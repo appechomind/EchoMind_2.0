@@ -1,10 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EchoMind</title>
+  <base href="/EchoMind_2.0/" />
+  <title>EchoMind - A Piece of Magic</title>
   <style>
     html, body {
       margin: 0;
@@ -28,6 +28,17 @@
       font-size: 3em;
       color: white;
       text-shadow: 0 0 20px #b076ff;
+      z-index: 1;
+    }
+
+    .subtitle {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5em;
+      color: #a96eff;
+      text-shadow: 0 0 10px #b076ff;
       z-index: 1;
     }
 
@@ -63,7 +74,7 @@
     }
 
     .orb:hover {
-      transform: scale(1.1);
+      transform: scale(1.1) !important;
     }
 
     .orb canvas {
@@ -76,12 +87,36 @@
 
     .orb span {
       z-index: 2;
+      padding: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .orb-container {
+        width: 300px;
+        height: 300px;
+        margin: -150px 0 0 -150px;
+      }
+      
+      .orb {
+        width: 80px;
+        height: 80px;
+        font-size: 0.8em;
+      }
+
+      .title {
+        font-size: 2em;
+      }
+
+      .subtitle {
+        font-size: 1em;
+      }
     }
   </style>
 </head>
 <body>
   <canvas id="fractalCanvas"></canvas>
   <div class="title">EchoMind</div>
+  <div class="subtitle">A Piece of Magic</div>
   <div class="orb-container">
     <!-- Each orb will share the same fractal animation drawn independently -->
     <div class="orb" style="top: 0%; left: 50%; transform: translate(-50%, -50%);" onclick="location.href='tricks/mentalism/mind-reader.html'"><canvas></canvas><span>Mentalism</span></div>
@@ -91,7 +126,7 @@
     <div class="orb" style="top: 100%; left: 50%; transform: translate(-50%, -50%);" onclick="location.href='tricks/community.html'"><canvas></canvas><span>Community</span></div>
     <div class="orb" style="top: 80%; left: 15%; transform: translate(-50%, -50%);" onclick="location.href='tools/gizmo.html'"><canvas></canvas><span>Gizmo</span></div>
     <div class="orb" style="top: 50%; left: 0%; transform: translate(-50%, -50%);" onclick="location.href='tools/settings.html'"><canvas></canvas><span>Settings</span></div>
-    <div class="orb" style="top: 20%; left: 15%; transform: translate(-50%, -50%);" onclick="location.href='tools/cipher.html'"><canvas></canvas><span>Don’t Click</span></div>
+    <div class="orb" style="top: 20%; left: 15%; transform: translate(-50%, -50%);" onclick="location.href='tools/cipher.html'"><canvas></canvas><span>Don't Click</span></div>
   </div>
 
   <script>
