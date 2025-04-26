@@ -221,78 +221,14 @@
     let isWaitingForResponse = false;
     let waitTimeout = null;
     let lastProcessedTranscript = '';
-    let recognition = null;
     
-    function initSpeechRecognition() {
-      if (!('webkitSpeechRecognition' in window)) {
-        console.error('Speech recognition not supported');
+    function handleSpeechResult(data) {
+      // Get the transcript from the speech result
+      const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
+      
+      if (!transcript) {
         return;
       }
-
-      recognition = new webkitSpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        console.debug('Speech recognition started');
-        document.getElementById('mic-icon').classList.add('listening');
-      };
-
-      recognition.onend = () => {
-        console.debug('Speech recognition ended');
-        document.getElementById('mic-icon').classList.remove('listening');
-        // Restart recognition if it ends unexpectedly
-        if (document.visibilityState === 'visible') {
-          recognition.start();
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          // Request permissions again
-          window.EchoMindPermissions.requestPermission();
-        }
-      };
-
-      recognition.onresult = handleSpeechResult;
-      
-      // Start recognition when page becomes visible
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          if (recognition) {
-            try {
-              recognition.start();
-            } catch (e) {
-              if (e.name === 'NotAllowedError') {
-                window.EchoMindPermissions.requestPermission();
-              }
-            }
-          }
-        } else {
-          if (recognition) {
-            recognition.stop();
-          }
-        }
-      });
-
-      // Initial start
-      try {
-        recognition.start();
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-        if (e.name === 'NotAllowedError') {
-          window.EchoMindPermissions.requestPermission();
-        }
-      }
-    }
-
-    function handleSpeechResult(event) {
-      const results = event.results;
-      const transcript = Array.from(results)
-        .map(result => result[0].transcript.toLowerCase().trim())
-        .join(' ');
 
       console.debug('Speech result:', transcript);
 
@@ -365,11 +301,6 @@
         clearTimeout(waitTimeout);
       }
       
-      // Stop recognition before navigating
-      if (recognition) {
-        recognition.stop();
-      }
-      
       // Perform the search
       console.debug('Initiating Google Images search for:', cleanTranscript);
       const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanTranscript)}&tbm=isch`;
@@ -385,9 +316,27 @@
     window.addEventListener('load', () => {
       // Initialize permissions first
       window.EchoMindPermissions.init({
-        onPermissionChange: (status) => {
+        onPermissionChange: async (status) => {
           if (status.granted) {
-            initSpeechRecognition();
+            try {
+              // Initialize speech module
+              await window.EchoMind.Speech.init({
+                continuous: true,
+                interimResults: true,
+                lang: 'en-US'
+              });
+
+              // Set up result handler
+              window.EchoMind.Speech.on('result', handleSpeechResult);
+
+              // Start listening
+              await window.EchoMind.Speech.start();
+              console.debug('Speech recognition started');
+              document.querySelector('.mic-icon').style.opacity = '1';
+
+            } catch (error) {
+              console.error('Failed to initialize speech:', error);
+            }
           }
         }
       });
@@ -410,7 +359,8 @@
 
     // Handle page unload
     window.addEventListener('beforeunload', () => {
-      if (recognition) {
+      if (window.EchoMind.Speech) {
+        window.EchoMind.Speech.stop();
         localStorage.setItem('speechRecognitionActive', 'true');
       }
     });
@@ -418,7 +368,7 @@
     // Check if we should restart recognition on page load
     if (localStorage.getItem('speechRecognitionActive') === 'true') {
       localStorage.removeItem('speechRecognitionActive');
-      setTimeout(initSpeechRecognition, 500);
+      window.EchoMind.Speech.start();
     }
   </script>
 </body>
