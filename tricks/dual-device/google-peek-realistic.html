@@ -227,7 +227,9 @@
       isAndroid: /Android/.test(navigator.userAgent),
       isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
       permissionRetryCount: 0,
-      maxPermissionRetries: 3
+      maxPermissionRetries: 3,
+      lastTranscript: '',
+      searchInitiated: false
     };
 
     // Command phrases that trigger the search
@@ -243,7 +245,7 @@
     // Configuration
     const CONFIG = {
       responseWaitTime: 2000,  // Time to wait after trigger before listening for response
-      responseDuration: 10000,  // How long to listen for the response (10 seconds)
+      responseDuration: 10000,  // How long to listen for the response
       minResponseLength: 2,     // Minimum length of response in characters
       permissionCheckInterval: 10000,  // Check permissions every 10 seconds on mobile
       permissionRetryDelay: 1000,      // Delay between permission retries
@@ -261,27 +263,18 @@
     async function initialize() {
       try {
         console.log('Initializing speech recognition...');
-        // Set up audio context for iOS
-        if (state.isIOS) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          const audioContext = new AudioContext();
-          // iOS requires user interaction to start audio context
-          document.addEventListener('touchstart', () => {
-            audioContext.resume();
-          }, { once: true });
-        }
-
-        // Initialize speech module with persistent permissions
+        
+        // Initialize speech module with platform-specific settings
         state.speechModule = window.EchoMind.Speech;
         await state.speechModule.init({
           continuous: true,
           interimResults: true,
           lang: 'en-US',
           maxAlternatives: 1,
-          debugMode: true,  // Enable debug mode
-          autoRestart: true,
+          debugMode: true,
+          autoRestart: state.isMobile, // Only auto-restart on mobile
           autoRestartDelay: 1000,
-          keepAlive: true
+          keepAlive: state.isMobile // Only keep alive on mobile
         });
 
         console.log('Speech recognition initialized successfully');
@@ -296,12 +289,9 @@
         if (state.isMobile) {
           console.log('Setting up mobile-specific handlers');
           setInterval(checkAndRenewPermissions, CONFIG.permissionCheckInterval);
-          // Add visibility change handler for mobile
           document.addEventListener('visibilitychange', handleVisibilityChange);
-          // Add page hide/show handlers
           document.addEventListener('pagehide', handlePageHide);
           document.addEventListener('pageshow', handlePageShow);
-          // Add resume handler for mobile
           document.addEventListener('resume', handleResume);
         }
 
@@ -310,7 +300,6 @@
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           await handlePermissionError();
         } else {
-          // Attempt to reinitialize after error
           setTimeout(initialize, 2000);
         }
       }
@@ -322,9 +311,8 @@
       
       state.speechModule.on('end', () => {
         if (state.isMobile) {
-          // More aggressive restart on mobile
           restartSpeechRecognition(true);
-        } else {
+        } else if (!state.searchInitiated) {
           restartSpeechRecognition(false);
         }
       });
@@ -333,7 +321,7 @@
         console.error('Speech recognition error:', error);
         if (error.error === 'not-allowed' || error.error === 'service-not-allowed') {
           await handlePermissionError();
-        } else {
+        } else if (!state.searchInitiated) {
           restartSpeechRecognition(state.isMobile);
         }
       });
@@ -347,6 +335,13 @@
         const transcript = data.finalTranscript.toLowerCase().trim();
         console.log('Processing transcript:', transcript);
         
+        // Prevent duplicate processing of the same transcript
+        if (transcript === state.lastTranscript) {
+          console.log('Duplicate transcript, ignoring');
+          return;
+        }
+        state.lastTranscript = transcript;
+
         if (state.waitingForResponse) {
           console.log('Waiting for response, processing:', transcript);
           handleResponse(transcript);
@@ -367,8 +362,6 @@
             return;
           }
         }
-      } else if (data.interimTranscript) {
-        console.log('Interim transcript:', data.interimTranscript);
       }
     }
 
@@ -503,6 +496,7 @@
     function startWaitingForResponse() {
       console.log('Starting to wait for response');
       state.waitingForResponse = true;
+      state.searchInitiated = false;
       
       // Clear any existing timeout
       if (state.triggerTimeout) {
@@ -512,10 +506,14 @@
       // Wait a moment before listening for response
       state.triggerTimeout = setTimeout(() => {
         console.log('Now actively listening for response');
+        // Reset last transcript to allow new responses
+        state.lastTranscript = '';
+        
         // Set timeout to stop waiting for response
         state.triggerTimeout = setTimeout(() => {
           console.log('Response wait timeout reached');
           state.waitingForResponse = false;
+          state.searchInitiated = false;
         }, CONFIG.responseDuration);
       }, CONFIG.responseWaitTime);
     }
@@ -523,21 +521,16 @@
     function handleResponse(transcript) {
       console.log('Handling response:', transcript);
       
-      // Only process if we're still waiting for response
-      if (!state.waitingForResponse) {
-        console.log('Not waiting for response anymore, ignoring');
+      // Only process if we're still waiting for response and haven't initiated a search
+      if (!state.waitingForResponse || state.searchInitiated) {
+        console.log('Not waiting for response or search already initiated, ignoring');
         return;
-      }
-
-      // Clear the waiting state
-      state.waitingForResponse = false;
-      if (state.triggerTimeout) {
-        clearTimeout(state.triggerTimeout);
       }
 
       // Process the response if it's long enough
       if (transcript.length >= CONFIG.minResponseLength) {
         console.log('Response is valid, performing image search for:', transcript);
+        state.searchInitiated = true;
         performImageSearch(transcript);
       } else {
         console.log('Response too short, ignoring');
@@ -546,8 +539,9 @@
 
     // Perform Google Image search
     function performImageSearch(query) {
-      if (query) {
+      if (query && !state.searchInitiated) {
         console.log('Navigating to image search for:', query);
+        state.searchInitiated = true;
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       }
     }
