@@ -329,8 +329,16 @@
       // If already waiting for response, handle it
       if (state.waitingForResponse) {
         if (data.finalTranscript) {
-          console.log('Got response while waiting:', transcript);
-          handleResponse(transcript);
+          // Extract the response part after "specifically"
+          const parts = transcript.split(TRIGGER_WORD);
+          if (parts.length > 1) {
+            const response = parts[1].trim();
+            console.log('Got response after trigger word:', response);
+            handleResponse(response);
+          } else {
+            console.log('Got response without trigger word:', transcript);
+            handleResponse(transcript);
+          }
         }
         return;
       }
@@ -494,8 +502,8 @@
     }
 
     function handleResponse(transcript) {
-      // Ignore if it's the same as the trigger command
-      if (transcript.includes(TRIGGER_WORD)) {
+      // Ignore if it's just the trigger word
+      if (transcript === TRIGGER_WORD) {
         return;
       }
 
