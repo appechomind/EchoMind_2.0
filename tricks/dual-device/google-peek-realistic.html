@@ -218,7 +218,10 @@
       searchTerm: '',
       isListening: false,
       speechModule: null,
-      commandsModule: null
+      commandsModule: null,
+      waitingForResponse: false,
+      lastTriggerTime: 0,
+      triggerTimeout: null
     };
 
     // Command phrases that trigger the search
@@ -231,10 +234,17 @@
       'tell me exactly'
     ];
 
+    // Configuration
+    const CONFIG = {
+      responseWaitTime: 2000,  // Time to wait after trigger before listening for response
+      responseDuration: 5000,  // How long to listen for the response
+      minResponseLength: 2     // Minimum length of response in characters
+    };
+
     // Initialize EchoMind modules
     async function initialize() {
       try {
-        // Initialize speech module
+        // Initialize speech module with persistent permissions
         state.speechModule = window.EchoMind.Speech;
         await state.speechModule.init({
           continuous: true,
@@ -243,7 +253,8 @@
           maxAlternatives: 1,
           debugMode: false,
           autoRestart: true,
-          autoRestartDelay: 1000
+          autoRestartDelay: 1000,
+          keepAlive: true // Keep the recognition active
         });
 
         // Set up speech event handlers
@@ -251,29 +262,107 @@
           if (data.finalTranscript) {
             const transcript = data.finalTranscript.toLowerCase().trim();
             
+            // If we're waiting for a response, handle it differently
+            if (state.waitingForResponse) {
+              handleResponse(transcript);
+              return;
+            }
+
             // Check for trigger phrases
             for (const phrase of TRIGGER_PHRASES) {
               if (transcript.includes(phrase)) {
-                // Find where the trigger phrase ends
-                const phraseEnd = transcript.indexOf(phrase) + phrase.length;
-                // Get everything after the trigger phrase
-                let searchTerm = transcript.slice(phraseEnd).trim();
-                
-                // Only search if we have a term after the trigger phrase
-                if (searchTerm && searchTerm.length > 0) {
-                  performImageSearch(searchTerm);
+                // Prevent multiple triggers in quick succession
+                const now = Date.now();
+                if (now - state.lastTriggerTime < 1000) {
+                  return;
                 }
+                state.lastTriggerTime = now;
+                
+                // Start waiting for response
+                startWaitingForResponse();
                 return;
               }
             }
           }
         });
 
+        state.speechModule.on('end', function() {
+          // Automatically restart recognition if it ends
+          if (!state.speechModule.isListening) {
+            setTimeout(() => {
+              state.speechModule.start();
+            }, 100);
+          }
+        });
+
+        state.speechModule.on('error', function(error) {
+          console.error('Speech recognition error:', error);
+          // Restart on error after a short delay
+          setTimeout(() => {
+            if (!state.speechModule.isListening) {
+              state.speechModule.start();
+            }
+          }, 1000);
+        });
+
         // Start listening immediately
         state.speechModule.start();
         
+        // Set up periodic permission check and renewal
+        setInterval(checkAndRenewPermissions, 30000);
+        
       } catch (error) {
         console.error('Initialization error:', error);
+        // Attempt to reinitialize after error
+        setTimeout(initialize, 2000);
+      }
+    }
+
+    // Handle waiting for and processing response
+    function startWaitingForResponse() {
+      state.waitingForResponse = true;
+      
+      // Clear any existing timeout
+      if (state.triggerTimeout) {
+        clearTimeout(state.triggerTimeout);
+      }
+
+      // Wait a moment before listening for response
+      state.triggerTimeout = setTimeout(() => {
+        // Set timeout to stop waiting for response
+        state.triggerTimeout = setTimeout(() => {
+          state.waitingForResponse = false;
+        }, CONFIG.responseDuration);
+      }, CONFIG.responseWaitTime);
+    }
+
+    function handleResponse(transcript) {
+      // Only process if we're still waiting for response
+      if (!state.waitingForResponse) return;
+
+      // Clear the waiting state
+      state.waitingForResponse = false;
+      if (state.triggerTimeout) {
+        clearTimeout(state.triggerTimeout);
+      }
+
+      // Process the response if it's long enough
+      if (transcript.length >= CONFIG.minResponseLength) {
+        performImageSearch(transcript);
+      }
+    }
+
+    // Check and renew permissions periodically
+    async function checkAndRenewPermissions() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        console.error('Permission check failed:', error);
+        // Try to reinitialize speech recognition
+        if (!state.speechModule.isListening) {
+          state.speechModule.start();
+        }
       }
     }
 
@@ -304,10 +393,34 @@
 
     // Keep listening across page visibility changes
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && state.speechModule && !state.isListening) {
-        state.speechModule.start();
+      if (!document.hidden) {
+        // Ensure we're listening when page becomes visible
+        if (!state.speechModule.isListening) {
+          state.speechModule.start();
+        }
+        // Check permissions when page becomes visible
+        checkAndRenewPermissions();
       }
     });
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+      // Attempt to keep recognition active even during page transitions
+      if (state.speechModule && state.speechModule.isListening) {
+        localStorage.setItem('speechRecognitionActive', 'true');
+      }
+    });
+
+    // Check if we should restart recognition on page load
+    if (localStorage.getItem('speechRecognitionActive') === 'true') {
+      localStorage.removeItem('speechRecognitionActive');
+      // Small delay to ensure page is ready
+      setTimeout(() => {
+        if (state.speechModule && !state.speechModule.isListening) {
+          state.speechModule.start();
+        }
+      }, 500);
+    }
   </script>
 </body>
 </html> 
