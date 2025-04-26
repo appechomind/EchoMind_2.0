@@ -264,18 +264,79 @@
       try {
         console.log('Initializing speech recognition...');
         
-        // Initialize speech module with platform-specific settings
-        state.speechModule = window.EchoMind.Speech;
-        await state.speechModule.init({
-          continuous: true,
-          interimResults: true,
-          lang: 'en-US',
-          maxAlternatives: 1,
-          debugMode: true,
-          autoRestart: true,
-          autoRestartDelay: 1000,
-          keepAlive: true
-        });
+        // Check if EchoMind is available, otherwise use Web Speech API directly
+        if (!window.EchoMind || !window.EchoMind.Speech) {
+          console.log('EchoMind not available, using Web Speech API directly');
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRecognition) {
+            throw new Error('Speech recognition not supported');
+          }
+          
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'en-US';
+          recognition.maxAlternatives = 1;
+          
+          // Create a simple wrapper to match EchoMind interface
+          state.speechModule = {
+            isListening: false,
+            recognition: recognition,
+            start: function() {
+              try {
+                this.recognition.start();
+                this.isListening = true;
+              } catch (e) {
+                console.error('Failed to start recognition:', e);
+              }
+            },
+            stop: function() {
+              try {
+                this.recognition.stop();
+                this.isListening = false;
+              } catch (e) {
+                console.error('Failed to stop recognition:', e);
+              }
+            },
+            on: function(event, handler) {
+              switch(event) {
+                case 'result':
+                  this.recognition.onresult = (event) => {
+                    const results = event.results;
+                    const lastResult = results[results.length - 1];
+                    const transcript = lastResult[0].transcript;
+                    handler({
+                      finalTranscript: lastResult.isFinal ? transcript : '',
+                      interimTranscript: !lastResult.isFinal ? transcript : ''
+                    });
+                  };
+                  break;
+                case 'end':
+                  this.recognition.onend = () => {
+                    this.isListening = false;
+                    handler();
+                  };
+                  break;
+                case 'error':
+                  this.recognition.onerror = handler;
+                  break;
+              }
+            }
+          };
+        } else {
+          // Initialize EchoMind speech module
+          state.speechModule = window.EchoMind.Speech;
+          await state.speechModule.init({
+            continuous: true,
+            interimResults: true,
+            lang: 'en-US',
+            maxAlternatives: 1,
+            debugMode: true,
+            autoRestart: true,
+            autoRestartDelay: 1000,
+            keepAlive: true
+          });
+        }
 
         console.log('Speech recognition initialized successfully');
         
@@ -286,6 +347,7 @@
         await requestMicrophonePermission();
         
         // Start listening immediately
+        console.log('Starting speech recognition immediately');
         if (!state.speechModule.isListening) {
           state.speechModule.start();
         }
