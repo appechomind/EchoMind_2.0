@@ -373,7 +373,8 @@
             const response = parts[1].trim();
             console.log('Got response after trigger word:', response);
             handleResponse(response);
-          } else {
+          } else if (!transcript.includes(TRIGGER_WORD)) {
+            // Only handle the transcript if it doesn't contain the trigger word
             console.log('Got response without trigger word:', transcript);
             handleResponse(transcript);
           }
@@ -426,8 +427,9 @@
     }
 
     function handleResponse(transcript) {
-      // Ignore if it's just the trigger word
-      if (transcript === TRIGGER_WORD) {
+      // Ignore if it's just the trigger word or empty
+      if (!transcript || transcript === TRIGGER_WORD) {
+        console.log('Ignoring empty response or trigger word');
         return;
       }
 
@@ -439,6 +441,7 @@
 
       // Don't process if we already initiated a search
       if (state.searchInitiated) {
+        console.log('Search already initiated, ignoring response');
         return;
       }
 
@@ -448,14 +451,26 @@
         state.lastTranscript = transcript;
         state.searchInitiated = true;
         performImageSearch(transcript);
+      } else {
+        console.log('Response too short or duplicate:', transcript);
       }
     }
 
     // Perform Google Image search
     function performImageSearch(query) {
-      if (query && !query.includes(TRIGGER_WORD)) {
+      if (!query) {
+        console.log('No query provided for image search');
+        return;
+      }
+
+      // Remove the trigger word if it's somehow in the query
+      query = query.replace(TRIGGER_WORD, '').trim();
+      
+      if (query.length >= CONFIG.minResponseLength) {
         console.log('Navigating to image search for:', query);
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+      } else {
+        console.log('Query too short after cleaning:', query);
       }
     }
 
