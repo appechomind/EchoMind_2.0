@@ -298,25 +298,33 @@
 
       // Don't process the same transcript multiple times
       if (transcript === lastProcessedTranscript) {
+        console.debug('Duplicate transcript, ignoring');
         return;
       }
       lastProcessedTranscript = transcript;
 
       // Check for trigger word
       if (transcript.includes(TRIGGER_WORD)) {
+        console.debug('Trigger word detected');
         if (!isWaitingForResponse) {
           startWaitingForResponse();
           
           // Get everything after the last occurrence of the trigger word
           const triggerIndex = transcript.lastIndexOf(TRIGGER_WORD);
           const response = transcript.substring(triggerIndex + TRIGGER_WORD.length).trim();
+          console.debug('Extracted response:', response);
           
           if (response.length >= MIN_RESPONSE_LENGTH) {
+            console.debug('Response meets length requirement, handling response');
             handleResponse(response);
+          } else {
+            console.debug('Response too short, waiting for more input');
           }
+        } else {
+          console.debug('Already waiting for response, ignoring trigger word');
         }
       } else if (isWaitingForResponse) {
-        // Process the entire transcript as a response
+        console.debug('Processing response while waiting');
         handleResponse(transcript);
       }
     }
@@ -347,6 +355,7 @@
       
       // Ignore if it's just the trigger word or too short
       if (cleanTranscript.length < MIN_RESPONSE_LENGTH) {
+        console.debug('Response too short or just trigger word, ignoring');
         return;
       }
       
@@ -356,10 +365,20 @@
         clearTimeout(waitTimeout);
       }
       
+      // Stop recognition before navigating
+      if (recognition) {
+        recognition.stop();
+      }
+      
       // Perform the search
+      console.debug('Initiating Google Images search for:', cleanTranscript);
       const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanTranscript)}&tbm=isch`;
-      console.debug('Navigating to:', searchUrl);
-      window.location.href = searchUrl;
+      console.debug('Search URL:', searchUrl);
+      
+      // Use a small delay to ensure logs are visible
+      setTimeout(() => {
+        window.location.href = searchUrl;
+      }, 100);
     }
 
     // Initialize when the page loads
