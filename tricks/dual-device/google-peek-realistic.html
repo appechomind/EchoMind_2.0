@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Google</title>
-  <script src="../../js/permissions-handler.js"></script>
+  <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   <script src="../../js/echomind-speech.js"></script>
   <script src="../../js/echomind-commands.js"></script>
-  <script src="js/mobile-permissions.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: arial,sans-serif;
       margin: 0;
       padding: 0;
       height: 100vh;
@@ -43,11 +42,11 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      margin-top: -120px;
     }
     
     .logo {
       margin-bottom: 25px;
-      margin-top: -100px;
     }
     
     .logo img {
@@ -83,24 +82,28 @@
       flex: 1;
       height: 34px;
       font-size: 16px;
+      margin-left: 10px;
     }
     
     .search-icons {
       display: flex;
       align-items: center;
+      gap: 15px;
+      padding-right: 8px;
     }
     
     .search-icon, .mic-icon {
-      width: 20px;
-      height: 20px;
-      margin-left: 12px;
+      width: 24px;
+      height: 24px;
       cursor: pointer;
+      opacity: 0.6;
     }
     
     .buttons {
       margin-top: 30px;
       display: flex;
       justify-content: center;
+      gap: 12px;
     }
     
     .buttons button {
@@ -110,7 +113,6 @@
       color: #3c4043;
       font-family: arial,sans-serif;
       font-size: 14px;
-      margin: 11px 4px;
       padding: 0 16px;
       height: 36px;
       cursor: pointer;
@@ -149,241 +151,14 @@
     .left-footer, .right-footer {
       display: flex;
     }
-    
-    /* Status and notification styling */
-    .status {
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      border-radius: 20px;
-      background-color: rgba(0, 0, 0, 0.7);
-      color: white;
-      font-size: 14px;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    
-    .status.visible {
-      opacity: 1;
-    }
-    
-    #transcript {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80%;
-      max-width: 600px;
-      padding: 10px;
-      border-radius: 10px;
-      background-color: rgba(0, 0, 0, 0.06);
-      z-index: 1000;
-    }
-    
-    .interim {
-      color: gray;
-      font-style: italic;
-    }
-    
-    /* Trick-specific styles */
-    .trick-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-      color: white;
-      text-align: center;
-    }
-    
-    .trick-overlay.active {
-      display: flex;
-    }
-    
-    .trick-content {
-      padding: 40px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      max-width: 600px;
-    }
-    
-    .trick-content h2 {
-      margin-bottom: 20px;
-      color: #fff;
-    }
-    
-    #countdown {
-      font-size: 72px;
-      font-weight: bold;
-      margin: 40px 0;
-      color: #4285f4;
-    }
-    
-    .trick-button {
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      font-size: 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 10px;
-    }
-    
-    .trick-button:hover {
-      background-color: #357ae8;
-    }
-    
-    .speech-indicator {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 20px;
-      display: none;
-      align-items: center;
-      z-index: 1000;
-    }
-    
-    .speech-indicator.active {
-      display: flex;
-    }
-    
-    .speech-dot {
-      width: 10px;
-      height: 10px;
-      background: #4285f4;
-      border-radius: 50%;
-      margin-right: 10px;
-      animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.5; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    /* Mobile-specific permission UI */
-    .permission-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 3000;
-      padding: 20px;
-    }
-
-    .permission-content {
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      max-width: 90%;
-      width: 400px;
-      text-align: center;
-    }
-
-    .permission-content h3 {
-      margin-top: 0;
-      color: #333;
-    }
-
-    .permission-content p {
-      color: #666;
-      line-height: 1.6;
-      margin: 15px 0;
-    }
-
-    .permission-steps {
-      text-align: left;
-      margin: 20px 0;
-      padding-left: 20px;
-    }
-
-    .permission-steps li {
-      margin: 10px 0;
-      color: #444;
-    }
-
-    .permission-button {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 25px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 15px;
-      transition: background-color 0.3s;
-    }
-
-    .permission-button:hover {
-      background: #357ae8;
-    }
-
-    /* iOS tap instruction */
-    .ios-tap-instruction {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.95);
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      z-index: 3001;
-      display: none;
-    }
-
-    /* Mobile-optimized status messages */
-    .status {
-      padding: 15px 25px;
-      border-radius: 25px;
-      font-size: 16px;
-    }
-
-    /* Mobile-optimized transcript */
-    #transcript {
-      bottom: 120px;
-      padding: 15px;
-      font-size: 16px;
-    }
-
-    /* Mobile-optimized buttons */
-    .trick-button {
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 25px;
-    }
 
     @media (max-width: 600px) {
       .search-container {
         width: 90%;
       }
-
+      
       .buttons button {
-        width: 45%;
         margin: 5px;
-      }
-
-      .permission-content {
-        padding: 20px;
       }
     }
   </style>
@@ -401,10 +176,17 @@
     
     <div class="search-container">
       <div class="search-box">
-        <input type="text" class="search-input" id="searchInput">
+        <svg class="search-icon" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+        </svg>
+        <input type="text" class="search-input" id="searchInput" autocomplete="off" autofocus>
         <div class="search-icons">
-          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzljYTNhZiI+PHBhdGggZD0iTTE1LjUgMTRoLS43OWwtLjI4LS4yN0E2LjQ3IDYuNDcgMCAwIDAgMTYgOS41IDYuNSA2LjUgMCAxIDAgOS41IDE2YzEuNjEgMCAzLjA5LS41OSA0LjIzLTEuNTdsLjI3LjI4di43OWw1IDQuOTlMMjAuNDkgMTlsLTQuOTktNXptLTYgMEM3LjAxIDE0IDUgMTEuOTkgNSA5LjVTNy4wMSA1IDkuNSA1IDE0IDcuMDEgMTQgOS41IDExLjk5IDE0IDkuNSAxNHoiLz48L3N2Zz4=" alt="Search" class="search-icon">
-          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzRjYWY1MCI+PHBhdGggZD0iTTEyIDE0YzEuNjYgMCAzLTEuMzQgMy0zVjVjMC0xLjY2LTEuMzQtMy0zLTNTOSAzLjM0IDkgNXY2YzAgMS42NiAxLjM0IDMgMyAzeiIvPjxwYXRoIGQ9Ik0xNyA5YzAgMi43Ni0yLjI0IDUtNSA1cy01LTIuMjQtNS01SDVjMCAzLjUzIDIuNjEgNi40MyA2IDYuOTJWMTloMnYtMy4wOGMzLjM5LS40OSA2LTMuMzkgNi02LjkyaC0yeiIvPjwvc3ZnPg==" alt="Voice" class="mic-icon" id="micButton">
+          <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
+            <path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path>
+            <path fill="#fbbc05" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path>
+            <path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path>
+          </svg>
         </div>
       </div>
       <div class="buttons">
@@ -430,364 +212,105 @@
     </div>
   </div>
 
-  <div id="setupOverlay" class="trick-overlay">
-    <div class="trick-content">
-      <h2>Reading Thoughts</h2>
-      <p>Think of anything you want to search for on Google. Don't say it out loud yet.</p>
-      <button class="trick-button" onclick="startTrick()">Begin</button>
-    </div>
-  </div>
-
-  <div id="thinkingOverlay" class="trick-overlay">
-    <div class="trick-content">
-      <h2>Keep thinking...</h2>
-      <div id="countdown">10</div>
-      <button class="trick-button" onclick="revealSearch()">I Got It</button>
-    </div>
-  </div>
-
-  <div id="speechStatus" class="status"></div>
-  <div id="transcript"></div>
-
-  <!-- Permission instruction overlay -->
-  <div id="permissionOverlay" class="permission-overlay">
-    <div class="permission-content">
-      <h3>Microphone Access Required</h3>
-      <p id="permissionInstructions"></p>
-      <ul class="permission-steps" id="permissionSteps"></ul>
-      <button class="permission-button" onclick="handlePermissionButton()">Got it</button>
-    </div>
-  </div>
-
-  <!-- iOS tap instruction -->
-  <div id="iosTapInstruction" class="ios-tap-instruction">
-    <p>Tap anywhere to enable voice features</p>
-  </div>
-
   <script>
-    // Cache DOM elements
-    const elements = {
-      searchInput: document.getElementById('searchInput'),
-      micButton: document.getElementById('micButton'),
-      setupOverlay: document.getElementById('setupOverlay'),
-      thinkingOverlay: document.getElementById('thinkingOverlay'),
-      countdown: document.getElementById('countdown'),
-      transcript: document.getElementById('transcript'),
-      speechStatus: document.getElementById('speechStatus')
-    };
-
     // State management
     const state = {
       searchTerm: '',
       isListening: false,
-      countdownInterval: null,
-      recognition: null,
-      permissionGranted: false,
-      hasError: false,
       speechModule: null,
-      commandsModule: null,
-      trickActive: false
+      commandsModule: null
     };
 
-    // Speech recognition configuration
-    const RECOGNITION_CONFIG = {
-      continuous: true,
-      interimResults: true,
-      lang: 'en-US'
-    };
-
-    // Command phrases
-    const COMMANDS = {
-      reveal: ['what were you thinking', 'what did you search for', 'did you search for', 'were you thinking of', 'is this what you thought of'],
-      reset: ['let me try again', 'start over']
-    };
-
-    // Fallback search terms
-    const FALLBACK_TERMS = [
-      'vacation destinations 2024',
-      'best restaurants near me',
-      'upcoming movies',
-      'how to learn magic tricks',
-      'weather forecast today'
+    // Command phrases that trigger the search
+    const TRIGGER_PHRASES = [
+      'what were you thinking',
+      'what were you thinking of',
+      'what did you search for',
+      'what did you think of',
+      'what was on your mind',
+      'tell me what you thought of',
+      'show me what you thought of'
     ];
 
-    // Permission handling
-    let permissionHandler = null;
-
-    // Initialize EchoMind modules and permissions
+    // Initialize EchoMind modules
     async function initialize() {
       try {
-        console.log('Starting initialization...');
-
-        // Check if EchoMind is available
-        if (!window.EchoMind) {
-          throw new Error('EchoMind namespace not found. Check script loading order.');
-        }
-
-        // Initialize mobile permissions handler
-        console.log('Initializing mobile permissions...');
-        permissionHandler = window.MobilePermissions;
-        if (!permissionHandler) {
-          console.warn('Mobile permissions handler not found, continuing without it...');
-        } else {
-          await permissionHandler.init();
-        }
-
-        // Initialize EchoMind Speech module
-        console.log('Initializing speech module...');
-        if (!window.EchoMind.Speech) {
-          throw new Error('EchoMind Speech module not found. Check if echomind-speech.js is loaded.');
-        }
-
+        // Initialize speech module
         state.speechModule = window.EchoMind.Speech;
-        const speechInitResult = await state.speechModule.init({
+        await state.speechModule.init({
           continuous: true,
           interimResults: true,
           lang: 'en-US',
           maxAlternatives: 1,
-          debugMode: true,
-          autoRestart: false
-        });
-
-        console.log('Speech initialization result:', speechInitResult);
-
-        if (!speechInitResult) {
-          throw new Error('Speech module initialization failed');
-        }
-
-        // Initialize Commands module
-        console.log('Initializing commands module...');
-        if (!window.EchoMind.Commands) {
-          throw new Error('EchoMind Commands module not found. Check if echomind-commands.js is loaded.');
-        }
-
-        state.commandsModule = window.EchoMind.Commands;
-        const commandsInitResult = await state.commandsModule.init({
-          debugMode: true,
-          caseSensitive: false,
-          allowFuzzyMatch: true,
-          fuzzyMatchThreshold: 0.6
-        });
-
-        console.log('Commands initialization result:', commandsInitResult);
-
-        if (!commandsInitResult) {
-          throw new Error('Commands module initialization failed');
-        }
-
-        // Register commands
-        console.log('Registering voice commands...');
-        const commandsRegistered = state.commandsModule.registerCommands({
-          'what were you thinking': revealSearch,
-          'what did you search for': revealSearch,
-          'did you search for': revealSearch,
-          'were you thinking of': revealSearch,
-          'is this what you thought of': revealSearch,
-          'let me try again': resetTrick,
-          'start over': resetTrick
+          debugMode: false,
+          autoRestart: true,
+          autoRestartDelay: 1000
         });
 
         // Set up speech event handlers
         state.speechModule.on('result', function(data) {
           if (data.finalTranscript) {
-            console.log('Final transcript:', data.finalTranscript);
             const transcript = data.finalTranscript.toLowerCase().trim();
             
-            // Check for reveal commands
-            for (const command of COMMANDS.reveal) {
-              if (transcript.includes(command)) {
-                console.log('Reveal command detected:', command);
-                revealSearch();
+            // Check for trigger phrases
+            for (const phrase of TRIGGER_PHRASES) {
+              if (transcript.includes(phrase)) {
+                // Extract the search term - everything after the trigger phrase
+                const searchStart = transcript.indexOf(phrase) + phrase.length;
+                let searchTerm = transcript.slice(searchStart).trim();
+                
+                // If no specific term found, use the last part of the transcript
+                if (!searchTerm) {
+                  const words = transcript.split(' ');
+                  searchTerm = words[words.length - 1];
+                }
+                
+                if (searchTerm) {
+                  performImageSearch(searchTerm);
+                }
                 return;
               }
             }
           }
         });
 
-        state.speechModule.on('error', function(error) {
-          console.error('Speech recognition error:', error);
-          showStatus('Error: ' + error.message);
-        });
-
-        // Start listening automatically
-        startListening();
-
-        console.log('Initialization complete');
-        return true;
-
+        // Start listening immediately
+        state.speechModule.start();
+        
       } catch (error) {
         console.error('Initialization error:', error);
-        showStatus('Error: ' + error.message);
-        // Show detailed error in console
-        console.error('Detailed error:', {
-          error: error,
-          stack: error.stack,
-          speechModule: state.speechModule ? 'present' : 'missing',
-          commandsModule: state.commandsModule ? 'present' : 'missing',
-          EchoMind: window.EchoMind ? 'present' : 'missing'
-        });
-        return false;
       }
     }
 
-    // Handle permission instructions event
-    function handlePermissionInstructions(event) {
-      const overlay = document.getElementById('permissionOverlay');
-      const instructions = document.getElementById('permissionInstructions');
-      const steps = document.getElementById('permissionSteps');
-
-      instructions.textContent = 'To use voice features, please enable microphone access:';
-      steps.innerHTML = event.detail.instructions
-        .split('\n')
-        .filter(step => step.trim())
-        .map(step => `<li>${step}</li>`)
-        .join('');
-
-      overlay.style.display = 'flex';
-    }
-
-    // Handle iOS-specific instructions
-    function handleIOSInstructions(event) {
-      const instruction = document.getElementById('iosTapInstruction');
-      instruction.style.display = 'block';
-
-      // Hide after interaction or timeout
-      const hideInstruction = () => {
-        instruction.style.display = 'none';
-        document.removeEventListener('touchend', hideInstruction);
-      };
-
-      document.addEventListener('touchend', hideInstruction);
-      setTimeout(hideInstruction, 5000);
-    }
-
-    // Handle permission overlay button click
-    function handlePermissionButton() {
-      document.getElementById('permissionOverlay').style.display = 'none';
-    }
-
-    // Status display with debounce
-    function showStatus(message) {
-      clearTimeout(state.statusTimeout);
-      elements.speechStatus.textContent = message;
-      elements.speechStatus.classList.add('visible');
-      
-      state.statusTimeout = setTimeout(() => {
-        elements.speechStatus.classList.remove('visible');
-      }, 3000);
-    }
-
-    // Trick flow control
-    function startTrick() {
-      if (!state.speechModule || !state.commandsModule) {
-        showStatus('Speech recognition not ready');
-        return;
-      }
-
-      elements.setupOverlay.classList.remove('active');
-      elements.thinkingOverlay.classList.add('active');
-      state.trickActive = true;
-      startCountdown();
-      // Don't start listening here since it's already running
-    }
-
-    function resetTrick() {
-      clearInterval(state.countdownInterval);
-      state.searchTerm = '';
-      state.trickActive = false;
-      elements.transcript.innerHTML = '';
-      elements.searchInput.value = '';
-      elements.thinkingOverlay.classList.remove('active');
-      elements.setupOverlay.classList.add('active');
-      // Don't stop listening, just mark trick as inactive
-    }
-
-    function revealSearch() {
-      clearInterval(state.countdownInterval);
-      elements.thinkingOverlay.classList.remove('active');
-      state.trickActive = false;
-      
-      console.log('Revealing search term:', state.searchTerm);
-      
-      if (!state.searchTerm) {
-        state.searchTerm = FALLBACK_TERMS[Math.floor(Math.random() * FALLBACK_TERMS.length)];
-        console.log('Using fallback term:', state.searchTerm);
-      }
-      
-      elements.searchInput.value = state.searchTerm;
-      performSearch(); // Remove the setTimeout to make it more immediate
-    }
-
-    function performSearch() {
-      const query = encodeURIComponent(elements.searchInput.value || state.searchTerm);
-      console.log('Performing search with query:', query);
-      
+    // Perform Google Image search
+    function performImageSearch(query) {
       if (query) {
-        // Add image search parameter to the URL
-        window.location.href = `https://www.google.com/search?q=${query}&tbm=isch`;
+        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       }
     }
 
-    // Event listeners
-    elements.micButton.addEventListener('click', () => {
-      if (!state.isListening) {
-        startListening();
-      } else {
-        stopListening();
+    // Regular Google search
+    function performSearch() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (query) {
+        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      }
+    }
+
+    // Handle search on Enter key
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
       }
     });
 
-    // Initialize on load with proper script loading check
-    document.addEventListener('DOMContentLoaded', () => {
-      // Check if scripts are loaded in correct order
-      if (!window.EchoMind) {
-        console.error('EchoMind scripts not loaded properly. Check script tags order.');
-        showStatus('Error: Required scripts not loaded');
-        return;
-      }
+    // Initialize when the page loads
+    document.addEventListener('DOMContentLoaded', initialize);
 
-      // Hide permission overlay by default
-      document.getElementById('permissionOverlay').style.display = 'none';
-      
-      // Initialize with retry
-      const initWithRetry = async (retries = 3) => {
-        for (let i = 0; i < retries; i++) {
-          console.log(`Initialization attempt ${i + 1}/${retries}`);
-          const success = await initialize();
-          if (success) {
-            return;
-          }
-          // Wait before retrying
-          if (i < retries - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        console.error('Failed to initialize after', retries, 'attempts');
-        showStatus('Failed to initialize speech recognition');
-      };
-
-      initWithRetry();
-    });
-
-    // Add page visibility handler
+    // Keep listening across page visibility changes
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        // Stop listening when page is hidden
-        if (state.speechModule && state.isListening) {
-          stopListening();
-        }
-      } else {
-        // Resume listening when page becomes visible again
-        if (state.speechModule && !state.isListening) {
-          startListening();
-        }
-      }
-    });
-
-    // Clean up on page unload
-    window.addEventListener('beforeunload', () => {
-      if (state.speechModule && state.isListening) {
-        stopListening();
+      if (!document.hidden && state.speechModule && !state.isListening) {
+        state.speechModule.start();
       }
     });
   </script>
