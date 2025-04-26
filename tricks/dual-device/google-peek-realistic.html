@@ -217,78 +217,44 @@
     // State management
     const state = {
       isListening: false,
-      speechModule: null,
-      waitingForSearch: false,
-      searchTimeout: null
+      speechModule: null
     };
 
-    // Configuration
+    // The trigger word
     const TRIGGER_WORD = 'specifically';
-    const WAIT_TIME = 1000;  // 1 second wait after trigger
-    const LISTEN_TIME = 15000;  // 15 seconds to capture search terms
 
     // Handle speech results
     function handleSpeechResult(data) {
+      // Get the transcript
       const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
+      
+      // Only process if we have a transcript
+      if (!transcript) return;
+      
       console.log('Heard:', transcript);
 
-      // If we're waiting for search terms
-      if (state.waitingForSearch) {
-        if (data.finalTranscript) {
-          console.log('Got search terms:', transcript);
-          performImageSearch(transcript);
-        }
-        return;
-      }
-
-      // Check for trigger word
+      // Check if transcript contains the trigger word
       if (transcript.includes(TRIGGER_WORD)) {
-        console.log('Trigger word detected!');
-        startSearchCapture();
-      }
-    }
-
-    // Start capturing search terms
-    function startSearchCapture() {
-      // Clear any existing timeout
-      if (state.searchTimeout) {
-        clearTimeout(state.searchTimeout);
-      }
-
-      console.log('Waiting 1 second...');
-      
-      // Wait 1 second before starting to capture
-      setTimeout(() => {
-        console.log('Now listening for search terms (15 seconds)...');
-        state.waitingForSearch = true;
+        // Find everything AFTER the trigger word
+        const searchTerms = transcript.split(TRIGGER_WORD)[1];
         
-        // Set timeout to perform search after 15 seconds
-        state.searchTimeout = setTimeout(() => {
-          console.log('Search capture timeout reached');
-          state.waitingForSearch = false;
-        }, LISTEN_TIME);
-      }, WAIT_TIME);
+        // If we have search terms after "specifically"
+        if (searchTerms && searchTerms.trim()) {
+          console.log('Searching for:', searchTerms.trim());
+          performImageSearch(searchTerms.trim());
+        }
+      }
     }
 
     // Perform Google Image search
     function performImageSearch(query) {
       if (!query) return;
       
-      console.log('Searching for:', query);
-      
-      // Stop listening
+      // Stop listening before navigating
       if (state.speechModule && state.isListening) {
         state.speechModule.stop();
         state.isListening = false;
       }
-
-      // Clear any pending timeout
-      if (state.searchTimeout) {
-        clearTimeout(state.searchTimeout);
-      }
-
-      // Reset state
-      state.waitingForSearch = false;
 
       // Navigate to Google Images search
       window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
@@ -301,38 +267,33 @@
         await state.speechModule.init({
           continuous: true,
           interimResults: true,
-          lang: 'en-US',
-          maxAlternatives: 1
+          lang: 'en-US'
         });
 
-        console.log('Speech recognition initialized');
+        console.log('Speech recognition ready');
         
-        // Set up handlers
+        // Set up result handler
         state.speechModule.on('result', handleSpeechResult);
         
+        // Handle end event
         state.speechModule.on('end', () => {
           console.log('Speech recognition ended');
           state.isListening = false;
           
-          // Restart if we're not navigating away
-          if (!state.waitingForSearch) {
-            setTimeout(() => {
-              if (state.speechModule && !state.isListening) {
-                state.speechModule.start();
-                state.isListening = true;
-              }
-            }, 1000);
-          }
-        });
-
-        state.speechModule.on('error', (error) => {
-          console.error('Speech error:', error);
-          state.isListening = false;
+          // Restart if needed
+          setTimeout(() => {
+            if (!state.isListening) {
+              state.speechModule.start();
+              state.isListening = true;
+              console.log('Speech recognition restarted');
+            }
+          }, 1000);
         });
 
         // Start listening
         state.speechModule.start();
         state.isListening = true;
+        console.log('Started listening');
 
       } catch (error) {
         console.error('Speech initialization error:', error);
@@ -343,8 +304,6 @@
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        console.log('Initializing...');
-        
         // Initialize permissions
         EchoMind.Permissions.init({
           debugMode: true
