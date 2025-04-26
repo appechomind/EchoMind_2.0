@@ -216,284 +216,152 @@
   <script>
     // State management
     const state = {
-      searchTerm: '',
       isListening: false,
       speechModule: null,
-      commandsModule: null,
-      waitingForResponse: false,
-      lastTriggerTime: 0,
-      triggerTimeout: null,
-      lastTranscript: '',
-      searchInitiated: false
+      waitingForSearch: false,
+      searchTimeout: null
     };
-
-    // Single trigger word
-    const TRIGGER_WORD = 'specifically';
 
     // Configuration
-    const CONFIG = {
-      responseWaitTime: 1000,    // Increased wait time after trigger
-      responseDuration: 7000,    // Increased duration to listen for response
-      minResponseLength: 2,     // Minimum length of response in characters
-      audioConstraints: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    };
+    const TRIGGER_WORD = 'specifically';
+    const WAIT_TIME = 1000;  // 1 second wait after trigger
+    const LISTEN_TIME = 15000;  // 15 seconds to capture search terms
 
-    // Initialize EchoMind modules
-    async function initialize() {
-      try {
-        console.log('Initializing permissions and speech recognition...');
-        
-        // Initialize permissions handler first
-        EchoMind.Permissions.init({
-          debugMode: true,
-          checkInterval: 5000
-        });
+    // Handle speech results
+    function handleSpeechResult(data) {
+      const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
+      console.log('Heard:', transcript);
 
-        // Set up permission change handler
-        EchoMind.Permissions.onPermissionChange(async ({ granted }) => {
-          console.log('Permission state changed:', granted);
-          if (granted) {
-            if (!state.isListening) {
-              await initializeSpeechRecognition();
-            }
-          } else {
-            state.isListening = false;
-            if (state.speechModule) {
-              state.speechModule.stop();
-            }
-          }
-        });
-
-        // Set up error handler
-        EchoMind.Permissions.onError(({ error }) => {
-          console.error('Permission error:', error);
-          // Attempt recovery based on error type
-          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-            setTimeout(() => EchoMind.Permissions.requestPermission(), 1000);
-          }
-        });
-
-        // Request initial permission
-        const permissionGranted = await EchoMind.Permissions.requestPermission();
-        if (permissionGranted) {
-          await initializeSpeechRecognition();
-        } else {
-          console.error('Failed to get microphone permission');
+      // If we're waiting for search terms
+      if (state.waitingForSearch) {
+        if (data.finalTranscript) {
+          console.log('Got search terms:', transcript);
+          performImageSearch(transcript);
         }
-
-      } catch (error) {
-        console.error('Initialization error:', error);
-        setTimeout(initialize, 2000);
+        return;
       }
+
+      // Check for trigger word
+      if (transcript.includes(TRIGGER_WORD)) {
+        console.log('Trigger word detected!');
+        startSearchCapture();
+      }
+    }
+
+    // Start capturing search terms
+    function startSearchCapture() {
+      // Clear any existing timeout
+      if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
+      }
+
+      console.log('Waiting 1 second...');
+      
+      // Wait 1 second before starting to capture
+      setTimeout(() => {
+        console.log('Now listening for search terms (15 seconds)...');
+        state.waitingForSearch = true;
+        
+        // Set timeout to perform search after 15 seconds
+        state.searchTimeout = setTimeout(() => {
+          console.log('Search capture timeout reached');
+          state.waitingForSearch = false;
+        }, LISTEN_TIME);
+      }, WAIT_TIME);
+    }
+
+    // Perform Google Image search
+    function performImageSearch(query) {
+      if (!query) return;
+      
+      console.log('Searching for:', query);
+      
+      // Stop listening
+      if (state.speechModule && state.isListening) {
+        state.speechModule.stop();
+        state.isListening = false;
+      }
+
+      // Clear any pending timeout
+      if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
+      }
+
+      // Reset state
+      state.waitingForSearch = false;
+
+      // Navigate to Google Images search
+      window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
     }
 
     // Initialize speech recognition
     async function initializeSpeechRecognition() {
       try {
-        // Initialize speech module with platform-specific settings
         state.speechModule = window.EchoMind.Speech;
         await state.speechModule.init({
           continuous: true,
           interimResults: true,
           lang: 'en-US',
-          maxAlternatives: 1,
-          debugMode: true,
-          autoRestart: true,
-          autoRestartDelay: 1000,
-          keepAlive: true
+          maxAlternatives: 1
         });
 
-        console.log('Speech recognition initialized successfully');
+        console.log('Speech recognition initialized');
         
-        // Set up speech event handlers
-        setupSpeechHandlers();
+        // Set up handlers
+        state.speechModule.on('result', handleSpeechResult);
         
-        // Start listening immediately
-        if (!state.speechModule.isListening) {
-          state.speechModule.start();
-          state.isListening = true;
-        }
+        state.speechModule.on('end', () => {
+          console.log('Speech recognition ended');
+          state.isListening = false;
+          
+          // Restart if we're not navigating away
+          if (!state.waitingForSearch) {
+            setTimeout(() => {
+              if (state.speechModule && !state.isListening) {
+                state.speechModule.start();
+                state.isListening = true;
+              }
+            }, 1000);
+          }
+        });
+
+        state.speechModule.on('error', (error) => {
+          console.error('Speech error:', error);
+          state.isListening = false;
+        });
+
+        // Start listening
+        state.speechModule.start();
+        state.isListening = true;
 
       } catch (error) {
         console.error('Speech initialization error:', error);
-        state.isListening = false;
         setTimeout(initializeSpeechRecognition, 2000);
       }
     }
 
-    // Set up speech recognition handlers
-    function setupSpeechHandlers() {
-      state.speechModule.on('result', handleSpeechResult);
-      
-      state.speechModule.on('end', () => {
-        console.log('Speech recognition ended');
-        state.isListening = false;
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        console.log('Initializing...');
         
-        // Only restart if we have permission
-        if (EchoMind.Permissions.isGranted()) {
-          restartSpeechRecognition(true);
-        }
-      });
+        // Initialize permissions
+        EchoMind.Permissions.init({
+          debugMode: true
+        });
 
-      state.speechModule.on('error', async (error) => {
-        console.error('Speech recognition error:', error);
-        state.isListening = false;
-        
-        if (error.error === 'not-allowed' || error.error === 'service-not-allowed') {
-          // Let the permissions handler handle it
-          await EchoMind.Permissions.requestPermission();
+        // Request permission and initialize speech
+        const granted = await EchoMind.Permissions.requestPermission();
+        if (granted) {
+          await initializeSpeechRecognition();
         } else {
-          restartSpeechRecognition(true);
+          console.error('Microphone permission denied');
         }
-      });
-    }
 
-    // Handle speech results
-    function handleSpeechResult(data) {
-      if (!EchoMind.Permissions.isGranted()) {
-        console.log('No microphone permission, ignoring speech result');
-        return;
+      } catch (error) {
+        console.error('Initialization error:', error);
       }
-
-      const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
-      console.log('Raw transcript:', transcript);
-
-      // If we're waiting for a response, process any final transcript
-      if (state.waitingForResponse && data.finalTranscript) {
-        console.log('Processing response:', transcript);
-        handleResponse(transcript);
-        return;
-      }
-
-      // Check for trigger word in any transcript
-      if (transcript.includes(TRIGGER_WORD)) {
-        console.log('Trigger word detected');
-        
-        // If this is a final result with both trigger and response
-        if (data.finalTranscript) {
-          const parts = transcript.split(TRIGGER_WORD);
-          if (parts.length > 1) {
-            // Get the text after the last occurrence of the trigger word
-            const response = parts[parts.length - 1].trim();
-            console.log('Found immediate response:', response);
-            if (response) {
-              handleResponse(response);
-              return;
-            }
-          }
-        }
-        
-        // Start waiting for response if we haven't processed one immediately
-        if (!state.searchInitiated) {
-          startWaitingForResponse();
-        }
-      }
-    }
-
-    // Restart speech recognition
-    function restartSpeechRecognition(aggressive = false) {
-      if (!EchoMind.Permissions.isGranted()) {
-        console.log('No microphone permission, not restarting');
-        return;
-      }
-
-      const delay = aggressive ? 100 : 1000;
-      setTimeout(() => {
-        if (!state.isListening && state.speechModule) {
-          console.log('Restarting speech recognition');
-          state.speechModule.start();
-          state.isListening = true;
-        }
-      }, delay);
-    }
-
-    // Handle waiting for and processing response
-    function startWaitingForResponse() {
-      console.log('Starting to wait for response');
-      state.waitingForResponse = true;
-      state.searchInitiated = false;
-      state.lastTranscript = '';
-      
-      // Clear any existing timeout
-      if (state.triggerTimeout) {
-        clearTimeout(state.triggerTimeout);
-      }
-
-      // Set timeout to stop waiting for response
-      state.triggerTimeout = setTimeout(() => {
-        console.log('Response wait timeout reached');
-        state.waitingForResponse = false;
-        state.searchInitiated = false;
-      }, CONFIG.responseDuration);
-    }
-
-    function handleResponse(transcript) {
-      console.log('Handling response:', transcript);
-      
-      // Clean the transcript
-      transcript = transcript.replace(new RegExp(TRIGGER_WORD, 'gi'), '').trim();
-      console.log('Cleaned transcript:', transcript);
-      
-      // Ignore if empty or too short
-      if (!transcript || transcript.length < CONFIG.minResponseLength) {
-        console.log('Response too short, ignoring');
-        return;
-      }
-
-      // Don't process if we already initiated a search
-      if (state.searchInitiated) {
-        console.log('Search already initiated, ignoring response');
-        return;
-      }
-
-      // Process the response if it's different from last transcript
-      if (transcript !== state.lastTranscript) {
-        console.log('Initiating search for:', transcript);
-        state.lastTranscript = transcript;
-        state.searchInitiated = true;
-        state.waitingForResponse = false;
-        
-        if (state.triggerTimeout) {
-          clearTimeout(state.triggerTimeout);
-        }
-        
-        performImageSearch(transcript);
-      } else {
-        console.log('Duplicate response, ignoring:', transcript);
-      }
-    }
-
-    // Perform Google Image search
-    function performImageSearch(query) {
-      if (!query) {
-        console.log('No query provided for image search');
-        return;
-      }
-
-      console.log('Preparing to search for:', query);
-      
-      // Final cleanup of query
-      query = query.trim();
-      
-      if (query.length >= CONFIG.minResponseLength) {
-        console.log('Navigating to image search for:', query);
-        // Stop listening before navigating
-        if (state.speechModule && state.isListening) {
-          state.speechModule.stop();
-          state.isListening = false;
-        }
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-      } else {
-        console.log('Query too short after cleaning:', query);
-        // Reset state since we're not performing the search
-        state.searchInitiated = false;
-        state.waitingForResponse = false;
-      }
-    }
+    });
 
     // Regular Google search
     function performSearch() {
@@ -510,9 +378,6 @@
       }
     });
 
-    // Initialize when the page loads
-    document.addEventListener('DOMContentLoaded', initialize);
-
     // Handle page unload
     window.addEventListener('beforeunload', () => {
       if (state.isListening) {
@@ -523,7 +388,7 @@
     // Check if we should restart recognition on page load
     if (localStorage.getItem('speechRecognitionActive') === 'true') {
       localStorage.removeItem('speechRecognitionActive');
-      setTimeout(initialize, 500);
+      setTimeout(initializeSpeechRecognition, 500);
     }
   </script>
 </body>
