@@ -284,9 +284,11 @@
             recognition: recognition,
             start: function() {
               try {
-                this.recognition.start();
-                this.isListening = true;
-                console.log('Speech recognition started');
+                if (!this.isListening) {
+                  this.recognition.start();
+                  this.isListening = true;
+                  console.log('Speech recognition started');
+                }
               } catch (e) {
                 console.error('Failed to start recognition:', e);
                 // If we get a "already started" error, just mark as listening
@@ -318,28 +320,22 @@
                   break;
                 case 'end':
                   this.recognition.onend = () => {
-                    console.log('Recognition ended, auto-restarting...');
+                    console.log('Recognition ended');
                     this.isListening = false;
                     handler();
-                    // Auto-restart recognition
-                    setTimeout(() => this.start(), 100);
                   };
                   break;
                 case 'error':
                   this.recognition.onerror = (error) => {
                     console.error('Recognition error:', error);
                     handler(error);
-                    // Auto-restart on error unless it's a permission error
-                    if (error.error !== 'not-allowed') {
-                      setTimeout(() => this.start(), 1000);
-                    }
                   };
                   break;
               }
             }
           };
         } else {
-          // Initialize EchoMind speech module with auto-restart
+          // Initialize EchoMind speech module
           state.speechModule = window.EchoMind.Speech;
           await state.speechModule.init({
             continuous: true,
@@ -347,8 +343,7 @@
             lang: 'en-US',
             maxAlternatives: 1,
             debugMode: true,
-            autoRestart: true,
-            autoRestartDelay: 100,
+            autoRestart: false,
             keepAlive: true
           });
         }
@@ -362,20 +357,10 @@
         await requestMicrophonePermission();
         
         // Start listening immediately
-        console.log('Starting speech recognition immediately');
+        console.log('Starting speech recognition');
         if (!state.speechModule.isListening) {
           state.speechModule.start();
         }
-        
-        // Set up periodic permission checks and auto-restart
-        setInterval(async () => {
-          console.log('Checking recognition state...');
-          if (!state.speechModule.isListening) {
-            console.log('Recognition not active, restarting...');
-            await checkAndRenewPermissions();
-            state.speechModule.start();
-          }
-        }, 1000);
         
         // Set up mobile-specific handlers
         if (state.isMobile) {
@@ -391,8 +376,6 @@
         console.error('Initialization error:', error);
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           await handlePermissionError();
-        } else {
-          setTimeout(initialize, 2000);
         }
       }
     }
@@ -402,16 +385,13 @@
       state.speechModule.on('result', handleSpeechResult);
       
       state.speechModule.on('end', () => {
-        console.log('Speech recognition ended, restarting...');
-        restartSpeechRecognition(true);
+        console.log('Speech recognition ended');
       });
 
       state.speechModule.on('error', async (error) => {
         console.error('Speech recognition error:', error);
         if (error.error === 'not-allowed' || error.error === 'service-not-allowed') {
           await handlePermissionError();
-        } else {
-          restartSpeechRecognition(true);
         }
       });
     }
@@ -498,24 +478,13 @@
       }
     }
 
-    // Restart speech recognition
-    function restartSpeechRecognition(aggressive = false) {
-      const delay = aggressive ? 100 : 1000;
-      setTimeout(() => {
-        if (!state.speechModule.isListening) {
-          console.log('Restarting speech recognition');
-          state.speechModule.start();
-        }
-      }, delay);
-    }
-
     // Handle visibility change
     async function handleVisibilityChange() {
       if (!document.hidden) {
         console.log('Page visible, checking permissions and restarting if needed');
         await checkAndRenewPermissions();
         if (!state.speechModule.isListening) {
-          restartSpeechRecognition(true);
+          state.speechModule.start();
         }
       }
     }
@@ -534,7 +503,7 @@
         console.log('Restoring speech recognition state');
         localStorage.removeItem('speechRecognitionActive');
         await checkAndRenewPermissions();
-        restartSpeechRecognition(true);
+        state.speechModule.start();
       }
     }
 
@@ -542,7 +511,7 @@
     async function handleResume() {
       console.log('App resumed, checking permissions and restarting');
       await checkAndRenewPermissions();
-      restartSpeechRecognition(true);
+      state.speechModule.start();
     }
 
     // Check and renew permissions
