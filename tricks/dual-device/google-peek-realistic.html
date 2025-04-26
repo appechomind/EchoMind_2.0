@@ -216,203 +216,155 @@
   <script>
     const TRIGGER_WORD = 'specifically';
     const MIN_RESPONSE_LENGTH = 3;
-    const WAIT_DURATION = 5000; // 5 seconds to wait for response
     
-    let isWaitingForResponse = false;
-    let waitTimeout = null;
-    let lastProcessedTranscript = '';
-    
-    function handleSpeechResult(data) {
-      // Get the transcript from the speech result
-      const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
-      
-      if (!transcript) {
-        return;
-      }
+    let recognition = null;
+    let isListening = false;
+    let lastTranscript = '';
 
-      console.debug('Speech result:', transcript);
-
-      // Don't process the same transcript multiple times
-      if (transcript === lastProcessedTranscript) {
-        console.debug('Duplicate transcript, ignoring');
-        return;
-      }
-      lastProcessedTranscript = transcript;
-
-      // Check for trigger word
-      if (transcript.includes(TRIGGER_WORD)) {
-        console.debug('Trigger word detected');
-        if (!isWaitingForResponse) {
-          startWaitingForResponse();
-          
-          // Get everything after the last occurrence of the trigger word
-          const triggerIndex = transcript.lastIndexOf(TRIGGER_WORD);
-          const response = transcript.substring(triggerIndex + TRIGGER_WORD.length).trim();
-          console.debug('Extracted response:', response);
-          
-          if (response.length >= MIN_RESPONSE_LENGTH) {
-            console.debug('Response meets length requirement, handling response');
-            handleResponse(response);
-          } else {
-            console.debug('Response too short, waiting for more input');
-          }
-        } else {
-          console.debug('Already waiting for response, ignoring trigger word');
-        }
-      } else if (isWaitingForResponse) {
-        console.debug('Processing response while waiting');
-        handleResponse(transcript);
-      }
-    }
-
-    function startWaitingForResponse() {
-      console.debug('Started waiting for response');
-      isWaitingForResponse = true;
-      
-      // Clear any existing timeout
-      if (waitTimeout) {
-        clearTimeout(waitTimeout);
-      }
-      
-      // Set new timeout
-      waitTimeout = setTimeout(() => {
-        console.debug('Response wait timeout');
-        isWaitingForResponse = false;
-      }, WAIT_DURATION);
-    }
-
-    function handleResponse(transcript) {
-      // Clean up the transcript
-      const cleanTranscript = transcript.toLowerCase()
-        .replace(TRIGGER_WORD, '')
-        .trim();
-        
-      console.debug('Processing response:', cleanTranscript);
-      
-      // Ignore if it's just the trigger word or too short
-      if (cleanTranscript.length < MIN_RESPONSE_LENGTH) {
-        console.debug('Response too short or just trigger word, ignoring');
-        return;
-      }
-      
-      // Stop waiting for more responses
-      isWaitingForResponse = false;
-      if (waitTimeout) {
-        clearTimeout(waitTimeout);
-      }
-      
-      // Perform the search
-      console.debug('Initiating Google Images search for:', cleanTranscript);
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(cleanTranscript)}&tbm=isch`;
-      console.debug('Search URL:', searchUrl);
-      
-      // Use a small delay to ensure logs are visible
-      setTimeout(() => {
-        window.location.href = searchUrl;
-      }, 100);
-    }
-
-    // Initialize when the page loads
-    window.addEventListener('load', async () => {
-      console.debug('Page loaded, initializing speech recognition...');
-      
+    // Initialize speech recognition
+    function initSpeechRecognition() {
       try {
-        // Initialize permissions first with debug mode
-        window.EchoMindPermissions.init({
-          debugMode: true
-        });
-
-        // Request permission immediately
-        const permissionGranted = await window.EchoMindPermissions.requestPermission();
-        console.debug('Initial permission request result:', permissionGranted);
-
-        if (permissionGranted) {
-          // Initialize speech module
-          const initSuccess = await window.EchoMind.Speech.init({
-            continuous: true,
-            interimResults: true,
-            lang: 'en-US',
-            debugMode: true,
-            autoRestart: true
-          });
-
-          if (!initSuccess) {
-            throw new Error('Failed to initialize speech recognition');
-          }
-
-          // Set up result handler
-          window.EchoMind.Speech.on('result', handleSpeechResult);
-          window.EchoMind.Speech.on('error', (error) => {
-            console.error('Speech recognition error:', error);
-          });
-
-          // Start listening immediately
-          const startPromise = window.EchoMind.Speech.start();
-          if (startPromise && typeof startPromise.then === 'function') {
-            const started = await startPromise;
-            console.debug('Speech recognition start result:', started);
-            
-            if (started) {
-              document.querySelector('.mic-icon').style.opacity = '1';
-              console.debug('Listening for trigger word "specifically"...');
-            } else {
-              console.error('Failed to start speech recognition');
-            }
-          } else {
-            console.error('Invalid return from speech.start()');
-          }
-        } else {
-          console.error('Permission not granted');
+        // Check for browser support
+        if (!('webkitSpeechRecognition' in window)) {
+          console.error('Speech recognition not supported');
+          return;
         }
+
+        // Create recognition object
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        // Set up handlers
+        recognition.onstart = () => {
+          console.debug('Speech recognition started');
+          isListening = true;
+          document.querySelector('.mic-icon').style.opacity = '1';
+        };
+
+        recognition.onend = () => {
+          console.debug('Speech recognition ended');
+          isListening = false;
+          document.querySelector('.mic-icon').style.opacity = '0.6';
+          
+          // Restart if needed
+          if (document.visibilityState === 'visible') {
+            setTimeout(() => {
+              if (!isListening) startListening();
+            }, 100);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          isListening = false;
+          
+          if (event.error === 'not-allowed') {
+            requestMicrophonePermission();
+          }
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = Array.from(event.results)
+            .map(result => result[0].transcript.toLowerCase())
+            .join(' ');
+
+          console.debug('Speech result:', transcript);
+
+          // Don't process the same transcript
+          if (transcript === lastTranscript) return;
+          lastTranscript = transcript;
+
+          // Check for trigger word
+          if (transcript.includes(TRIGGER_WORD)) {
+            console.debug('Trigger word detected');
+            
+            // Get everything after the trigger word
+            const triggerIndex = transcript.lastIndexOf(TRIGGER_WORD);
+            const searchTerm = transcript.substring(triggerIndex + TRIGGER_WORD.length).trim();
+            
+            if (searchTerm.length >= MIN_RESPONSE_LENGTH) {
+              console.debug('Performing search for:', searchTerm);
+              performImageSearch(searchTerm);
+            }
+          }
+        };
+
+        startListening();
       } catch (error) {
-        console.error('Error during initialization:', error);
+        console.error('Error initializing speech recognition:', error);
+      }
+    }
+
+    // Start listening
+    function startListening() {
+      if (!recognition) {
+        console.debug('Recognition not initialized');
+        return;
+      }
+
+      try {
+        recognition.start();
+        console.debug('Started listening');
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        if (error.name === 'NotAllowedError') {
+          requestMicrophonePermission();
+        }
+      }
+    }
+
+    // Request microphone permission
+    async function requestMicrophonePermission() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        console.debug('Microphone permission granted');
+        initSpeechRecognition();
+        return true;
+      } catch (error) {
+        console.error('Microphone permission error:', error);
+        return false;
+      }
+    }
+
+    // Perform image search
+    function performImageSearch(query) {
+      if (!query) return;
+      
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+      console.debug('Navigating to:', searchUrl);
+      window.location.href = searchUrl;
+    }
+
+    // Handle page visibility
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (!isListening) startListening();
+      } else {
+        if (recognition) recognition.stop();
       }
     });
 
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible') {
-        console.debug('Page became visible, checking permissions...');
-        const granted = await window.EchoMindPermissions.checkPermission();
-        
-        if (granted) {
-          const startPromise = window.EchoMind.Speech.start();
-          if (startPromise && typeof startPromise.then === 'function') {
-            const started = await startPromise;
-            console.debug('Speech recognition restart result:', started);
-          }
-        } else {
-          console.debug('Requesting permission on visibility change...');
-          const newGranted = await window.EchoMindPermissions.requestPermission();
-          if (newGranted) {
-            await window.EchoMind.Speech.start();
-          }
-        }
-      } else {
-        // Stop recognition when page is hidden
-        if (window.EchoMind.Speech) {
-          window.EchoMind.Speech.stop();
-        }
-      }
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      console.debug('Page loaded, requesting microphone permission...');
+      requestMicrophonePermission();
     });
 
     // Handle page unload
     window.addEventListener('beforeunload', () => {
-      if (window.EchoMind.Speech) {
-        window.EchoMind.Speech.stop();
-        localStorage.setItem('speechRecognitionActive', 'true');
+      if (recognition) {
+        recognition.stop();
+        localStorage.setItem('wasListening', 'true');
       }
     });
 
-    // Check if we should restart recognition on page load
-    if (localStorage.getItem('speechRecognitionActive') === 'true') {
-      localStorage.removeItem('speechRecognitionActive');
-      window.EchoMindPermissions.requestPermission().then(async granted => {
-        if (granted) {
-          await window.EchoMind.Speech.start();
-          console.debug('Restarted speech recognition from stored state');
-        }
-      });
+    // Check if we should restart
+    if (localStorage.getItem('wasListening') === 'true') {
+      localStorage.removeItem('wasListening');
+      requestMicrophonePermission();
     }
 
     // Regular Google search
