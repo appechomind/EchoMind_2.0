@@ -217,11 +217,15 @@
     // State management
     const state = {
       isListening: false,
-      speechModule: null
+      speechModule: null,
+      collectingSearch: false,
+      searchTimeout: null,
+      collectedText: ''
     };
 
-    // The trigger word
+    // The trigger word and collection time
     const TRIGGER_WORD = 'specifically';
+    const COLLECTION_TIME = 15000; // 15 seconds
 
     // Handle speech results
     function handleSpeechResult(data) {
@@ -233,17 +237,42 @@
       
       console.log('Heard:', transcript);
 
+      // If we're collecting search terms
+      if (state.collectingSearch) {
+        state.collectedText = transcript;
+        console.log('Collecting:', transcript);
+        return;
+      }
+
       // Check if transcript contains the trigger word
       if (transcript.includes(TRIGGER_WORD)) {
-        // Find everything AFTER the trigger word
-        const searchTerms = transcript.split(TRIGGER_WORD)[1];
-        
-        // If we have search terms after "specifically"
-        if (searchTerms && searchTerms.trim()) {
-          console.log('Searching for:', searchTerms.trim());
-          performImageSearch(searchTerms.trim());
-        }
+        console.log('Trigger word detected! Collecting for 15 seconds...');
+        startCollecting();
       }
+    }
+
+    // Start collecting search terms
+    function startCollecting() {
+      // Reset collection state
+      state.collectingSearch = true;
+      state.collectedText = '';
+
+      // Clear any existing timeout
+      if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
+      }
+
+      // Set timeout to perform search after 15 seconds
+      state.searchTimeout = setTimeout(() => {
+        const searchTerms = state.collectedText.replace(TRIGGER_WORD, '').trim();
+        if (searchTerms) {
+          console.log('15 seconds up! Searching for:', searchTerms);
+          performImageSearch(searchTerms);
+        } else {
+          console.log('No search terms collected');
+          state.collectingSearch = false;
+        }
+      }, COLLECTION_TIME);
     }
 
     // Perform Google Image search
@@ -254,6 +283,12 @@
       if (state.speechModule && state.isListening) {
         state.speechModule.stop();
         state.isListening = false;
+      }
+
+      // Clear collection state
+      state.collectingSearch = false;
+      if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
       }
 
       // Navigate to Google Images search
@@ -282,7 +317,7 @@
           
           // Restart if needed
           setTimeout(() => {
-            if (!state.isListening) {
+            if (!state.isListening && !state.collectingSearch) {
               state.speechModule.start();
               state.isListening = true;
               console.log('Speech recognition restarted');
