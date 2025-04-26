@@ -223,13 +223,12 @@
 
     // Command phrases that trigger the search
     const TRIGGER_PHRASES = [
-      'what were you thinking',
-      'what were you thinking of',
-      'what did you search for',
       'what did you think of',
-      'what was on your mind',
-      'tell me what you thought of',
-      'show me what you thought of'
+      'specifically',
+      'tell me specifically',
+      'show me specifically',
+      'what exactly',
+      'tell me exactly'
     ];
 
     // Initialize EchoMind modules
@@ -255,17 +254,13 @@
             // Check for trigger phrases
             for (const phrase of TRIGGER_PHRASES) {
               if (transcript.includes(phrase)) {
-                // Extract the search term - everything after the trigger phrase
-                const searchStart = transcript.indexOf(phrase) + phrase.length;
-                let searchTerm = transcript.slice(searchStart).trim();
+                // Find where the trigger phrase ends
+                const phraseEnd = transcript.indexOf(phrase) + phrase.length;
+                // Get everything after the trigger phrase
+                let searchTerm = transcript.slice(phraseEnd).trim();
                 
-                // If no specific term found, use the last part of the transcript
-                if (!searchTerm) {
-                  const words = transcript.split(' ');
-                  searchTerm = words[words.length - 1];
-                }
-                
-                if (searchTerm) {
+                // Only search if we have a term after the trigger phrase
+                if (searchTerm && searchTerm.length > 0) {
                   performImageSearch(searchTerm);
                 }
                 return;
