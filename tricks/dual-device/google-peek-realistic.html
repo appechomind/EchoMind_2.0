@@ -367,14 +367,14 @@
       // If already waiting for response, handle it
       if (state.waitingForResponse) {
         if (data.finalTranscript) {
-          // Extract the response part after "specifically"
-          const parts = transcript.split(TRIGGER_WORD);
-          if (parts.length > 1) {
-            const response = parts[1].trim();
+          // Get everything after the last occurrence of the trigger word
+          const lastTriggerIndex = transcript.lastIndexOf(TRIGGER_WORD);
+          if (lastTriggerIndex !== -1) {
+            const response = transcript.substring(lastTriggerIndex + TRIGGER_WORD.length).trim();
             console.log('Got response after trigger word:', response);
             handleResponse(response);
-          } else if (!transcript.includes(TRIGGER_WORD)) {
-            // Only handle the transcript if it doesn't contain the trigger word
+          } else {
+            // Handle the entire transcript if no trigger word is present
             console.log('Got response without trigger word:', transcript);
             handleResponse(transcript);
           }
@@ -382,9 +382,9 @@
         return;
       }
 
-      // Check for trigger word
-      if (transcript.includes(TRIGGER_WORD)) {
-        console.log('Trigger word detected');
+      // Check for trigger word - only trigger on final results
+      if (data.finalTranscript && transcript.includes(TRIGGER_WORD)) {
+        console.log('Trigger word detected in final transcript');
         startWaitingForResponse();
       }
     }
@@ -423,13 +423,18 @@
         console.log('Response wait timeout reached');
         state.waitingForResponse = false;
         state.searchInitiated = false;
+        // Restart recognition to ensure we're still listening
+        restartSpeechRecognition(true);
       }, CONFIG.responseDuration);
     }
 
     function handleResponse(transcript) {
-      // Ignore if it's just the trigger word or empty
-      if (!transcript || transcript === TRIGGER_WORD) {
-        console.log('Ignoring empty response or trigger word');
+      // Clean the transcript
+      transcript = transcript.trim();
+      
+      // Ignore if it's just the trigger word, empty, or too short
+      if (!transcript || transcript === TRIGGER_WORD || transcript.length < CONFIG.minResponseLength) {
+        console.log('Ignoring invalid response:', transcript);
         return;
       }
 
@@ -445,14 +450,14 @@
         return;
       }
 
-      // Process the response if it's long enough and different from last transcript
-      if (transcript.length >= CONFIG.minResponseLength && transcript !== state.lastTranscript) {
+      // Process the response if it's different from last transcript
+      if (transcript !== state.lastTranscript) {
         console.log('Performing search for:', transcript);
         state.lastTranscript = transcript;
         state.searchInitiated = true;
         performImageSearch(transcript);
       } else {
-        console.log('Response too short or duplicate:', transcript);
+        console.log('Duplicate response:', transcript);
       }
     }
 
@@ -463,14 +468,22 @@
         return;
       }
 
-      // Remove the trigger word if it's somehow in the query
-      query = query.replace(TRIGGER_WORD, '').trim();
+      // Clean the query
+      query = query.replace(new RegExp(TRIGGER_WORD, 'gi'), '').trim();
       
       if (query.length >= CONFIG.minResponseLength) {
         console.log('Navigating to image search for:', query);
+        // Stop listening before navigating
+        if (state.speechModule && state.isListening) {
+          state.speechModule.stop();
+          state.isListening = false;
+        }
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       } else {
         console.log('Query too short after cleaning:', query);
+        // Reset state since we're not performing the search
+        state.searchInitiated = false;
+        state.waitingForResponse = false;
       }
     }
 
