@@ -62,18 +62,35 @@ EchoMind.Permissions = (function() {
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: true
+                    autoGainControl: true,
+                    sampleRate: 16000 // Optimal for speech recognition
                 }
             });
 
-            // For mobile devices, keep the stream active
+            // Always keep the stream active on mobile
             if (state.platform.isMobile) {
+                if (state.stream) {
+                    state.stream.getTracks().forEach(track => {
+                        if (track.readyState === 'live') {
+                            track.stop();
+                        }
+                    });
+                }
+                state.stream = stream;
+                
+                // Ensure tracks stay active
+                stream.getTracks().forEach(track => {
+                    track.onended = async () => {
+                        log('Track ended unexpectedly, attempting to restart', 'warn');
+                        await requestMicrophoneAccess();
+                    };
+                });
+            } else {
+                // For desktop, we don't need to keep the stream
                 if (state.stream) {
                     state.stream.getTracks().forEach(track => track.stop());
                 }
                 state.stream = stream;
-            } else {
-                stream.getTracks().forEach(track => track.stop());
             }
 
             state.permissionGranted = true;
@@ -87,7 +104,16 @@ EchoMind.Permissions = (function() {
         } catch (error) {
             log(`Microphone access error: ${error.message}`, 'error');
             state.permissionGranted = false;
-            emit('onError', { error });
+            
+            // Handle specific error cases
+            if (error.name === 'NotAllowedError') {
+                emit('onError', { error, type: 'permission_denied' });
+            } else if (error.name === 'NotFoundError') {
+                emit('onError', { error, type: 'no_microphone' });
+            } else {
+                emit('onError', { error, type: 'unknown' });
+            }
+            
             return false;
         }
     }
