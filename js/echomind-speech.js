@@ -20,7 +20,6 @@ EchoMind.Speech = (function() {
     let _eventHandlers = {};
     let _interimTranscript = '';
     let _finalTranscript = '';
-    let _permissionGranted = false;
     let _autoRestartTimeout = null;
     
     // Default options
@@ -31,7 +30,8 @@ EchoMind.Speech = (function() {
         maxAlternatives: 1,
         debugMode: false,
         autoRestart: true,
-        autoRestartDelay: 300 // ms delay before restarting
+        autoRestartDelay: 300, // ms delay before restarting
+        keepAlive: true
     };
     
     // Private methods
@@ -54,128 +54,99 @@ EchoMind.Speech = (function() {
     }
 
     function _restartRecognition() {
-        if (_options.autoRestart && _permissionGranted && !_isListening) {
+        if (_options.autoRestart && !_isListening && EchoMind.Permissions.isGranted()) {
             clearTimeout(_autoRestartTimeout);
             _autoRestartTimeout = setTimeout(() => {
                 _debug('Auto-restarting recognition...');
                 try {
                     _recognition.start();
+                    _isListening = true;
                 } catch (e) {
                     _debug('Error auto-restarting recognition: ' + e.message);
+                    _isListening = false;
                 }
             }, _options.autoRestartDelay);
         }
     }
     
-    function _checkPermissions() {
-        return navigator.permissions.query({ name: 'microphone' })
-            .then(permissionStatus => {
-                _permissionGranted = permissionStatus.state === 'granted';
-                
-                // Listen for permission changes
-                permissionStatus.onchange = () => {
-                    _permissionGranted = permissionStatus.state === 'granted';
-                    if (!_permissionGranted) {
-                        _triggerEvent('error', {
-                            error: 'not-allowed',
-                            message: 'Microphone permission denied'
-                        });
-                    }
-                };
-                
-                return _permissionGranted;
-            })
-            .catch(() => {
-                // Fallback to getUserMedia if permissions API not available
-                return navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        stream.getTracks().forEach(track => track.stop());
-                        _permissionGranted = true;
-                        return true;
-                    })
-                    .catch(() => {
-                        _permissionGranted = false;
-                        return false;
-                    });
-            });
-    }
-
     function _initRecognition() {
         try {
-            // Check if browser supports speech recognition
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                throw new Error('Speech recognition not supported in this browser.');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                _debug('Speech Recognition not supported');
+                return false;
             }
             
-            // Initialize the recognition object
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             _recognition = new SpeechRecognition();
             
-            // Configure recognition settings
+            // Configure recognition
             _recognition.continuous = _options.continuous;
             _recognition.interimResults = _options.interimResults;
-            _recognition.lang = _options.lang;
             _recognition.maxAlternatives = _options.maxAlternatives;
+            _recognition.lang = _options.lang;
             
-            // Set up event handlers for the recognition object
-            _recognition.onstart = function(event) {
-                _isListening = true;
+            // Set up handlers
+            _recognition.onstart = function() {
                 _debug('Recognition started');
-                _triggerEvent('start', { event });
+                _isListening = true;
+                _triggerEvent('start');
             };
             
-            _recognition.onend = function(event) {
-                _isListening = false;
+            _recognition.onend = function() {
                 _debug('Recognition ended');
-                _triggerEvent('end', { event });
-                _restartRecognition();
+                _isListening = false;
+                _triggerEvent('end');
+                
+                // Only auto-restart if we have permission
+                if (_options.autoRestart && EchoMind.Permissions.isGranted()) {
+                    _restartRecognition();
+                }
             };
             
             _recognition.onresult = function(event) {
-                _interimTranscript = '';
-                _finalTranscript = '';
+                // Only process results if we have permission
+                if (!EchoMind.Permissions.isGranted()) {
+                    _debug('No permission, ignoring results');
+                    return;
+                }
+
+                let interimTranscript = '';
+                let finalTranscript = '';
                 
-                // Process results
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript;
-                    
                     if (event.results[i].isFinal) {
-                        _finalTranscript += transcript;
+                        finalTranscript += transcript;
                     } else {
-                        _interimTranscript += transcript;
+                        interimTranscript += transcript;
                     }
                 }
                 
-                // Trigger appropriate events
-                if (_finalTranscript) {
-                    _debug('Final result: ' + _finalTranscript);
-                    _triggerEvent('onFinalResult', { 
-                        transcript: _finalTranscript,
-                        confidence: event.results[event.resultIndex][0].confidence
-                    });
+                if (interimTranscript !== _interimTranscript) {
+                    _interimTranscript = interimTranscript;
+                    _triggerEvent('onInterimResult', { transcript: _interimTranscript });
                 }
                 
-                if (_interimTranscript) {
-                    _debug('Interim result: ' + _interimTranscript);
-                    _triggerEvent('onInterimResult', { 
-                        transcript: _interimTranscript 
-                    });
+                if (finalTranscript !== _finalTranscript) {
+                    _finalTranscript = finalTranscript;
+                    _triggerEvent('onFinalResult', { transcript: _finalTranscript });
                 }
                 
-                // Also trigger the general result event
                 _triggerEvent('result', {
-                    results: event.results,
-                    resultIndex: event.resultIndex,
-                    finalTranscript: _finalTranscript,
-                    interimTranscript: _interimTranscript
+                    interimTranscript: _interimTranscript,
+                    finalTranscript: _finalTranscript
                 });
             };
             
             _recognition.onerror = function(event) {
                 _debug('Recognition error: ' + event.error);
+                _isListening = false;
+
                 if (event.error === 'not-allowed') {
-                    _permissionGranted = false;
+                    // Let the permissions handler handle it
+                    EchoMind.Permissions.requestPermission();
                 }
+
                 _triggerEvent('error', { 
                     error: event.error,
                     message: event.message || ''
@@ -218,11 +189,6 @@ EchoMind.Speech = (function() {
     
     // Public API
     return {
-        /**
-         * Initialize the speech recognition module
-         * @param {Object} options - Configuration options
-         * @returns {Promise<Boolean>} Success status
-         */
         init: function(options = {}) {
             if (_initialized) {
                 console.warn('EchoMind.Speech is already initialized');
@@ -247,104 +213,88 @@ EchoMind.Speech = (function() {
                 speechend: []
             };
             
-            // Check permissions first, then initialize recognition
-            return _checkPermissions()
-                .then(hasPermission => {
-                    if (!hasPermission) {
-                        _debug('Microphone permission not granted');
-                        return false;
-                    }
-                    
-                    const success = _initRecognition();
-                    if (success) {
-                        _initialized = true;
-                        _debug('Speech recognition initialized successfully');
-                    }
-                    return success;
-                });
+            // Initialize recognition
+            const success = _initRecognition();
+            if (success) {
+                _initialized = true;
+                _debug('Speech recognition initialized successfully');
+            }
+            return Promise.resolve(success);
         },
         
-        /**
-         * Start listening for speech
-         * @returns {Boolean} Success status
-         */
         start: function() {
             if (!_initialized) {
-                console.error('EchoMind.Speech must be initialized before starting');
+                _debug('Speech recognition not initialized');
                 return false;
             }
             
-            if (_isListening) {
-                _debug('Already listening');
-                return true;
+            if (!EchoMind.Permissions.isGranted()) {
+                _debug('No microphone permission, requesting...');
+                return EchoMind.Permissions.requestPermission()
+                    .then(granted => {
+                        if (granted) {
+                            try {
+                                _recognition.start();
+                                _isListening = true;
+                                return true;
+                            } catch (e) {
+                                _debug('Error starting recognition: ' + e.message);
+                                _isListening = false;
+                                return false;
+                            }
+                        }
+                        return false;
+                    });
             }
             
             try {
                 _recognition.start();
-                _debug('Starting recognition...');
-                return true;
-            } catch (error) {
-                _debug('Error starting recognition: ' + error.message);
-                return false;
+                _isListening = true;
+                return Promise.resolve(true);
+            } catch (e) {
+                _debug('Error starting recognition: ' + e.message);
+                _isListening = false;
+                return Promise.resolve(false);
             }
         },
         
-        /**
-         * Stop listening for speech
-         * @returns {Boolean} Success status
-         */
         stop: function() {
-            if (!_initialized || !_isListening) {
-                return false;
+            if (_initialized && _isListening) {
+                try {
+                    _recognition.stop();
+                    _isListening = false;
+                    return true;
+                } catch (e) {
+                    _debug('Error stopping recognition: ' + e.message);
+                    return false;
+                }
             }
-            
-            try {
-                clearTimeout(_autoRestartTimeout);
-                _recognition.stop();
-                _debug('Stopping recognition...');
-                return true;
-            } catch (error) {
-                _debug('Error stopping recognition: ' + error.message);
-                return false;
-            }
+            return false;
         },
         
-        /**
-         * Check if speech recognition is currently active
-         * @returns {Boolean} True if listening, false otherwise
-         */
-        isListening: function() {
+        on: function(eventName, callback) {
+            if (_eventHandlers[eventName]) {
+                _eventHandlers[eventName].push(callback);
+                return true;
+            }
+            return false;
+        },
+        
+        off: function(eventName, callback) {
+            if (_eventHandlers[eventName]) {
+                _eventHandlers[eventName] = _eventHandlers[eventName]
+                    .filter(handler => handler !== callback);
+                return true;
+            }
+            return false;
+        },
+        
+        get isListening() {
             return _isListening;
         },
         
-        /**
-         * Check if speech recognition is supported in this browser
-         * @returns {Boolean} True if supported, false otherwise
-         */
-        isSupported: function() {
-            return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
-        },
-        
-        /**
-         * Register an event handler
-         * @param {String} eventName - Name of the event to handle
-         * @param {Function} handler - Event handler function
-         */
-        on: function(eventName, handler) {
-            if (_eventHandlers[eventName]) {
-                _eventHandlers[eventName].push(handler);
-            }
-        },
-        
-        /**
-         * Unregister an event handler
-         * @param {String} eventName - Name of the event
-         * @param {Function} handler - Event handler function to remove
-         */
-        off: function(eventName, handler) {
-            if (_eventHandlers[eventName]) {
-                _eventHandlers[eventName] = _eventHandlers[eventName].filter(h => h !== handler);
-            }
+        get isInitialized() {
+            return _initialized;
         }
     };
 })(); 

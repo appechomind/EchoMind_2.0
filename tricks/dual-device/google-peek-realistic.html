@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
+  <script src="../../js/echomind-permissions.js"></script>
   <script src="../../js/echomind-speech.js"></script>
   <script src="../../js/echomind-commands.js"></script>
   <style>
@@ -222,12 +223,6 @@
       waitingForResponse: false,
       lastTriggerTime: 0,
       triggerTimeout: null,
-      permissionGranted: false,
-      isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-      isAndroid: /Android/.test(navigator.userAgent),
-      isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-      permissionRetryCount: 0,
-      maxPermissionRetries: 3,
       lastTranscript: '',
       searchInitiated: false
     };
@@ -240,8 +235,6 @@
       responseWaitTime: 500,    // Reduced wait time after trigger
       responseDuration: 5000,   // How long to listen for the response
       minResponseLength: 2,     // Minimum length of response in characters
-      permissionCheckInterval: 10000,
-      permissionRetryDelay: 1000,
       audioConstraints: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -252,8 +245,55 @@
     // Initialize EchoMind modules
     async function initialize() {
       try {
-        console.log('Initializing speech recognition...');
+        console.log('Initializing permissions and speech recognition...');
         
+        // Initialize permissions handler first
+        EchoMind.Permissions.init({
+          debugMode: true,
+          checkInterval: 5000
+        });
+
+        // Set up permission change handler
+        EchoMind.Permissions.onPermissionChange(async ({ granted }) => {
+          console.log('Permission state changed:', granted);
+          if (granted) {
+            if (!state.isListening) {
+              await initializeSpeechRecognition();
+            }
+          } else {
+            state.isListening = false;
+            if (state.speechModule) {
+              state.speechModule.stop();
+            }
+          }
+        });
+
+        // Set up error handler
+        EchoMind.Permissions.onError(({ error }) => {
+          console.error('Permission error:', error);
+          // Attempt recovery based on error type
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            setTimeout(() => EchoMind.Permissions.requestPermission(), 1000);
+          }
+        });
+
+        // Request initial permission
+        const permissionGranted = await EchoMind.Permissions.requestPermission();
+        if (permissionGranted) {
+          await initializeSpeechRecognition();
+        } else {
+          console.error('Failed to get microphone permission');
+        }
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        setTimeout(initialize, 2000);
+      }
+    }
+
+    // Initialize speech recognition
+    async function initializeSpeechRecognition() {
+      try {
         // Initialize speech module with platform-specific settings
         state.speechModule = window.EchoMind.Speech;
         await state.speechModule.init({
@@ -272,31 +312,16 @@
         // Set up speech event handlers
         setupSpeechHandlers();
         
-        // Initial permission request
-        await requestMicrophonePermission();
-        
         // Start listening immediately
         if (!state.speechModule.isListening) {
           state.speechModule.start();
-        }
-        
-        // Set up periodic permission checks for mobile
-        if (state.isMobile) {
-          console.log('Setting up mobile-specific handlers');
-          setInterval(checkAndRenewPermissions, CONFIG.permissionCheckInterval);
-          document.addEventListener('visibilitychange', handleVisibilityChange);
-          document.addEventListener('pagehide', handlePageHide);
-          document.addEventListener('pageshow', handlePageShow);
-          document.addEventListener('resume', handleResume);
+          state.isListening = true;
         }
 
       } catch (error) {
-        console.error('Initialization error:', error);
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          await handlePermissionError();
-        } else {
-          setTimeout(initialize, 2000);
-        }
+        console.error('Speech initialization error:', error);
+        state.isListening = false;
+        setTimeout(initializeSpeechRecognition, 2000);
       }
     }
 
@@ -305,14 +330,22 @@
       state.speechModule.on('result', handleSpeechResult);
       
       state.speechModule.on('end', () => {
-        console.log('Speech recognition ended, restarting...');
-        restartSpeechRecognition(true);
+        console.log('Speech recognition ended');
+        state.isListening = false;
+        
+        // Only restart if we have permission
+        if (EchoMind.Permissions.isGranted()) {
+          restartSpeechRecognition(true);
+        }
       });
 
       state.speechModule.on('error', async (error) => {
         console.error('Speech recognition error:', error);
+        state.isListening = false;
+        
         if (error.error === 'not-allowed' || error.error === 'service-not-allowed') {
-          await handlePermissionError();
+          // Let the permissions handler handle it
+          await EchoMind.Permissions.requestPermission();
         } else {
           restartSpeechRecognition(true);
         }
@@ -321,6 +354,11 @@
 
     // Handle speech results
     function handleSpeechResult(data) {
+      if (!EchoMind.Permissions.isGranted()) {
+        console.log('No microphone permission, ignoring speech result');
+        return;
+      }
+
       console.log('Speech result received:', data);
       
       const transcript = (data.finalTranscript || data.interimTranscript || '').toLowerCase().trim();
@@ -350,135 +388,21 @@
       }
     }
 
-    // Request microphone permission with retry logic
-    async function requestMicrophonePermission() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: CONFIG.audioConstraints
-        });
-        
-        state.permissionGranted = true;
-        state.permissionRetryCount = 0;
-        
-        // Keep the stream active on mobile
-        if (state.isMobile) {
-          window.persistentStream = stream;
-        } else {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('Permission request failed:', error);
-        if (state.permissionRetryCount < state.maxPermissionRetries) {
-          state.permissionRetryCount++;
-          await new Promise(resolve => setTimeout(resolve, CONFIG.permissionRetryDelay));
-          return requestMicrophonePermission();
-        }
-        return false;
-      }
-    }
-
-    // Handle permission errors
-    async function handlePermissionError() {
-      if (state.isIOS) {
-        // iOS requires user interaction
-        await new Promise(resolve => {
-          const handleTouch = async () => {
-            document.removeEventListener('touchend', handleTouch);
-            await requestMicrophonePermission();
-            resolve();
-          };
-          document.addEventListener('touchend', handleTouch);
-        });
-      } else if (state.isAndroid) {
-        // Android might need multiple attempts
-        for (let i = 0; i < state.maxPermissionRetries; i++) {
-          const success = await requestMicrophonePermission();
-          if (success) break;
-          await new Promise(resolve => setTimeout(resolve, CONFIG.permissionRetryDelay));
-        }
-      }
-    }
-
     // Restart speech recognition
     function restartSpeechRecognition(aggressive = false) {
+      if (!EchoMind.Permissions.isGranted()) {
+        console.log('No microphone permission, not restarting');
+        return;
+      }
+
       const delay = aggressive ? 100 : 1000;
       setTimeout(() => {
-        if (!state.speechModule.isListening) {
+        if (!state.isListening && state.speechModule) {
           console.log('Restarting speech recognition');
           state.speechModule.start();
+          state.isListening = true;
         }
       }, delay);
-    }
-
-    // Handle visibility change
-    async function handleVisibilityChange() {
-      if (!document.hidden) {
-        console.log('Page visible, checking permissions and restarting if needed');
-        await checkAndRenewPermissions();
-        if (!state.speechModule.isListening) {
-          restartSpeechRecognition(true);
-        }
-      }
-    }
-
-    // Handle page hide
-    function handlePageHide() {
-      if (state.isMobile && window.persistentStream) {
-        console.log('Preserving speech recognition state');
-        localStorage.setItem('speechRecognitionActive', 'true');
-      }
-    }
-
-    // Handle page show
-    async function handlePageShow() {
-      if (localStorage.getItem('speechRecognitionActive') === 'true') {
-        console.log('Restoring speech recognition state');
-        localStorage.removeItem('speechRecognitionActive');
-        await checkAndRenewPermissions();
-        restartSpeechRecognition(true);
-      }
-    }
-
-    // Handle resume (mobile specific)
-    async function handleResume() {
-      console.log('App resumed, checking permissions and restarting');
-      await checkAndRenewPermissions();
-      restartSpeechRecognition(true);
-    }
-
-    // Check and renew permissions
-    async function checkAndRenewPermissions() {
-      if (!state.permissionGranted || state.isMobile) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: CONFIG.audioConstraints
-          });
-          
-          state.permissionGranted = true;
-          
-          // On mobile, keep the stream active
-          if (state.isMobile) {
-            if (window.persistentStream) {
-              window.persistentStream.getTracks().forEach(track => track.stop());
-            }
-            window.persistentStream = stream;
-          } else {
-            stream.getTracks().forEach(track => track.stop());
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('Permission check failed:', error);
-          state.permissionGranted = false;
-          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-            await handlePermissionError();
-          }
-          return false;
-        }
-      }
-      return true;
     }
 
     // Handle waiting for and processing response
@@ -553,12 +477,9 @@
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', initialize);
 
-    // Keep listening across page visibility changes
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     // Handle page unload
     window.addEventListener('beforeunload', () => {
-      if (state.speechModule && state.speechModule.isListening) {
+      if (state.isListening) {
         localStorage.setItem('speechRecognitionActive', 'true');
       }
     });
@@ -566,11 +487,7 @@
     // Check if we should restart recognition on page load
     if (localStorage.getItem('speechRecognitionActive') === 'true') {
       localStorage.removeItem('speechRecognitionActive');
-      setTimeout(() => {
-        if (state.speechModule && !state.speechModule.isListening) {
-          state.speechModule.start();
-        }
-      }, 500);
+      setTimeout(initialize, 500);
     }
   </script>
 </body>
