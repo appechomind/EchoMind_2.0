@@ -328,7 +328,7 @@
 
         if (permissionGranted) {
           // Initialize speech module
-          await window.EchoMind.Speech.init({
+          const initSuccess = await window.EchoMind.Speech.init({
             continuous: true,
             interimResults: true,
             lang: 'en-US',
@@ -336,18 +336,30 @@
             autoRestart: true
           });
 
+          if (!initSuccess) {
+            throw new Error('Failed to initialize speech recognition');
+          }
+
           // Set up result handler
           window.EchoMind.Speech.on('result', handleSpeechResult);
+          window.EchoMind.Speech.on('error', (error) => {
+            console.error('Speech recognition error:', error);
+          });
 
           // Start listening immediately
-          const started = await window.EchoMind.Speech.start();
-          console.debug('Speech recognition start result:', started);
-          
-          if (started) {
-            document.querySelector('.mic-icon').style.opacity = '1';
-            console.debug('Listening for trigger word "specifically"...');
+          const startPromise = window.EchoMind.Speech.start();
+          if (startPromise && typeof startPromise.then === 'function') {
+            const started = await startPromise;
+            console.debug('Speech recognition start result:', started);
+            
+            if (started) {
+              document.querySelector('.mic-icon').style.opacity = '1';
+              console.debug('Listening for trigger word "specifically"...');
+            } else {
+              console.error('Failed to start speech recognition');
+            }
           } else {
-            console.error('Failed to start speech recognition');
+            console.error('Invalid return from speech.start()');
           }
         } else {
           console.error('Permission not granted');
@@ -364,8 +376,11 @@
         const granted = await window.EchoMindPermissions.checkPermission();
         
         if (granted) {
-          const started = await window.EchoMind.Speech.start();
-          console.debug('Speech recognition restart result:', started);
+          const startPromise = window.EchoMind.Speech.start();
+          if (startPromise && typeof startPromise.then === 'function') {
+            const started = await startPromise;
+            console.debug('Speech recognition restart result:', started);
+          }
         } else {
           console.debug('Requesting permission on visibility change...');
           const newGranted = await window.EchoMindPermissions.requestPermission();
