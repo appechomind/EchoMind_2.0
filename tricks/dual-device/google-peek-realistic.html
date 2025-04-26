@@ -314,16 +314,19 @@
 
     // Initialize when the page loads
     window.addEventListener('load', () => {
-      // Initialize permissions first
+      // Initialize permissions first with debug mode
       window.EchoMindPermissions.init({
+        debugMode: true,
         onPermissionChange: async (status) => {
+          console.debug('Permission status changed:', status);
           if (status.granted) {
             try {
               // Initialize speech module
               await window.EchoMind.Speech.init({
                 continuous: true,
                 interimResults: true,
-                lang: 'en-US'
+                lang: 'en-US',
+                debugMode: true
               });
 
               // Set up result handler
@@ -337,9 +340,32 @@
             } catch (error) {
               console.error('Failed to initialize speech:', error);
             }
+          } else {
+            console.debug('Requesting microphone permission...');
+            const granted = await window.EchoMindPermissions.requestPermission();
+            console.debug('Permission request result:', granted);
           }
         }
       });
+
+      // Immediately request permission
+      window.EchoMindPermissions.requestPermission().then(granted => {
+        console.debug('Initial permission request result:', granted);
+      });
+    });
+
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.debug('Page became visible, checking permissions...');
+        window.EchoMindPermissions.checkPermission().then(granted => {
+          if (granted) {
+            window.EchoMind.Speech.start();
+          } else {
+            window.EchoMindPermissions.requestPermission();
+          }
+        });
+      }
     });
 
     // Regular Google search
@@ -368,7 +394,11 @@
     // Check if we should restart recognition on page load
     if (localStorage.getItem('speechRecognitionActive') === 'true') {
       localStorage.removeItem('speechRecognitionActive');
-      window.EchoMind.Speech.start();
+      window.EchoMindPermissions.requestPermission().then(granted => {
+        if (granted) {
+          window.EchoMind.Speech.start();
+        }
+      });
     }
   </script>
 </body>
