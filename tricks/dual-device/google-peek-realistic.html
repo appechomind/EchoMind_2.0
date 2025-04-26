@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Google</title>
+  <script src="../../js/permissions-handler.js"></script>
+  <script src="../../js/echomind-speech.js"></script>
+  <script src="../../js/echomind-commands.js"></script>
+  <script src="js/mobile-permissions.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 6px;
+      height: 60px;
+    }
+    
+    .header a {
+      text-decoration: none;
+      color: rgba(0,0,0,0.87);
+      margin-right: 15px;
+      font-size: 13px;
+    }
+    
+    .header a:hover {
+      text-decoration: underline;
+    }
+    
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .logo {
+      margin-bottom: 25px;
+      margin-top: -100px;
+    }
+    
+    .logo img {
+      width: 272px;
+      height: 92px;
+    }
+    
+    .search-container {
+      width: 580px;
+      margin: 0 auto;
+      position: relative;
+    }
+    
+    .search-box {
+      width: 100%;
+      display: flex;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 8px 14px;
+      box-shadow: none;
+      height: 44px;
+      align-items: center;
+    }
+    
+    .search-box:hover, .search-box:focus-within {
+      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+      border-color: rgba(223,225,229,0);
+    }
+    
+    .search-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      height: 34px;
+      font-size: 16px;
+    }
+    
+    .search-icons {
+      display: flex;
+      align-items: center;
+    }
+    
+    .search-icon, .mic-icon {
+      width: 20px;
+      height: 20px;
+      margin-left: 12px;
+      cursor: pointer;
+    }
+    
+    .buttons {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .buttons button {
+      background-color: #f8f9fa;
+      border: 1px solid #f8f9fa;
+      border-radius: 4px;
+      color: #3c4043;
+      font-family: arial,sans-serif;
+      font-size: 14px;
+      margin: 11px 4px;
+      padding: 0 16px;
+      height: 36px;
+      cursor: pointer;
+    }
+    
+    .buttons button:hover {
+      box-shadow: 0 1px 1px rgba(0,0,0,.1);
+      background-color: #f8f9fa;
+      border: 1px solid #dadce0;
+      color: #202124;
+    }
+    
+    .footer {
+      background: #f2f2f2;
+      margin-top: auto;
+    }
+    
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-top: 1px solid #dadce0;
+    }
+    
+    .footer-content a {
+      color: #70757a;
+      text-decoration: none;
+      font-size: 14px;
+      margin-right: 20px;
+    }
+    
+    .footer-content a:hover {
+      text-decoration: underline;
+    }
+    
+    .left-footer, .right-footer {
+      display: flex;
+    }
+    
+    /* Status and notification styling */
+    .status {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      border-radius: 20px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 14px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .status.visible {
+      opacity: 1;
+    }
+    
+    #transcript {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 600px;
+      padding: 10px;
+      border-radius: 10px;
+      background-color: rgba(0, 0, 0, 0.06);
+      z-index: 1000;
+    }
+    
+    .interim {
+      color: gray;
+      font-style: italic;
+    }
+    
+    /* Trick-specific styles */
+    .trick-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      color: white;
+      text-align: center;
+    }
+    
+    .trick-overlay.active {
+      display: flex;
+    }
+    
+    .trick-content {
+      padding: 40px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      max-width: 600px;
+    }
+    
+    .trick-content h2 {
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    
+    #countdown {
+      font-size: 72px;
+      font-weight: bold;
+      margin: 40px 0;
+      color: #4285f4;
+    }
+    
+    .trick-button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    
+    .trick-button:hover {
+      background-color: #357ae8;
+    }
+    
+    .speech-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      display: none;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .speech-indicator.active {
+      display: flex;
+    }
+    
+    .speech-dot {
+      width: 10px;
+      height: 10px;
+      background: #4285f4;
+      border-radius: 50%;
+      margin-right: 10px;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Mobile-specific permission UI */
+    .permission-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      padding: 20px;
+    }
+
+    .permission-content {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      max-width: 90%;
+      width: 400px;
+      text-align: center;
+    }
+
+    .permission-content h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .permission-content p {
+      color: #666;
+      line-height: 1.6;
+      margin: 15px 0;
+    }
+
+    .permission-steps {
+      text-align: left;
+      margin: 20px 0;
+      padding-left: 20px;
+    }
+
+    .permission-steps li {
+      margin: 10px 0;
+      color: #444;
+    }
+
+    .permission-button {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background-color 0.3s;
+    }
+
+    .permission-button:hover {
+      background: #357ae8;
+    }
+
+    /* iOS tap instruction */
+    .ios-tap-instruction {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      z-index: 3001;
+      display: none;
+    }
+
+    /* Mobile-optimized status messages */
+    .status {
+      padding: 15px 25px;
+      border-radius: 25px;
+      font-size: 16px;
+    }
+
+    /* Mobile-optimized transcript */
+    #transcript {
+      bottom: 120px;
+      padding: 15px;
+      font-size: 16px;
+    }
+
+    /* Mobile-optimized buttons */
+    .trick-button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 25px;
+    }
+
+    @media (max-width: 600px) {
+      .search-container {
+        width: 90%;
+      }
+
+      .buttons button {
+        width: 45%;
+        margin: 5px;
+      }
+
+      .permission-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="#">Gmail</a>
+    <a href="#">Images</a>
+  </div>
+
+  <div class="content">
+    <div class="logo">
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+    </div>
+    
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" class="search-input" id="searchInput">
+        <div class="search-icons">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzljYTNhZiI+PHBhdGggZD0iTTE1LjUgMTRoLS43OWwtLjI4LS4yN0E2LjQ3IDYuNDcgMCAwIDAgMTYgOS41IDYuNSA2LjUgMCAxIDAgOS41IDE2YzEuNjEgMCAzLjA5LS41OSA0LjIzLTEuNTdsLjI3LjI4di43OWw1IDQuOTlMMjAuNDkgMTlsLTQuOTktNXptLTYgMEM3LjAxIDE0IDUgMTEuOTkgNSA5LjVTNy4wMSA1IDkuNSA1IDE0IDcuMDEgMTQgOS41IDExLjk5IDE0IDkuNSAxNHoiLz48L3N2Zz4=" alt="Search" class="search-icon">
+          <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzRjYWY1MCI+PHBhdGggZD0iTTEyIDE0YzEuNjYgMCAzLTEuMzQgMy0zVjVjMC0xLjY2LTEuMzQtMy0zLTNTOSAzLjM0IDkgNXY2YzAgMS42NiAxLjM0IDMgMyAzeiIvPjxwYXRoIGQ9Ik0xNyA5YzAgMi43Ni0yLjI0IDUtNSA1cy01LTIuMjQtNS01SDVjMCAzLjUzIDIuNjEgNi40MyA2IDYuOTJWMTloMnYtMy4wOGMzLjM5LS40OSA2LTMuMzkgNi02LjkyaC0yeiIvPjwvc3ZnPg==" alt="Voice" class="mic-icon" id="micButton">
+        </div>
+      </div>
+      <div class="buttons">
+        <button onclick="performSearch()">Google Search</button>
+        <button>I'm Feeling Lucky</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-content">
+      <div class="left-footer">
+        <a href="#">About</a>
+        <a href="#">Advertising</a>
+        <a href="#">Business</a>
+        <a href="#">How Search works</a>
+      </div>
+      <div class="right-footer">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Settings</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="setupOverlay" class="trick-overlay">
+    <div class="trick-content">
+      <h2>Reading Thoughts</h2>
+      <p>Think of anything you want to search for on Google. Don't say it out loud yet.</p>
+      <button class="trick-button" onclick="startTrick()">Begin</button>
+    </div>
+  </div>
+
+  <div id="thinkingOverlay" class="trick-overlay">
+    <div class="trick-content">
+      <h2>Keep thinking...</h2>
+      <div id="countdown">10</div>
+      <button class="trick-button" onclick="revealSearch()">I Got It</button>
+    </div>
+  </div>
+
+  <div id="speechStatus" class="status"></div>
+  <div id="transcript"></div>
+
+  <!-- Permission instruction overlay -->
+  <div id="permissionOverlay" class="permission-overlay">
+    <div class="permission-content">
+      <h3>Microphone Access Required</h3>
+      <p id="permissionInstructions"></p>
+      <ul class="permission-steps" id="permissionSteps"></ul>
+      <button class="permission-button" onclick="handlePermissionButton()">Got it</button>
+    </div>
+  </div>
+
+  <!-- iOS tap instruction -->
+  <div id="iosTapInstruction" class="ios-tap-instruction">
+    <p>Tap anywhere to enable voice features</p>
+  </div>
+
+  <script>
+    // Cache DOM elements
+    const elements = {
+      searchInput: document.getElementById('searchInput'),
+      micButton: document.getElementById('micButton'),
+      setupOverlay: document.getElementById('setupOverlay'),
+      thinkingOverlay: document.getElementById('thinkingOverlay'),
+      countdown: document.getElementById('countdown'),
+      transcript: document.getElementById('transcript'),
+      speechStatus: document.getElementById('speechStatus')
+    };
+
+    // State management
+    const state = {
+      searchTerm: '',
+      isListening: false,
+      countdownInterval: null,
+      recognition: null,
+      permissionGranted: false,
+      hasError: false,
+      speechModule: null,
+      commandsModule: null,
+      trickActive: false
+    };
+
+    // Speech recognition configuration
+    const RECOGNITION_CONFIG = {
+      continuous: true,
+      interimResults: true,
+      lang: 'en-US'
+    };
+
+    // Command phrases
+    const COMMANDS = {
+      reveal: ['what did you search for', 'did you search for', 'were you thinking of', 'is this what you thought of'],
+      reset: ['let me try again', 'start over']
+    };
+
+    // Fallback search terms
+    const FALLBACK_TERMS = [
+      'vacation destinations 2024',
+      'best restaurants near me',
+      'upcoming movies',
+      'how to learn magic tricks',
+      'weather forecast today'
+    ];
+
+    // Permission handling
+    let permissionHandler = null;
+
+    // Initialize EchoMind modules and permissions
+    async function initialize() {
+      try {
+        console.log('Starting initialization...');
+
+        // Check if EchoMind is available
+        if (!window.EchoMind) {
+          throw new Error('EchoMind namespace not found. Check script loading order.');
+        }
+
+        // Initialize mobile permissions handler
+        console.log('Initializing mobile permissions...');
+        permissionHandler = window.MobilePermissions;
+        if (!permissionHandler) {
+          console.warn('Mobile permissions handler not found, continuing without it...');
+        } else {
+          await permissionHandler.init();
+        }
+
+        // Initialize EchoMind Speech module
+        console.log('Initializing speech module...');
+        if (!window.EchoMind.Speech) {
+          throw new Error('EchoMind Speech module not found. Check if echomind-speech.js is loaded.');
+        }
+
+        state.speechModule = window.EchoMind.Speech;
+        const speechInitResult = await state.speechModule.init({
+          continuous: true,
+          interimResults: true,
+          lang: 'en-US',
+          maxAlternatives: 1,
+          debugMode: true,
+          autoRestart: false
+        });
+
+        console.log('Speech initialization result:', speechInitResult);
+
+        if (!speechInitResult) {
+          throw new Error('Speech module initialization failed');
+        }
+
+        // Initialize Commands module
+        console.log('Initializing commands module...');
+        if (!window.EchoMind.Commands) {
+          throw new Error('EchoMind Commands module not found. Check if echomind-commands.js is loaded.');
+        }
+
+        state.commandsModule = window.EchoMind.Commands;
+        const commandsInitResult = await state.commandsModule.init({
+          debugMode: true,
+          caseSensitive: false,
+          allowFuzzyMatch: true,
+          fuzzyMatchThreshold: 0.6
+        });
+
+        console.log('Commands initialization result:', commandsInitResult);
+
+        if (!commandsInitResult) {
+          throw new Error('Commands module initialization failed');
+        }
+
+        // Register commands
+        console.log('Registering voice commands...');
+        const commandsRegistered = state.commandsModule.registerCommands({
+          'what did you search for': revealSearch,
+          'did you search for': revealSearch,
+          'were you thinking of': revealSearch,
+          'is this what you thought of': revealSearch,
+          'let me try again': resetTrick,
+          'start over': resetTrick
+        });
+
+        if (!commandsRegistered) {
+          throw new Error('Failed to register commands');
+        }
+
+        // Start recognition immediately
+        console.log('Starting speech recognition...');
+        const startResult = state.speechModule.start();
+        console.log('Speech recognition start result:', startResult);
+
+        console.log('Initialization complete');
+        return true;
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showStatus('Error: ' + error.message);
+        // Show detailed error in console
+        console.error('Detailed error:', {
+          error: error,
+          stack: error.stack,
+          speechModule: state.speechModule ? 'present' : 'missing',
+          commandsModule: state.commandsModule ? 'present' : 'missing',
+          EchoMind: window.EchoMind ? 'present' : 'missing'
+        });
+        return false;
+      }
+    }
+
+    // Handle permission instructions event
+    function handlePermissionInstructions(event) {
+      const overlay = document.getElementById('permissionOverlay');
+      const instructions = document.getElementById('permissionInstructions');
+      const steps = document.getElementById('permissionSteps');
+
+      instructions.textContent = 'To use voice features, please enable microphone access:';
+      steps.innerHTML = event.detail.instructions
+        .split('\n')
+        .filter(step => step.trim())
+        .map(step => `<li>${step}</li>`)
+        .join('');
+
+      overlay.style.display = 'flex';
+    }
+
+    // Handle iOS-specific instructions
+    function handleIOSInstructions(event) {
+      const instruction = document.getElementById('iosTapInstruction');
+      instruction.style.display = 'block';
+
+      // Hide after interaction or timeout
+      const hideInstruction = () => {
+        instruction.style.display = 'none';
+        document.removeEventListener('touchend', hideInstruction);
+      };
+
+      document.addEventListener('touchend', hideInstruction);
+      setTimeout(hideInstruction, 5000);
+    }
+
+    // Handle permission overlay button click
+    function handlePermissionButton() {
+      document.getElementById('permissionOverlay').style.display = 'none';
+    }
+
+    // Status display with debounce
+    function showStatus(message) {
+      clearTimeout(state.statusTimeout);
+      elements.speechStatus.textContent = message;
+      elements.speechStatus.classList.add('visible');
+      
+      state.statusTimeout = setTimeout(() => {
+        elements.speechStatus.classList.remove('visible');
+      }, 3000);
+    }
+
+    // Trick flow control
+    function startTrick() {
+      if (!state.speechModule || !state.commandsModule) {
+        showStatus('Speech recognition not ready');
+        return;
+      }
+
+      elements.setupOverlay.classList.remove('active');
+      elements.thinkingOverlay.classList.add('active');
+      state.trickActive = true;
+      startCountdown();
+      // Don't start listening here since it's already running
+    }
+
+    function resetTrick() {
+      clearInterval(state.countdownInterval);
+      state.searchTerm = '';
+      state.trickActive = false;
+      elements.transcript.innerHTML = '';
+      elements.searchInput.value = '';
+      elements.thinkingOverlay.classList.remove('active');
+      elements.setupOverlay.classList.add('active');
+      // Don't stop listening, just mark trick as inactive
+    }
+
+    function revealSearch() {
+      clearInterval(state.countdownInterval);
+      elements.thinkingOverlay.classList.remove('active');
+      state.trickActive = false;
+      
+      console.log('Revealing search term:', state.searchTerm);
+      
+      if (!state.searchTerm) {
+        state.searchTerm = FALLBACK_TERMS[Math.floor(Math.random() * FALLBACK_TERMS.length)];
+        console.log('Using fallback term:', state.searchTerm);
+      }
+      
+      elements.searchInput.value = state.searchTerm;
+      setTimeout(performSearch, 500);
+      // Don't stop listening, just mark trick as inactive
+    }
+
+    function performSearch() {
+      const query = encodeURIComponent(elements.searchInput.value || state.searchTerm);
+      console.log('Performing search with query:', query);
+      
+      if (query) {
+        window.location.href = `https://www.google.com/search?q=${query}`;
+      }
+    }
+
+    // Event listeners
+    elements.micButton.addEventListener('click', () => {
+      if (!state.isListening) {
+        startListening();
+      } else {
+        stopListening();
+      }
+    });
+
+    // Initialize on load with proper script loading check
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if scripts are loaded in correct order
+      if (!window.EchoMind) {
+        console.error('EchoMind scripts not loaded properly. Check script tags order.');
+        showStatus('Error: Required scripts not loaded');
+        return;
+      }
+
+      // Hide permission overlay by default
+      document.getElementById('permissionOverlay').style.display = 'none';
+      
+      // Initialize with retry
+      const initWithRetry = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          console.log(`Initialization attempt ${i + 1}/${retries}`);
+          const success = await initialize();
+          if (success) {
+            return;
+          }
+          // Wait before retrying
+          if (i < retries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        console.error('Failed to initialize after', retries, 'attempts');
+        showStatus('Failed to initialize speech recognition');
+      };
+
+      initWithRetry();
+    });
+
+    // Add page visibility handler
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Stop listening when page is hidden
+        if (state.speechModule && state.isListening) {
+          stopListening();
+        }
+      } else {
+        // Resume listening when page becomes visible again
+        if (state.speechModule && !state.isListening) {
+          startListening();
+        }
+      }
+    });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      if (state.speechModule && state.isListening) {
+        stopListening();
+      }
+    });
+  </script>
+</body>
+</html> 
