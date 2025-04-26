@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Reader Debug</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .debug-section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      background-color: white;
+      border-radius: 8px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      text-align: center;
+      border: 1px solid #ccc;
+      padding: 5px;
+      background-color: white;
+      border-radius: 4px;
+    }
+    .card img {
+      height: 80px;
+      display: block;
+      margin: 0 auto;
+    }
+    .card .name {
+      font-size: 10px;
+      margin-top: 5px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .speech-status {
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #e9f5ff;
+      border-radius: 4px;
+    }
+    .speech-log {
+      height: 150px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background-color: #f9f9f9;
+      font-family: monospace;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .test-button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .test-button:hover {
+      background-color: #45a049;
+    }
+    .current-card {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .current-card img {
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mind Reader Debug Tool</h1>
+  
+  <div class="debug-section">
+    <h2>Speech Recognition Test</h2>
+    <div class="speech-status" id="speech-status">Status: Not started</div>
+    <div class="speech-log" id="speech-log"></div>
+    <button id="start-speech" class="test-button">Start Speech Recognition</button>
+    
+    <div class="current-card">
+      <h3>Current Card</h3>
+      <img id="current-card" src="images/cards/back.png" alt="Current Card">
+      <div id="card-name">back</div>
+    </div>
+  </div>
+  
+  <div class="debug-section">
+    <h2>Available Card Images</h2>
+    <div class="card-grid" id="card-grid"></div>
+  </div>
+  
+  <script>
+    // Card definitions
+    const cardNames = ["ace","2","3","4","5","6","7","8","9","10","jack","queen","king"];
+    const suits = ["hearts","spades","diamonds","clubs"];
+    const specialCards = ["back", "red_joker", "black_joker"];
+    const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
+    
+    // DOM elements
+    const cardGrid = document.getElementById('card-grid');
+    const speechLog = document.getElementById('speech-log');
+    const speechStatus = document.getElementById('speech-status');
+    const startSpeechButton = document.getElementById('start-speech');
+    const currentCardImg = document.getElementById('current-card');
+    const cardNameEl = document.getElementById('card-name');
+    
+    let recognition = null;
+    
+    // Log helper function
+    function log(message) {
+      console.log(message);
+      const logEntry = document.createElement('div');
+      logEntry.textContent = message;
+      speechLog.appendChild(logEntry);
+      speechLog.scrollTop = speechLog.scrollHeight;
+    }
+    
+    // Initialize card grid
+    function initCardGrid() {
+      // Add special cards
+      specialCards.forEach(cardName => {
+        addCardToGrid(cardName);
+      });
+      
+      // Add regular cards
+      cardNames.forEach(value => {
+        suits.forEach(suit => {
+          const cardName = `${value}_of_${suit}`;
+          addCardToGrid(cardName);
+        });
+      });
+    }
+    
+    function addCardToGrid(cardName) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      
+      const img = document.createElement('img');
+      img.setAttribute('data-card', cardName);
+      
+      // Try to load the image with different extensions
+      tryLoadImage(img, cardName, 0);
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'name';
+      nameDiv.textContent = cardName;
+      
+      card.appendChild(img);
+      card.appendChild(nameDiv);
+      cardGrid.appendChild(card);
+      
+      // Add click handler
+      card.addEventListener('click', () => {
+        currentCardImg.src = img.src;
+        cardNameEl.textContent = cardName;
+      });
+    }
+    
+    function tryLoadImage(imgElement, cardName, extIndex) {
+      if (extIndex >= extensions.length) {
+        imgElement.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        imgElement.style.border = '2px solid red';
+        return;
+      }
+      
+      const ext = extensions[extIndex];
+      const imgPath = `images/cards/${cardName}.${ext}`;
+      
+      imgElement.onerror = () => {
+        tryLoadImage(imgElement, cardName, extIndex + 1);
+      };
+      
+      imgElement.onload = () => {
+        imgElement.style.border = '2px solid green';
+      };
+      
+      imgElement.src = imgPath;
+    }
+    
+    // Speech recognition functions
+    function startSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        log("ERROR: Speech Recognition not supported in this browser!");
+        speechStatus.textContent = "Status: Not supported in this browser";
+        speechStatus.style.backgroundColor = "#ffdddd";
+        return;
+      }
+      
+      // Stop previous instance if exists
+      if (recognition) {
+        recognition.stop();
+      }
+      
+      // Create new instance
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onstart = function() {
+        log("Speech recognition started");
+        speechStatus.textContent = "Status: Listening...";
+        speechStatus.style.backgroundColor = "#d6ffd6";
+        startSpeechButton.textContent = "Stop Speech Recognition";
+      };
+      
+      recognition.onresult = function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        log(`Heard: "${transcript}"`);
+        
+        // Process the transcript
+        const cardInfo = detectCard(transcript);
+        if (cardInfo) {
+          log(`Detected: ${cardInfo}`);
+          
+          // Update displayed card
+          tryLoadAndShowCard(cardInfo);
+        }
+      };
+      
+      recognition.onerror = function(e) {
+        log(`Error: ${e.error}`);
+        speechStatus.textContent = `Status: Error - ${e.error}`;
+        speechStatus.style.backgroundColor = "#ffdddd";
+      };
+      
+      recognition.onend = function() {
+        log("Speech recognition ended");
+        speechStatus.textContent = "Status: Stopped";
+        speechStatus.style.backgroundColor = "#e9f5ff";
+        startSpeechButton.textContent = "Start Speech Recognition";
+      };
+      
+      recognition.start();
+    }
+    
+    function stopSpeechRecognition() {
+      if (recognition) {
+        recognition.stop();
+      }
+    }
+    
+    function detectCard(transcript) {
+      const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
+      
+      // Map number words to digits
+      const numberMap = {
+        "two": "2", "three": "3", "four": "4", "five": "5",
+        "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
+      };
+      
+      const normalizedWords = words.map(word => numberMap[word] || word);
+      log(`Normalized words: ${normalizedWords.join(', ')}`);
+      
+      // Check for special cards
+      for (let special of specialCards) {
+        const specialName = special.replace('_', ' ');
+        if (transcript.toLowerCase().includes(specialName)) {
+          return special;
+        }
+      }
+      
+      // Check for regular cards
+      let bestScore = 0;
+      let bestMatch = null;
+      
+      for (let value of cardNames) {
+        for (let suit of suits) {
+          // Calculate match score
+          const score = (normalizedWords.includes(value) ? 1 : 0) + 
+                       (normalizedWords.includes(suit) ? 1 : 0);
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = `${value}_of_${suit}`;
+          }
+        }
+      }
+      
+      if (bestScore > 0) {
+        return bestMatch;
+      }
+      
+      return null;
+    }
+    
+    function tryLoadAndShowCard(cardName) {
+      if (!cardName) return;
+      
+      let index = 0;
+      tryNext();
+      
+      function tryNext() {
+        if (index >= extensions.length) {
+          log(`Failed to load any image for ${cardName}`);
+          currentCardImg.src = 'images/cards/back.png';
+          cardNameEl.textContent = 'back (fallback)';
+          return;
+        }
+        
+        const ext = extensions[index++];
+        const imgPath = `images/cards/${cardName}.${ext}`;
+        log(`Trying to load: ${imgPath}`);
+        
+        const testImg = new Image();
+        testImg.onload = function() {
+          log(`Successfully loaded: ${imgPath}`);
+          currentCardImg.src = imgPath;
+          cardNameEl.textContent = cardName;
+        };
+        
+        testImg.onerror = tryNext;
+        testImg.src = imgPath;
+      }
+    }
+    
+    // Event listeners
+    startSpeechButton.addEventListener('click', function() {
+      if (recognition && speechStatus.textContent.includes("Listening")) {
+        stopSpeechRecognition();
+      } else {
+        startSpeechRecognition();
+      }
+    });
+    
+    // Initialize
+    window.onload = function() {
+      log("Debug tool initialized");
+      initCardGrid();
+    };
+  </script>
+</body>
+</html> 

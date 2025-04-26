@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoMind - Dual Device Effects</title>
+  <!-- Add permissions handler script -->
+  <script src="../js/permissions-handler.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f0f1a;
+      color: #e0e0ff;
+      margin: 0;
+      padding: 0;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #4a2080 0%, #33104a 100%);
+      padding: 40px 20px;
+      text-align: center;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 2.5em;
+      text-shadow: 0 0 10px #a96eff;
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      margin-top: 10px;
+      color: #b88eff;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .effect-section {
+      background-color: rgba(30, 20, 50, 0.6);
+      border-radius: 10px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+      border: 1px solid #6032a8;
+    }
+    
+    h2 {
+      color: #c09aff;
+      border-bottom: 2px solid #6032a8;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    
+    .effect-card {
+      background-color: rgba(40, 30, 70, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      border: 1px solid #7944d4;
+    }
+    
+    .effect-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(122, 68, 212, 0.3);
+    }
+    
+    .effect-title {
+      color: #d4b8ff;
+      font-size: 1.3em;
+      margin-bottom: 10px;
+    }
+    
+    .effect-description {
+      line-height: 1.6;
+    }
+    
+    .directions {
+      background-color: rgba(60, 40, 100, 0.4);
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+      border-left: 4px solid #9966ff;
+    }
+    
+    ol, ul {
+      padding-left: 25px;
+    }
+    
+    li {
+      margin-bottom: 10px;
+    }
+    
+    .back-button {
+      display: inline-block;
+      background-color: #6032a8;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: background-color 0.3s;
+    }
+    
+    .back-button:hover {
+      background-color: #7944d4;
+    }
+    
+    #permissionStatus {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 0.8em;
+      z-index: 100;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dual Device Effects</h1>
+    <div class="subtitle">Magical effects that utilize two devices</div>
+  </header>
+  
+  <div class="container">
+    <div class="effect-section">
+      <h2>Synchronized Mind Reading</h2>
+      <div class="effect-card" onclick="checkPermissionAndNavigate('dual-device/sync-mind-reading.html')">
+        <div class="effect-title">Synchronized Mind Reading</div>
+        <div class="effect-description">
+          Use two devices simultaneously to create stunning synchronicity between you and your spectator.
+        </div>
+        <div class="directions">
+          <h3>Quick Directions:</h3>
+          <ol>
+            <li>Open the trick on both your device and your spectator's device</li>
+            <li>Follow the on-screen instructions for synchronization</li>
+            <li>Each person selects options on their own device</li>
+            <li>Reveal the impossible connection between your choices</li>
+          </ol>
+        </div>
+      </div>
+      
+      <div class="effect-card" onclick="checkPermissionAndNavigate('dual-device/google-peek-realistic.html')">
+        <div class="effect-title">Google Peek</div>
+        <div class="effect-description">
+          A mind-reading demonstration that reveals thoughts through Google searches. Just say "what did you search for" and the spectator's thoughts will be revealed through Google Images.
+        </div>
+        <div class="directions">
+          <h3>Quick Directions:</h3>
+          <ol>
+            <li>Open the realistic Google interface</li>
+            <li>Ask "what did you search for?"</li>
+            <li>Let the spectator think of something</li>
+            <li>Their thought will automatically appear and open in Google Images</li>
+          </ol>
+        </div>
+      </div>
+      
+      <div class="effect-card" onclick="checkPermissionAndNavigate('dual-device/image-transfer.html')">
+        <div class="effect-title">Image Transfer</div>
+        <div class="effect-description">
+          Magically transfer an image from one device to another without any visible connection.
+        </div>
+        <div class="directions">
+          <h3>Quick Directions:</h3>
+          <ol>
+            <li>Ask your spectator to select an image on their device</li>
+            <li>Have them concentrate on the image</li>
+            <li>Follow the on-screen instructions on your device</li>
+            <li>Reveal the exact image they selected on your device</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    
+    <a href="index.html" class="back-button">← Back to Tricks Menu</a>
+  </div>
+  
+  <div id="permissionStatus"></div>
+  
+  <script>
+    // Check permission status and navigate to the trick
+    function checkPermissionAndNavigate(path) {
+      const permissionStatusElement = document.getElementById('permissionStatus');
+      
+      // If permissions handler is available, check if microphone permission is granted
+      if (window.permissionsHandler) {
+        window.permissionsHandler.checkMicrophonePermission()
+          .then(state => {
+            // If permission not yet granted, request it
+            if (state !== 'granted') {
+              permissionStatusElement.style.display = 'block';
+              permissionStatusElement.textContent = "Requesting microphone access...";
+              
+              window.permissionsHandler.requestMicrophonePermission()
+                .then(granted => {
+                  if (granted) {
+                    // If granted, navigate to the trick
+                    window.location.href = path;
+                  } else {
+                    // If denied, show message
+                    permissionStatusElement.textContent = "Microphone access is required for voice features.";
+                    permissionStatusElement.style.display = 'block';
+                    
+                    // Still allow navigation after a short delay
+                    setTimeout(() => {
+                      window.location.href = path;
+                    }, 2000);
+                  }
+                });
+            } else {
+              // If permission already granted, navigate directly
+              window.location.href = path;
+            }
+          });
+      } else {
+        // If no permissions handler, navigate directly and let the trick handle permissions
+        window.location.href = path;
+      }
+    }
+    
+    // Check permission status on page load to pre-authorize
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.permissionsHandler && typeof window.permissionsHandler.checkMicrophonePermission === 'function') {
+        window.permissionsHandler.checkMicrophonePermission();
+      }
+    });
+  </script>
+</body>
+</html> 
