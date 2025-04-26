@@ -260,6 +260,7 @@
     // Initialize EchoMind modules
     async function initialize() {
       try {
+        console.log('Initializing speech recognition...');
         // Set up audio context for iOS
         if (state.isIOS) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -277,12 +278,14 @@
           interimResults: true,
           lang: 'en-US',
           maxAlternatives: 1,
-          debugMode: false,
+          debugMode: true,  // Enable debug mode
           autoRestart: true,
           autoRestartDelay: 1000,
           keepAlive: true
         });
 
+        console.log('Speech recognition initialized successfully');
+        
         // Set up speech event handlers
         setupSpeechHandlers();
         
@@ -291,6 +294,7 @@
         
         // Set up periodic permission checks for mobile
         if (state.isMobile) {
+          console.log('Setting up mobile-specific handlers');
           setInterval(checkAndRenewPermissions, CONFIG.permissionCheckInterval);
           // Add visibility change handler for mobile
           document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -337,23 +341,34 @@
 
     // Handle speech results
     function handleSpeechResult(data) {
+      console.log('Speech result received:', data);
+      
       if (data.finalTranscript) {
         const transcript = data.finalTranscript.toLowerCase().trim();
+        console.log('Processing transcript:', transcript);
         
         if (state.waitingForResponse) {
+          console.log('Waiting for response, processing:', transcript);
           handleResponse(transcript);
           return;
         }
 
+        // Check for trigger phrases
         for (const phrase of TRIGGER_PHRASES) {
           if (transcript.includes(phrase)) {
+            console.log('Trigger phrase detected:', phrase);
             const now = Date.now();
-            if (now - state.lastTriggerTime < 1000) return;
+            if (now - state.lastTriggerTime < 1000) {
+              console.log('Ignoring trigger - too soon after last trigger');
+              return;
+            }
             state.lastTriggerTime = now;
             startWaitingForResponse();
             return;
           }
         }
+      } else if (data.interimTranscript) {
+        console.log('Interim transcript:', data.interimTranscript);
       }
     }
 
@@ -486,6 +501,7 @@
 
     // Handle waiting for and processing response
     function startWaitingForResponse() {
+      console.log('Starting to wait for response');
       state.waitingForResponse = true;
       
       // Clear any existing timeout
@@ -495,16 +511,23 @@
 
       // Wait a moment before listening for response
       state.triggerTimeout = setTimeout(() => {
+        console.log('Now actively listening for response');
         // Set timeout to stop waiting for response
         state.triggerTimeout = setTimeout(() => {
+          console.log('Response wait timeout reached');
           state.waitingForResponse = false;
         }, CONFIG.responseDuration);
       }, CONFIG.responseWaitTime);
     }
 
     function handleResponse(transcript) {
+      console.log('Handling response:', transcript);
+      
       // Only process if we're still waiting for response
-      if (!state.waitingForResponse) return;
+      if (!state.waitingForResponse) {
+        console.log('Not waiting for response anymore, ignoring');
+        return;
+      }
 
       // Clear the waiting state
       state.waitingForResponse = false;
@@ -514,13 +537,17 @@
 
       // Process the response if it's long enough
       if (transcript.length >= CONFIG.minResponseLength) {
+        console.log('Response is valid, performing image search for:', transcript);
         performImageSearch(transcript);
+      } else {
+        console.log('Response too short, ignoring');
       }
     }
 
     // Perform Google Image search
     function performImageSearch(query) {
       if (query) {
+        console.log('Navigating to image search for:', query);
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       }
     }
