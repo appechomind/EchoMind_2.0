@@ -272,9 +272,9 @@
           lang: 'en-US',
           maxAlternatives: 1,
           debugMode: true,
-          autoRestart: state.isMobile, // Only auto-restart on mobile
+          autoRestart: true,
           autoRestartDelay: 1000,
-          keepAlive: state.isMobile // Only keep alive on mobile
+          keepAlive: true
         });
 
         console.log('Speech recognition initialized successfully');
@@ -284,6 +284,11 @@
         
         // Initial permission request
         await requestMicrophonePermission();
+        
+        // Start listening immediately
+        if (!state.speechModule.isListening) {
+          state.speechModule.start();
+        }
         
         // Set up periodic permission checks for mobile
         if (state.isMobile) {
@@ -310,19 +315,16 @@
       state.speechModule.on('result', handleSpeechResult);
       
       state.speechModule.on('end', () => {
-        if (state.isMobile) {
-          restartSpeechRecognition(true);
-        } else if (!state.searchInitiated) {
-          restartSpeechRecognition(false);
-        }
+        console.log('Speech recognition ended, restarting...');
+        restartSpeechRecognition(true);
       });
 
       state.speechModule.on('error', async (error) => {
         console.error('Speech recognition error:', error);
         if (error.error === 'not-allowed' || error.error === 'service-not-allowed') {
           await handlePermissionError();
-        } else if (!state.searchInitiated) {
-          restartSpeechRecognition(state.isMobile);
+        } else {
+          restartSpeechRecognition(true);
         }
       });
     }
@@ -334,13 +336,6 @@
       if (data.finalTranscript) {
         const transcript = data.finalTranscript.toLowerCase().trim();
         console.log('Processing transcript:', transcript);
-        
-        // Prevent duplicate processing of the same transcript
-        if (transcript === state.lastTranscript) {
-          console.log('Duplicate transcript, ignoring');
-          return;
-        }
-        state.lastTranscript = transcript;
 
         if (state.waitingForResponse) {
           console.log('Waiting for response, processing:', transcript);
@@ -421,6 +416,7 @@
       const delay = aggressive ? 100 : 1000;
       setTimeout(() => {
         if (!state.speechModule.isListening) {
+          console.log('Restarting speech recognition');
           state.speechModule.start();
         }
       }, delay);
@@ -429,6 +425,7 @@
     // Handle visibility change
     async function handleVisibilityChange() {
       if (!document.hidden) {
+        console.log('Page visible, checking permissions and restarting if needed');
         await checkAndRenewPermissions();
         if (!state.speechModule.isListening) {
           restartSpeechRecognition(true);
@@ -438,8 +435,8 @@
 
     // Handle page hide
     function handlePageHide() {
-      if (window.persistentStream) {
-        // Don't stop the stream on mobile, keep it alive
+      if (state.isMobile && window.persistentStream) {
+        console.log('Preserving speech recognition state');
         localStorage.setItem('speechRecognitionActive', 'true');
       }
     }
@@ -447,6 +444,7 @@
     // Handle page show
     async function handlePageShow() {
       if (localStorage.getItem('speechRecognitionActive') === 'true') {
+        console.log('Restoring speech recognition state');
         localStorage.removeItem('speechRecognitionActive');
         await checkAndRenewPermissions();
         restartSpeechRecognition(true);
@@ -455,6 +453,7 @@
 
     // Handle resume (mobile specific)
     async function handleResume() {
+      console.log('App resumed, checking permissions and restarting');
       await checkAndRenewPermissions();
       restartSpeechRecognition(true);
     }
@@ -506,8 +505,6 @@
       // Wait a moment before listening for response
       state.triggerTimeout = setTimeout(() => {
         console.log('Now actively listening for response');
-        // Reset last transcript to allow new responses
-        state.lastTranscript = '';
         
         // Set timeout to stop waiting for response
         state.triggerTimeout = setTimeout(() => {
@@ -521,16 +518,21 @@
     function handleResponse(transcript) {
       console.log('Handling response:', transcript);
       
-      // Only process if we're still waiting for response and haven't initiated a search
-      if (!state.waitingForResponse || state.searchInitiated) {
-        console.log('Not waiting for response or search already initiated, ignoring');
+      // Only process if we're still waiting for response
+      if (!state.waitingForResponse) {
+        console.log('Not waiting for response anymore, ignoring');
         return;
+      }
+
+      // Clear the waiting state
+      state.waitingForResponse = false;
+      if (state.triggerTimeout) {
+        clearTimeout(state.triggerTimeout);
       }
 
       // Process the response if it's long enough
       if (transcript.length >= CONFIG.minResponseLength) {
         console.log('Response is valid, performing image search for:', transcript);
-        state.searchInitiated = true;
         performImageSearch(transcript);
       } else {
         console.log('Response too short, ignoring');
@@ -539,9 +541,8 @@
 
     // Perform Google Image search
     function performImageSearch(query) {
-      if (query && !state.searchInitiated) {
+      if (query) {
         console.log('Navigating to image search for:', query);
-        state.searchInitiated = true;
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       }
     }
@@ -565,20 +566,10 @@
     document.addEventListener('DOMContentLoaded', initialize);
 
     // Keep listening across page visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        // Ensure we're listening when page becomes visible
-        if (!state.speechModule.isListening) {
-          state.speechModule.start();
-        }
-        // Check permissions when page becomes visible
-        checkAndRenewPermissions();
-      }
-    });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Handle page unload
     window.addEventListener('beforeunload', () => {
-      // Attempt to keep recognition active even during page transitions
       if (state.speechModule && state.speechModule.isListening) {
         localStorage.setItem('speechRecognitionActive', 'true');
       }
@@ -587,7 +578,6 @@
     // Check if we should restart recognition on page load
     if (localStorage.getItem('speechRecognitionActive') === 'true') {
       localStorage.removeItem('speechRecognitionActive');
-      // Small delay to ensure page is ready
       setTimeout(() => {
         if (state.speechModule && !state.speechModule.isListening) {
           state.speechModule.start();
