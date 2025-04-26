@@ -239,14 +239,17 @@
 
       // If we're collecting search terms
       if (state.collectingSearch) {
-        state.collectedText = transcript;
-        console.log('Collecting:', transcript);
+        // Update collected text with latest transcript
+        if (data.finalTranscript) {
+          state.collectedText = data.finalTranscript.toLowerCase().trim();
+          console.log('Updated collection:', state.collectedText);
+        }
         return;
       }
 
       // Check if transcript contains the trigger word
       if (transcript.includes(TRIGGER_WORD)) {
-        console.log('Trigger word detected! Collecting for 15 seconds...');
+        console.log('Trigger word detected! Starting 15 second collection...');
         startCollecting();
       }
     }
@@ -264,12 +267,17 @@
 
       // Set timeout to perform search after 15 seconds
       state.searchTimeout = setTimeout(() => {
-        const searchTerms = state.collectedText.replace(TRIGGER_WORD, '').trim();
+        console.log('Collection period ended. Final text:', state.collectedText);
+        
+        // Get everything after "specifically"
+        const parts = state.collectedText.split(TRIGGER_WORD);
+        const searchTerms = parts[parts.length - 1].trim();
+
         if (searchTerms) {
-          console.log('15 seconds up! Searching for:', searchTerms);
+          console.log('Performing search for:', searchTerms);
           performImageSearch(searchTerms);
         } else {
-          console.log('No search terms collected');
+          console.log('No search terms found after trigger word');
           state.collectingSearch = false;
         }
       }, COLLECTION_TIME);
@@ -277,22 +285,35 @@
 
     // Perform Google Image search
     function performImageSearch(query) {
-      if (!query) return;
+      console.log('Starting image search for:', query);
       
-      // Stop listening before navigating
-      if (state.speechModule && state.isListening) {
-        state.speechModule.stop();
-        state.isListening = false;
+      if (!query) {
+        console.log('No query provided, aborting search');
+        return;
       }
 
-      // Clear collection state
-      state.collectingSearch = false;
-      if (state.searchTimeout) {
-        clearTimeout(state.searchTimeout);
-      }
+      try {
+        // Stop listening before navigating
+        if (state.speechModule && state.isListening) {
+          state.speechModule.stop();
+          state.isListening = false;
+        }
 
-      // Navigate to Google Images search
-      window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+        // Clear collection state
+        state.collectingSearch = false;
+        if (state.searchTimeout) {
+          clearTimeout(state.searchTimeout);
+        }
+
+        // Construct and log the search URL
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+        console.log('Navigating to:', searchUrl);
+
+        // Perform the navigation
+        window.location.href = searchUrl;
+      } catch (error) {
+        console.error('Error during search:', error);
+      }
     }
 
     // Initialize speech recognition
@@ -323,6 +344,11 @@
               console.log('Speech recognition restarted');
             }
           }, 1000);
+        });
+
+        // Handle errors
+        state.speechModule.on('error', (error) => {
+          console.error('Speech recognition error:', error);
         });
 
         // Start listening
