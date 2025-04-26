@@ -313,60 +313,92 @@
     }
 
     // Initialize when the page loads
-    window.addEventListener('load', () => {
-      // Initialize permissions first with debug mode
-      window.EchoMindPermissions.init({
-        debugMode: true,
-        onPermissionChange: async (status) => {
-          console.debug('Permission status changed:', status);
-          if (status.granted) {
-            try {
-              // Initialize speech module
-              await window.EchoMind.Speech.init({
-                continuous: true,
-                interimResults: true,
-                lang: 'en-US',
-                debugMode: true
-              });
+    window.addEventListener('load', async () => {
+      console.debug('Page loaded, initializing speech recognition...');
+      
+      try {
+        // Initialize permissions first with debug mode
+        window.EchoMindPermissions.init({
+          debugMode: true
+        });
 
-              // Set up result handler
-              window.EchoMind.Speech.on('result', handleSpeechResult);
+        // Request permission immediately
+        const permissionGranted = await window.EchoMindPermissions.requestPermission();
+        console.debug('Initial permission request result:', permissionGranted);
 
-              // Start listening
-              await window.EchoMind.Speech.start();
-              console.debug('Speech recognition started');
-              document.querySelector('.mic-icon').style.opacity = '1';
+        if (permissionGranted) {
+          // Initialize speech module
+          await window.EchoMind.Speech.init({
+            continuous: true,
+            interimResults: true,
+            lang: 'en-US',
+            debugMode: true,
+            autoRestart: true
+          });
 
-            } catch (error) {
-              console.error('Failed to initialize speech:', error);
-            }
+          // Set up result handler
+          window.EchoMind.Speech.on('result', handleSpeechResult);
+
+          // Start listening immediately
+          const started = await window.EchoMind.Speech.start();
+          console.debug('Speech recognition start result:', started);
+          
+          if (started) {
+            document.querySelector('.mic-icon').style.opacity = '1';
+            console.debug('Listening for trigger word "specifically"...');
           } else {
-            console.debug('Requesting microphone permission...');
-            const granted = await window.EchoMindPermissions.requestPermission();
-            console.debug('Permission request result:', granted);
+            console.error('Failed to start speech recognition');
           }
+        } else {
+          console.error('Permission not granted');
         }
-      });
-
-      // Immediately request permission
-      window.EchoMindPermissions.requestPermission().then(granted => {
-        console.debug('Initial permission request result:', granted);
-      });
+      } catch (error) {
+        console.error('Error during initialization:', error);
+      }
     });
 
     // Handle page visibility changes
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible') {
         console.debug('Page became visible, checking permissions...');
-        window.EchoMindPermissions.checkPermission().then(granted => {
-          if (granted) {
-            window.EchoMind.Speech.start();
-          } else {
-            window.EchoMindPermissions.requestPermission();
+        const granted = await window.EchoMindPermissions.checkPermission();
+        
+        if (granted) {
+          const started = await window.EchoMind.Speech.start();
+          console.debug('Speech recognition restart result:', started);
+        } else {
+          console.debug('Requesting permission on visibility change...');
+          const newGranted = await window.EchoMindPermissions.requestPermission();
+          if (newGranted) {
+            await window.EchoMind.Speech.start();
           }
-        });
+        }
+      } else {
+        // Stop recognition when page is hidden
+        if (window.EchoMind.Speech) {
+          window.EchoMind.Speech.stop();
+        }
       }
     });
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+      if (window.EchoMind.Speech) {
+        window.EchoMind.Speech.stop();
+        localStorage.setItem('speechRecognitionActive', 'true');
+      }
+    });
+
+    // Check if we should restart recognition on page load
+    if (localStorage.getItem('speechRecognitionActive') === 'true') {
+      localStorage.removeItem('speechRecognitionActive');
+      window.EchoMindPermissions.requestPermission().then(async granted => {
+        if (granted) {
+          await window.EchoMind.Speech.start();
+          console.debug('Restarted speech recognition from stored state');
+        }
+      });
+    }
 
     // Regular Google search
     function performSearch() {
@@ -382,24 +414,6 @@
         performSearch();
       }
     });
-
-    // Handle page unload
-    window.addEventListener('beforeunload', () => {
-      if (window.EchoMind.Speech) {
-        window.EchoMind.Speech.stop();
-        localStorage.setItem('speechRecognitionActive', 'true');
-      }
-    });
-
-    // Check if we should restart recognition on page load
-    if (localStorage.getItem('speechRecognitionActive') === 'true') {
-      localStorage.removeItem('speechRecognitionActive');
-      window.EchoMindPermissions.requestPermission().then(granted => {
-        if (granted) {
-          window.EchoMind.Speech.start();
-        }
-      });
-    }
   </script>
 </body>
 </html> 
