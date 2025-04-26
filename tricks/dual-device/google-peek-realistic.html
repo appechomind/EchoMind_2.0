@@ -244,12 +244,12 @@
 
     // Configuration
     const CONFIG = {
-      responseWaitTime: 2000,  // Time to wait after trigger before listening for response
-      responseDuration: 10000,  // How long to listen for the response
-      minResponseLength: 2,     // Minimum length of response in characters
-      permissionCheckInterval: 10000,  // Check permissions every 10 seconds on mobile
-      permissionRetryDelay: 1000,      // Delay between permission retries
-      audioConstraints: {              // Detailed audio constraints
+      responseWaitTime: 2000,      // Time to wait after trigger before listening for response
+      responseDuration: 15000,     // How long to listen for the response (increased to 15 seconds)
+      minResponseLength: 2,        // Minimum length of response in characters
+      permissionCheckInterval: 5000, // Check permissions more frequently
+      permissionRetryDelay: 1000,   // Delay between permission retries
+      audioConstraints: {           // Detailed audio constraints
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
@@ -286,8 +286,13 @@
               try {
                 this.recognition.start();
                 this.isListening = true;
+                console.log('Speech recognition started');
               } catch (e) {
                 console.error('Failed to start recognition:', e);
+                // If we get a "already started" error, just mark as listening
+                if (e.name === 'InvalidStateError') {
+                  this.isListening = true;
+                }
               }
             },
             stop: function() {
@@ -313,18 +318,28 @@
                   break;
                 case 'end':
                   this.recognition.onend = () => {
+                    console.log('Recognition ended, auto-restarting...');
                     this.isListening = false;
                     handler();
+                    // Auto-restart recognition
+                    setTimeout(() => this.start(), 100);
                   };
                   break;
                 case 'error':
-                  this.recognition.onerror = handler;
+                  this.recognition.onerror = (error) => {
+                    console.error('Recognition error:', error);
+                    handler(error);
+                    // Auto-restart on error unless it's a permission error
+                    if (error.error !== 'not-allowed') {
+                      setTimeout(() => this.start(), 1000);
+                    }
+                  };
                   break;
               }
             }
           };
         } else {
-          // Initialize EchoMind speech module
+          // Initialize EchoMind speech module with auto-restart
           state.speechModule = window.EchoMind.Speech;
           await state.speechModule.init({
             continuous: true,
@@ -333,7 +348,7 @@
             maxAlternatives: 1,
             debugMode: true,
             autoRestart: true,
-            autoRestartDelay: 1000,
+            autoRestartDelay: 100,
             keepAlive: true
           });
         }
@@ -352,7 +367,17 @@
           state.speechModule.start();
         }
         
-        // Set up periodic permission checks for mobile
+        // Set up periodic permission checks and auto-restart
+        setInterval(async () => {
+          console.log('Checking recognition state...');
+          if (!state.speechModule.isListening) {
+            console.log('Recognition not active, restarting...');
+            await checkAndRenewPermissions();
+            state.speechModule.start();
+          }
+        }, 1000);
+        
+        // Set up mobile-specific handlers
         if (state.isMobile) {
           console.log('Setting up mobile-specific handlers');
           setInterval(checkAndRenewPermissions, CONFIG.permissionCheckInterval);
@@ -592,12 +617,12 @@
         clearTimeout(state.triggerTimeout);
       }
 
-      // Process the response if it's long enough
-      if (transcript.length >= CONFIG.minResponseLength) {
+      // Process the response if it's long enough and not just the trigger word
+      if (transcript.length >= CONFIG.minResponseLength && !TRIGGER_PHRASES.some(phrase => transcript === phrase)) {
         console.log('Response is valid, performing image search for:', transcript);
         performImageSearch(transcript);
       } else {
-        console.log('Response too short, ignoring');
+        console.log('Response too short or matches trigger word, ignoring');
       }
     }
 
