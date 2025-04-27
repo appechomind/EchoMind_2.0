@@ -279,12 +279,7 @@
 
     // Command phrases that trigger the search
     const TRIGGER_PHRASES = [
-      'what did you think of',
-      'specifically',
-      'tell me specifically',
-      'show me specifically',
-      'what exactly',
-      'tell me exactly'
+      'specifically'  // Make this the only trigger word for now
     ];
 
     // Configuration
@@ -521,9 +516,10 @@
         return;
       }
 
-      // Check for trigger phrases
-      for (const phrase of TRIGGER_PHRASES) {
-        if (transcript.includes(phrase)) {
+      // Check for trigger word more precisely
+      const words = transcript.toLowerCase().trim().split(/\s+/);
+      for (const word of words) {
+        if (TRIGGER_PHRASES.includes(word)) {
           const now = Date.now();
           // Prevent rapid re-triggering
           if (now - state.lastTriggerTime < 2000) {
@@ -531,7 +527,7 @@
             return;
           }
           
-          console.log('Trigger phrase detected:', phrase);
+          console.log('Trigger word detected:', word);
           state.lastTriggerTime = now;
           startWaitingForResponse();
           return;
@@ -578,17 +574,19 @@
         return;
       }
       
-      state.lastTranscript = transcript;
+      // Remove the trigger word from the response if it's present
+      const cleanTranscript = transcript.replace(/specifically/gi, '').trim();
+      
+      state.lastTranscript = cleanTranscript;
       state.waitingForResponse = false;
       
       if (state.triggerTimeout) {
         clearTimeout(state.triggerTimeout);
       }
 
-      if (transcript.length >= CONFIG.minResponseLength && 
-          !TRIGGER_PHRASES.some(phrase => transcript === phrase)) {
-        console.log('Performing search for:', transcript);
-        performImageSearch(transcript);
+      if (cleanTranscript.length >= CONFIG.minResponseLength) {
+        console.log('Performing search for:', cleanTranscript);
+        performImageSearch(cleanTranscript);
       }
       
       updateStatus('Listening...', 'listening');
