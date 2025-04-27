@@ -283,9 +283,9 @@
     // Configuration
     const CONFIG = {
       recordingDuration: 5000, // 5 seconds
-      startDelay: 1000,      // 1 second delay before recording
+      startDelay: 500,       // Reduced to 0.5 seconds for faster response
       minResponseLength: 2,
-      maxWordCount: 50 // Increased to allow for longer phrases
+      maxWordCount: 50
     };
 
     // UI Elements
@@ -335,38 +335,26 @@
 
     // Handle speech results
     function handleSpeechResult(event) {
-      // Only process the latest result
       const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript.toLowerCase().trim();
-      
-      console.log('Heard:', transcript);
 
-      // If we're recording, add to recorded text only if it's a final result
-      if (state.isRecording) {
-        if (result.isFinal) {
-          // Only store the complete phrase once
-          state.recordedText = [transcript];
-          updateStatus('Recording: ' + transcript, 'waiting');
-        }
+      // If we're recording and it's a final result
+      if (state.isRecording && result.isFinal) {
+        state.recordedText = [transcript];
+        updateStatus('Recording: ' + transcript, 'waiting');
         return;
       }
 
-      // Check for trigger variations
-      const words = transcript.split(/\s+/);
-      for (const word of words) {
-        if (TRIGGER_VARIATIONS.some(trigger => word.includes(trigger))) {
-          console.log('Trigger word detected:', word);
-          
-          // Show waiting status immediately
-          updateStatus('Starting in 1 second...', 'waiting');
-          
-          // Start recording after delay
-          setTimeout(() => {
-            state.recordedText = []; // Clear any previous text
-            startRecording();
-          }, CONFIG.startDelay);
-          return;
-        }
+      // Check for trigger word
+      if (!state.isRecording && 
+          transcript.includes('about')) {
+        updateStatus('Starting...', 'waiting');
+        
+        // Start recording after short delay
+        setTimeout(() => {
+          state.recordedText = [];
+          startRecording();
+        }, CONFIG.startDelay);
       }
     }
 
@@ -389,65 +377,48 @@
 
     // Process the recording and perform search
     function processRecording() {
-      console.log('Processing recording:', state.recordedText);
-      
       if (state.recordedText.length === 0) {
-        console.log('No recording to process');
         state.isRecording = false;
         updateStatus('Listening...', 'listening');
         return;
       }
 
-      // Take the last recorded phrase as it's the most complete
-      let searchQuery = state.recordedText[state.recordedText.length - 1];
-      
-      // Clean up the recording by removing trigger words
-      TRIGGER_VARIATIONS.forEach(trigger => {
-        searchQuery = searchQuery.replace(new RegExp(trigger, 'gi'), '');
-      });
-      searchQuery = searchQuery.trim();
+      // Take the last recorded phrase and clean it immediately
+      let searchQuery = state.recordedText[state.recordedText.length - 1]
+        .replace(/about/gi, '')  // Remove trigger word
+        .trim();
 
-      // Perform search if we have valid input
-      if (searchQuery.length >= CONFIG.minResponseLength) {
-        console.log('Performing search for:', searchQuery);
-        performImageSearch(searchQuery);
-      }
-
-      // Reset state
+      // Reset state before search for faster response
       state.isRecording = false;
       state.recordedText = [];
-      updateStatus('Listening...', 'listening');
+      
+      // Perform search if valid
+      if (searchQuery.length >= CONFIG.minResponseLength) {
+        updateStatus('Searching...', 'waiting');
+        // Use requestAnimationFrame for smoother transition
+        requestAnimationFrame(() => {
+          performImageSearch(searchQuery);
+        });
+      } else {
+        updateStatus('Listening...', 'listening');
+      }
     }
 
     // Perform Google Image search in new tab
     function performImageSearch(query) {
-      if (query) {
-        try {
-          // Try to open in new tab first
-          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-          
-          // For iOS Safari and other mobile browsers
-          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            // Try window.open with special handling for mobile
-            const newWindow = window.open();
-            if (newWindow) {
-              newWindow.opener = null;
-              newWindow.location = searchUrl;
-            } else {
-              // If window.open fails, try changing location
-              window.location.href = searchUrl;
-            }
-          } else {
-            // Desktop browsers
-            const newWindow = window.open(searchUrl, '_blank');
-            if (newWindow) {
-              newWindow.opener = null;
-            }
-          }
-        } catch (error) {
-          console.error('Error opening search:', error);
-          // Fallback to changing current window location
-          window.location.href = searchUrl;
+      if (!query) return;
+
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+      
+      // Optimized mobile handling
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Direct location change for mobile - fastest method
+        window.location.href = searchUrl;
+      } else {
+        // Desktop handling
+        const newWindow = window.open(searchUrl, '_blank');
+        if (newWindow) {
+          newWindow.opener = null;
         }
       }
     }
