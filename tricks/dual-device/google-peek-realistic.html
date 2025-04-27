@@ -6,10 +6,10 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
-  <!-- Load scripts from repository root -->
-  <script src="/EchoMind_2.0/js/mobile-permissions.js"></script>
-  <script src="/EchoMind_2.0/js/echomind-speech.js"></script>
-  <script src="/EchoMind_2.0/js/echomind-commands.js"></script>
+  <!-- Load scripts with relative paths -->
+  <script src="../../js/mobile-permissions.js"></script>
+  <script src="../../js/echomind-speech.js"></script>
+  <script src="../../js/echomind-commands.js"></script>
   
   <script>
     // Check if scripts loaded correctly and show error if not
@@ -38,11 +38,11 @@
         statusDiv.textContent = 'Error: Failed to load required modules: ' + missingModules.join(', ');
         statusDiv.style.display = 'block';
         
-        // Try to load from backup location
+        // Try to load from backup location with relative paths
         const backupScripts = [
-          '/EchoMind_2.0/backup echo 3/js/mobile-permissions.js',
-          '/EchoMind_2.0/backup echo 3/js/echomind-speech.js',
-          '/EchoMind_2.0/backup echo 3/js/echomind-commands.js'
+          '../../backup/js/mobile-permissions.js',
+          '../../backup/js/echomind-speech.js',
+          '../../backup/js/echomind-commands.js'
         ];
         
         Promise.all(backupScripts.map(src => {
@@ -67,10 +67,14 @@
           } else {
             console.error('Modules still not available after backup load');
             statusDiv.textContent = 'Error: Failed to load modules even from backup location';
+            // Fall back to Web Speech API
+            initializeFallbackSpeech();
           }
         }).catch(error => {
           console.error('Failed to load backup scripts:', error);
           statusDiv.textContent = 'Error: Failed to load modules from any location';
+          // Fall back to Web Speech API
+          initializeFallbackSpeech();
         });
       } else {
         console.log('All modules loaded successfully');
@@ -527,12 +531,23 @@
       console.log('Searching for:', query);
       updateStatus('Searching for: ' + query, 'waiting');
 
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-      
-      if (CONFIG.isMobile) {
-        showMobileSearch(searchUrl);
-      } else {
-        window.open(searchUrl, '_blank');
+      // Try to open in new tab first
+      try {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+        const newWindow = window.open(searchUrl, '_blank');
+        
+        if (newWindow === null) {
+          // If popup blocked or on mobile, use direct navigation
+          if (CONFIG.isMobile) {
+            showMobileSearch(searchUrl);
+          } else {
+            window.location.href = searchUrl;
+          }
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        // Fallback to direct navigation
+        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       }
 
       // Reset status after search
