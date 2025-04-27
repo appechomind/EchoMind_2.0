@@ -400,17 +400,19 @@
       isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
       retryCount: 0,
       maxRetries: 3,
-      isInitialized: false
+      isInitialized: false,
+      isInitializing: false
     };
 
     // Configuration
     const CONFIG = {
       triggerWord: 'about',
-      recordingDelay: state.isMobile ? 300 : 500, // Faster delay for mobile
-      recordingDuration: state.isMobile ? 4000 : 5000, // Shorter duration for mobile
+      recordingDelay: state.isMobile ? 300 : 500,
+      recordingDuration: state.isMobile ? 4000 : 5000,
       minWords: 1,
       maxWords: 15,
-      retryDelay: 1000
+      retryDelay: 1000,
+      initTimeout: 10000 // 10 second timeout for initialization
     };
 
     // Debug logging with timestamp
@@ -453,30 +455,59 @@
 
     // Mobile-specific initialization
     async function initializeMobileRecognition() {
-      log('Initializing mobile recognition');
+      if (state.isInitializing) {
+        log('Already initializing, skipping duplicate call');
+        return false;
+      }
+
+      state.isInitializing = true;
+      log('Starting mobile recognition initialization');
+      
       try {
-        // Request audio permission explicitly for mobile
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: true,
-          echoCancellation: true,
-          noiseSuppression: true
+        // Clean up any existing streams
+        if (window.audioStream) {
+          window.audioStream.getTracks().forEach(track => {
+            track.stop();
+            log('Stopped existing audio track');
+          });
+          window.audioStream = null;
+        }
+
+        // Request audio permission with timeout
+        const streamPromise = navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
         });
-        
-        // Keep the stream active
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Audio permission timeout')), CONFIG.initTimeout);
+        });
+
+        const stream = await Promise.race([streamPromise, timeoutPromise]);
         window.audioStream = stream;
-        log('Mobile audio stream initialized');
+        log('Mobile audio stream successfully initialized');
+        state.isInitializing = false;
         return true;
       } catch (error) {
         log(`Mobile audio initialization failed: ${error.message}`, 'error');
+        state.isInitializing = false;
         return false;
       }
     }
 
     // Enhanced error recovery
     async function recoverFromError() {
+      if (state.isInitializing) {
+        log('Already initializing, skipping recovery');
+        return false;
+      }
+
       log('Attempting to recover from error');
       if (state.retryCount >= state.maxRetries) {
-        log('Max retries reached, requiring page reload', 'error');
+        log('Max retries reached, reload required', 'error');
         updateStatus('Please reload the page', 'error');
         return false;
       }
@@ -485,18 +516,24 @@
       log(`Retry attempt ${state.retryCount}/${state.maxRetries}`);
       
       try {
-        if (window.audioStream) {
-          window.audioStream.getTracks().forEach(track => track.stop());
+        // Stop existing recognition
+        if (EchoMind.Speech.isActive()) {
+          await EchoMind.Speech.stop();
+          log('Stopped existing speech recognition');
         }
-        
-        if (state.isMobile) {
-          await initializeMobileRecognition();
-        }
-        
-        await EchoMind.Speech.stop();
+
+        // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
-        await EchoMind.Speech.start();
         
+        // Reinitialize
+        if (state.isMobile) {
+          const mobileInit = await initializeMobileRecognition();
+          if (!mobileInit) {
+            throw new Error('Mobile reinitialization failed');
+          }
+        }
+
+        await EchoMind.Speech.start();
         log('Recovery successful');
         updateStatus('Listening for trigger word...', 'listening');
         return true;
@@ -508,9 +545,16 @@
 
     // Initialize speech recognition with mobile optimizations
     async function initializeSpeechRecognition() {
+      if (state.isInitializing || state.isInitialized) {
+        log('Already initialized or initializing, skipping');
+        return;
+      }
+
       try {
-        log(`Initializing speech recognition for ${state.isMobile ? 'mobile' : 'desktop'}`);
-        
+        state.isInitializing = true;
+        log(`Starting speech recognition initialization for ${state.isMobile ? 'mobile' : 'desktop'}`);
+        updateStatus('Initializing...', 'processing');
+
         // Mobile-specific initialization
         if (state.isMobile) {
           const mobileInit = await initializeMobileRecognition();
@@ -520,7 +564,11 @@
         }
 
         // Initialize EchoMind modules
-        await EchoMind.Permissions.init();
+        if (!EchoMind.Permissions.isInitialized()) {
+          await EchoMind.Permissions.init();
+          log('Permissions module initialized');
+        }
+
         const speechInitialized = await EchoMind.Speech.init({
           continuous: true,
           interimResults: false,
@@ -533,17 +581,22 @@
           throw new Error('Failed to initialize EchoMind speech module');
         }
 
-        // Enhanced event handlers
+        // Set up event handlers
         EchoMind.Speech.on('result', handleSpeechResult);
+        
         EchoMind.Speech.on('error', async (error) => {
           log(`Speech error: ${error.message}`, 'error');
-          updateStatus('Error occurred, recovering...', 'error');
+          if (!state.isInitialized) {
+            updateStatus('Initialization failed, retrying...', 'error');
+          } else {
+            updateStatus('Error occurred, recovering...', 'error');
+          }
           await recoverFromError();
         });
 
         EchoMind.Speech.on('end', async () => {
           log('Speech recognition ended');
-          if (!state.isInitialized) {
+          if (state.isInitialized && !state.isInitializing) {
             await recoverFromError();
           }
         });
@@ -551,13 +604,16 @@
         // Start listening
         await EchoMind.Speech.start();
         state.isInitialized = true;
+        state.isInitializing = false;
         updateStatus('Listening for trigger word...', 'listening');
-        log('Speech recognition initialized successfully');
+        log('Speech recognition successfully initialized');
 
       } catch (error) {
         log(`Initialization error: ${error.message}`, 'error');
-        updateStatus('Failed to initialize speech recognition', 'error');
-        await recoverFromError();
+        state.isInitialized = false;
+        state.isInitializing = false;
+        updateStatus('Failed to initialize, retrying...', 'error');
+        setTimeout(recoverFromError, CONFIG.retryDelay);
       }
     }
 
@@ -620,6 +676,14 @@
       if (e.key === 'Enter') {
         performSearch();
       }
+    });
+
+    // Start initialization when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded, starting initialization');
+      initializeSpeechRecognition().catch(error => {
+        log(`Initial setup failed: ${error.message}`, 'error');
+      });
     });
   </script>
 </body>
