@@ -337,17 +337,20 @@
     function handleSpeechResult(event) {
       const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript.toLowerCase().trim();
+      
+      console.log('Heard:', transcript);
 
       // If we're recording and it's a final result
       if (state.isRecording && result.isFinal) {
         state.recordedText = [transcript];
+        console.log('Recorded:', transcript);
         updateStatus('Recording: ' + transcript, 'waiting');
         return;
       }
 
       // Check for trigger word
-      if (!state.isRecording && 
-          transcript.includes('about')) {
+      if (!state.isRecording && transcript.includes('about')) {
+        console.log('Trigger detected, starting soon...');
         updateStatus('Starting...', 'waiting');
         
         // Start recording after short delay
@@ -358,9 +361,76 @@
       }
     }
 
-    // Start recording for 5 seconds
+    // Process the recording and perform search
+    function processRecording() {
+      console.log('Processing recording, text array:', state.recordedText);
+      
+      if (!state.recordedText.length) {
+        console.log('No recording to process');
+        state.isRecording = false;
+        updateStatus('Listening...', 'listening');
+        return;
+      }
+
+      // Get the last recorded phrase
+      let searchQuery = state.recordedText[state.recordedText.length - 1];
+      console.log('Raw search query:', searchQuery);
+
+      // Clean up the query
+      searchQuery = searchQuery
+        .replace(/about/gi, '')
+        .trim();
+      
+      console.log('Cleaned search query:', searchQuery);
+
+      // Reset state
+      state.isRecording = false;
+      state.recordedText = [];
+
+      // Perform search if valid
+      if (searchQuery.length >= CONFIG.minResponseLength) {
+        console.log('Performing search for:', searchQuery);
+        updateStatus('Searching...', 'waiting');
+        performImageSearch(searchQuery);
+      } else {
+        console.log('Search query too short');
+        updateStatus('Listening...', 'listening');
+      }
+    }
+
+    // Perform Google Image search
+    function performImageSearch(query) {
+      if (!query) {
+        console.log('No query provided');
+        return;
+      }
+
+      console.log('Starting search for:', query);
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+      
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        console.log('Mobile device detected, redirecting...');
+        window.location.replace(searchUrl);
+      } else {
+        console.log('Desktop device detected, opening new tab...');
+        try {
+          const newWindow = window.open(searchUrl, '_blank');
+          if (newWindow) {
+            newWindow.opener = null;
+          } else {
+            console.log('Popup blocked, trying direct navigation');
+            window.location.href = searchUrl;
+          }
+        } catch (error) {
+          console.error('Error opening window:', error);
+          window.location.href = searchUrl;
+        }
+      }
+    }
+
+    // Start recording
     function startRecording() {
-      console.log('Starting 5-second recording...');
+      console.log('Starting recording...');
       state.isRecording = true;
       updateStatus('Recording started...', 'waiting');
 
@@ -369,58 +439,11 @@
         clearTimeout(state.recordingTimeout);
       }
 
-      // Set timeout to process recording after 5 seconds
+      // Set timeout to process recording
       state.recordingTimeout = setTimeout(() => {
+        console.log('Recording timeout reached, processing...');
         processRecording();
       }, CONFIG.recordingDuration);
-    }
-
-    // Process the recording and perform search
-    function processRecording() {
-      if (state.recordedText.length === 0) {
-        state.isRecording = false;
-        updateStatus('Listening...', 'listening');
-        return;
-      }
-
-      // Take the last recorded phrase and clean it immediately
-      let searchQuery = state.recordedText[state.recordedText.length - 1]
-        .replace(/about/gi, '')  // Remove trigger word
-        .trim();
-
-      // Reset state before search for faster response
-      state.isRecording = false;
-      state.recordedText = [];
-      
-      // Perform search if valid
-      if (searchQuery.length >= CONFIG.minResponseLength) {
-        updateStatus('Searching...', 'waiting');
-        // Use requestAnimationFrame for smoother transition
-        requestAnimationFrame(() => {
-          performImageSearch(searchQuery);
-        });
-      } else {
-        updateStatus('Listening...', 'listening');
-      }
-    }
-
-    // Perform Google Image search in new tab
-    function performImageSearch(query) {
-      if (!query) return;
-
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-      
-      // Optimized mobile handling
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Direct location change for mobile - fastest method
-        window.location.href = searchUrl;
-      } else {
-        // Desktop handling
-        const newWindow = window.open(searchUrl, '_blank');
-        if (newWindow) {
-          newWindow.opener = null;
-        }
-      }
     }
 
     // Update status indicator
