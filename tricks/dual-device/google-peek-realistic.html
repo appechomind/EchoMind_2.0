@@ -688,12 +688,72 @@
       }
     });
 
+    // Initialize speech recognition with mobile optimizations
+    async function initializeSpeechRecognition() {
+      if (state.isInitializing || state.isInitialized) {
+        log('Already initialized or initializing, skipping');
+        return;
+      }
+
+      try {
+        state.isInitializing = true;
+        log(`Starting initialization for ${state.isMobile ? 'mobile' : 'desktop'}`);
+        updateStatus('Initializing...', 'processing');
+
+        // Simple permission check first
+        try {
+          const permissionResult = await navigator.mediaDevices.getUserMedia({ audio: true });
+          permissionResult.getTracks().forEach(track => track.stop());
+          log('Microphone permission granted');
+        } catch (error) {
+          throw new Error(`Microphone permission denied: ${error.message}`);
+        }
+
+        // Initialize EchoMind Speech directly
+        const speechInitialized = await EchoMind.Speech.init({
+          continuous: true,
+          interimResults: true,
+          maxAlternatives: 1,
+          lang: 'en-US'
+        });
+
+        if (!speechInitialized) {
+          throw new Error('Speech initialization failed');
+        }
+
+        // Set up basic event handlers
+        EchoMind.Speech.on('result', handleSpeechResult);
+        EchoMind.Speech.on('error', (error) => {
+          log(`Speech error: ${error.message}`, 'error');
+          updateStatus('Error occurred', 'error');
+        });
+
+        // Start listening
+        await EchoMind.Speech.start();
+        
+        // Mark as initialized
+        state.isInitialized = true;
+        state.isInitializing = false;
+        updateStatus('Listening for "about"...', 'listening');
+        log('Successfully initialized');
+
+      } catch (error) {
+        log(`Initialization failed: ${error.message}`, 'error');
+        state.isInitialized = false;
+        state.isInitializing = false;
+        updateStatus('Failed to initialize - Please reload', 'error');
+      }
+    }
+
     // Start initialization when page loads
     document.addEventListener('DOMContentLoaded', () => {
       log('Page loaded, starting initialization');
-      initializeSpeechRecognition().catch(error => {
-        log(`Initial setup failed: ${error.message}`, 'error');
-      });
+      setTimeout(() => {
+        initializeSpeechRecognition().catch(error => {
+          log(`Initial setup failed: ${error.message}`, 'error');
+          updateStatus('Setup failed - Please reload', 'error');
+        });
+      }, 1000); // Short delay before starting
     });
   </script>
 </body>
