@@ -435,8 +435,18 @@
 
     // Process the search query
     function processSearchQuery(transcript) {
+      log(`Processing transcript: "${transcript}"`);
+      
       // Remove trigger word and clean the query
-      const query = transcript.replace(new RegExp(`^${CONFIG.triggerWord}\\s+`, 'i'), '').trim();
+      const triggerIndex = transcript.toLowerCase().indexOf(CONFIG.triggerWord);
+      if (triggerIndex === -1) {
+        log('Trigger word not found in transcript', 'warn');
+        return;
+      }
+
+      // Get everything after the trigger word
+      const query = transcript.slice(triggerIndex + CONFIG.triggerWord.length).trim();
+      log(`Extracted query: "${query}"`);
       
       if (!query) {
         log('Empty query after processing', 'warn');
@@ -444,12 +454,14 @@
       }
 
       const wordCount = query.split(/\s+/).length;
+      log(`Query word count: ${wordCount}`);
+      
       if (wordCount < CONFIG.minWords || wordCount > CONFIG.maxWords) {
         log(`Query word count (${wordCount}) outside acceptable range`, 'warn');
         return;
       }
 
-      log(`Processing search query: ${query}`);
+      log(`Executing search for query: "${query}"`);
       performSearch(query);
     }
 
@@ -629,34 +641,49 @@
       }
     }
 
-    // Enhanced search handling for mobile
+    // Perform the search
     function performSearch(query) {
-      if (!query) return;
-      
+      if (!query) {
+        log('Empty query provided to performSearch', 'error');
+        return;
+      }
+
       const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-      log(`Performing search: ${query}`);
+      log(`Search URL: ${searchUrl}`);
       
-      if (state.isMobile) {
-        // For mobile, use a more reliable navigation method
-        try {
-          window.location.assign(searchUrl);
-        } catch (error) {
-          log(`Navigation failed, using fallback: ${error.message}`, 'warn');
-          window.location.href = searchUrl;
+      try {
+        if (state.isMobile) {
+          log('Using mobile navigation method');
+          // For mobile, try multiple navigation methods
+          try {
+            window.location.assign(searchUrl);
+          } catch (error) {
+            log(`Primary navigation failed: ${error.message}, trying fallback`, 'warn');
+            window.location.href = searchUrl;
+          }
+        } else {
+          log('Using desktop navigation method');
+          window.open(searchUrl, '_blank');
         }
-      } else {
-        window.open(searchUrl, '_blank');
+        updateStatus('Redirecting to search...', 'processing');
+      } catch (error) {
+        log(`Search navigation failed: ${error.message}`, 'error');
+        updateStatus('Search failed, please try again', 'error');
       }
     }
 
     // Handle speech results
     function handleSpeechResult(data) {
-      if (!data.finalTranscript) return;
+      if (!data.finalTranscript) {
+        log('No final transcript available');
+        return;
+      }
       
       const transcript = data.finalTranscript.toLowerCase().trim();
-      log(`Received transcript: ${transcript}`);
+      log(`Received transcript: "${transcript}"`);
 
       if (state.isRecording) {
+        log('Currently recording, processing transcript');
         processSearchQuery(transcript);
         state.isRecording = false;
         updateStatus('Processing...', 'processing');
@@ -667,19 +694,26 @@
         // Clear any existing timeout
         if (state.processingTimeout) {
           clearTimeout(state.processingTimeout);
+          state.processingTimeout = null;
         }
 
         // Start recording after delay
         setTimeout(() => {
           state.isRecording = true;
           updateStatus('Recording...', 'listening');
+          log('Started recording');
           
           // Stop recording after duration
           state.processingTimeout = setTimeout(() => {
-            state.isRecording = false;
-            updateStatus('Listening for trigger word...', 'listening');
+            if (state.isRecording) {
+              state.isRecording = false;
+              log('Recording timeout reached');
+              updateStatus('Listening for trigger word...', 'listening');
+            }
           }, CONFIG.recordingDuration);
         }, CONFIG.recordingDelay);
+      } else {
+        log('No trigger word found in transcript');
       }
     }
 
