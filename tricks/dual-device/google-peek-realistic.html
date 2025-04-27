@@ -317,12 +317,24 @@
         console.log('Initializing permissions...');
         await EchoMind.Permissions.init({
           debugMode: true,
-          checkInterval: 5000,
+          checkInterval: 2000, // Check more frequently
+          onPermissionChange: (data) => {
+            console.log('Permission changed:', data);
+            if (data.granted) {
+              EchoMind.Speech.start();
+              updateStatus('Listening...', 'listening');
+            } else {
+              updateStatus('Microphone access needed', 'error');
+            }
+          },
           onError: (error) => {
             console.error('Permissions error:', error);
             updateStatus('Microphone permission error: ' + error.message, 'error');
           }
         });
+
+        // Wait for permissions to be ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Check if permission is granted
         if (!EchoMind.Permissions.isGranted()) {
@@ -346,6 +358,13 @@
           onError: (error) => {
             console.error('Speech recognition error:', error);
             updateStatus('Speech recognition error: ' + error.message, 'error');
+            
+            // Try to restart on error
+            setTimeout(() => {
+              if (EchoMind.Permissions.isGranted()) {
+                EchoMind.Speech.start();
+              }
+            }, 2000);
           }
         });
 
@@ -354,8 +373,12 @@
 
         // Start listening
         console.log('Starting speech recognition...');
-        await EchoMind.Speech.start();
-        updateStatus('Listening...', 'listening');
+        if (EchoMind.Permissions.isGranted()) {
+          await EchoMind.Speech.start();
+          updateStatus('Listening...', 'listening');
+        } else {
+          updateStatus('Please grant microphone access', 'error');
+        }
 
       } catch (error) {
         console.error('Initialization error:', error);
@@ -372,6 +395,7 @@
 
     // Set up event handlers
     function setupEventHandlers() {
+      // Speech events
       EchoMind.Speech.on('start', () => {
         console.log('Speech recognition started');
         updateStatus('Listening...', 'listening');
@@ -380,6 +404,11 @@
       EchoMind.Speech.on('end', () => {
         console.log('Speech recognition ended');
         updateStatus('Not listening', 'error');
+        
+        // Try to restart if we have permission
+        if (EchoMind.Permissions.isGranted()) {
+          setTimeout(() => EchoMind.Speech.start(), 1000);
+        }
       });
 
       EchoMind.Speech.on('error', (error) => {
@@ -387,23 +416,41 @@
         updateStatus('Error: ' + error.error, 'error');
       });
 
-      EchoMind.Speech.on('result', handleSpeechResult);
+      // Handle both interim and final results
+      EchoMind.Speech.on('onInterimResult', (data) => {
+        if (!data.transcript) return;
+        handleSpeechResult({ finalTranscript: '', interimTranscript: data.transcript });
+      });
 
-      // Handle permission changes
-      EchoMind.Permissions.onPermissionChange((data) => {
-        if (data.granted) {
+      EchoMind.Speech.on('onFinalResult', (data) => {
+        if (!data.transcript) return;
+        handleSpeechResult({ finalTranscript: data.transcript, interimTranscript: '' });
+      });
+
+      // Clean up on page unload
+      window.addEventListener('beforeunload', () => {
+        if (EchoMind.Speech.isListening) {
+          EchoMind.Speech.stop();
+        }
+        if (state.triggerTimeout) {
+          clearTimeout(state.triggerTimeout);
+        }
+      });
+
+      // Handle visibility changes
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && EchoMind.Permissions.isGranted()) {
           EchoMind.Speech.start();
-        } else {
-          updateStatus('Microphone access needed', 'error');
+          updateStatus('Listening...', 'listening');
         }
       });
     }
 
     // Handle speech results
     function handleSpeechResult(data) {
-      if (!data.finalTranscript) return;
+      const transcript = (data.finalTranscript || data.interimTranscript).toLowerCase().trim();
+      if (!transcript) return;
       
-      const transcript = data.finalTranscript.toLowerCase().trim();
       console.log('Processing transcript:', transcript);
 
       if (state.waitingForResponse) {
@@ -498,13 +545,6 @@
 
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', initialize);
-
-    // Handle visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && EchoMind.Permissions.isGranted()) {
-        EchoMind.Speech.start();
-      }
-    });
   </script>
 </body>
 </html> 
