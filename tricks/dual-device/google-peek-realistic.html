@@ -402,19 +402,18 @@
       maxRetries: 3,
       isInitialized: false,
       isInitializing: false,
-      lastTranscript: ''
+      recordedText: []  // Array to store recorded phrases
     };
 
     // Configuration
     const CONFIG = {
       triggerWord: 'about',
-      recordingDelay: state.isMobile ? 300 : 500,
-      recordingDuration: state.isMobile ? 4000 : 5000,
+      recordingDelay: 300,
+      recordingDuration: 5000,
       minWords: 1,
       maxWords: 15,
       retryDelay: 1000,
-      initTimeout: 10000,
-      triggerThreshold: 0.7  // How close the match needs to be
+      initTimeout: 10000
     };
 
     // Debug logging with timestamp
@@ -435,43 +434,86 @@
       statusDiv.className = `status ${type}`;
     }
 
-    // Process the search query
-    function processSearchQuery(transcript) {
-      log(`Processing transcript: "${transcript}"`);
+    // Handle speech results
+    function handleSpeechResult(data) {
+      if (!data.finalTranscript) {
+        return;
+      }
       
-      // Get everything after the trigger word
-      const triggerIndex = transcript.toLowerCase().indexOf(CONFIG.triggerWord);
-      if (triggerIndex === -1) {
-        log('No trigger word found in transcript', 'warn');
+      const transcript = data.finalTranscript.toLowerCase().trim();
+      log(`Received transcript: "${transcript}"`);
+
+      // If we're recording, process the search query
+      if (state.isRecording) {
+        log('Recording active, adding to recorded text');
+        state.recordedText.push(transcript);
+        updateStatus('Recording...', 'listening');
         return;
       }
 
-      // Extract the search query
-      let query = transcript.slice(triggerIndex + CONFIG.triggerWord.length).trim();
-      log(`Raw query: "${query}"`);
+      // Check for trigger word
+      if (transcript.includes(CONFIG.triggerWord)) {
+        log('Trigger word detected, starting recording');
+        updateStatus('Trigger word detected!', 'processing');
+        
+        // Get any text after the trigger word
+        const startIndex = transcript.indexOf(CONFIG.triggerWord) + CONFIG.triggerWord.length;
+        const initialText = transcript.slice(startIndex).trim();
+        if (initialText) {
+          state.recordedText.push(initialText);
+        }
 
+        // Clear any existing timeout
+        if (state.processingTimeout) {
+          clearTimeout(state.processingTimeout);
+          state.processingTimeout = null;
+        }
+
+        // Start recording
+        state.isRecording = true;
+        updateStatus('Recording query...', 'listening');
+        log('Started recording');
+        
+        // Set timeout to process recording
+        state.processingTimeout = setTimeout(() => {
+          processRecording();
+        }, CONFIG.recordingDuration);
+      } else {
+        log(`No trigger word in: "${transcript}"`);
+        updateStatus('Listening for "about"...', 'listening');
+      }
+    }
+
+    // Process the recording and perform search
+    function processRecording() {
+      log(`Processing recorded text: ${state.recordedText.join(' ')}`);
+      
+      if (state.recordedText.length === 0) {
+        log('No recording to process');
+        state.isRecording = false;
+        updateStatus('Listening for "about"...', 'listening');
+        return;
+      }
+
+      // Join all recorded phrases and clean up
+      let searchQuery = state.recordedText.join(' ');
+      
       // Clean up the query
-      query = query.replace(/[^\w\s]/g, ' ').trim(); // Remove special characters
-      query = query.replace(/\s+/g, ' '); // Normalize spaces
-      log(`Cleaned query: "${query}"`);
+      searchQuery = searchQuery.replace(new RegExp(CONFIG.triggerWord, 'gi'), '').trim();
+      searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
+      searchQuery = searchQuery.replace(/\s+/g, ' ');
+      
+      log(`Cleaned search query: "${searchQuery}"`);
 
-      if (!query) {
-        log('Empty query after cleaning', 'warn');
-        updateStatus('No search terms found', 'error');
-        return;
+      if (searchQuery) {
+        log(`Executing search for: "${searchQuery}"`);
+        executeSearch(searchQuery);
       }
 
-      const wordCount = query.split(/\s+/).length;
-      log(`Query word count: ${wordCount}`);
-
-      if (wordCount < CONFIG.minWords || wordCount > CONFIG.maxWords) {
-        log(`Query word count (${wordCount}) outside acceptable range`, 'warn');
-        updateStatus('Please try your search again', 'error');
-        return;
-      }
-
-      log(`Executing search for: "${query}"`);
-      executeSearch(query);
+      // Reset state
+      state.isRecording = false;
+      state.recordedText = [];
+      updateStatus('Listening for "about"...', 'listening');
     }
 
     // Execute the search
@@ -481,82 +523,16 @@
         log(`Search URL: ${searchUrl}`);
         updateStatus('Searching...', 'processing');
 
-        // For mobile devices
         if (state.isMobile) {
           log('Using mobile search method');
-          // Try different navigation methods
-          try {
-            window.location.href = searchUrl;
-          } catch (error) {
-            log(`Primary navigation failed, trying alternate: ${error.message}`, 'warn');
-            window.location.assign(searchUrl);
-          }
+          window.location.href = searchUrl;
         } else {
-          // For desktop
           log('Using desktop search method');
           window.open(searchUrl, '_blank');
         }
       } catch (error) {
         log(`Search failed: ${error.message}`, 'error');
         updateStatus('Search failed - Please try again', 'error');
-      }
-    }
-
-    // Handle speech results
-    function handleSpeechResult(data) {
-      try {
-        // Process final results
-        if (!data.finalTranscript) {
-          return;
-        }
-        
-        const transcript = data.finalTranscript.toLowerCase().trim();
-        log(`Received transcript: "${transcript}"`);
-        
-        // Avoid processing duplicate transcripts
-        if (transcript === state.lastTranscript) {
-          log('Duplicate transcript, skipping');
-          return;
-        }
-        state.lastTranscript = transcript;
-
-        if (state.isRecording) {
-          log('Currently recording, processing transcript');
-          processSearchQuery(transcript);
-          state.isRecording = false;
-        } else if (transcript.includes(CONFIG.triggerWord)) {
-          log('Trigger word detected, starting recording');
-          updateStatus('Trigger word detected!', 'processing');
-          
-          // Clear any existing timeout
-          if (state.processingTimeout) {
-            clearTimeout(state.processingTimeout);
-            state.processingTimeout = null;
-          }
-
-          // Start recording after delay
-          setTimeout(() => {
-            state.isRecording = true;
-            state.lastTranscript = ''; // Reset last transcript
-            updateStatus('Recording query...', 'listening');
-            log('Started recording');
-            
-            // Stop recording after duration
-            state.processingTimeout = setTimeout(() => {
-              if (state.isRecording) {
-                state.isRecording = false;
-                log('Recording timeout reached');
-                updateStatus('Listening for "about"...', 'listening');
-              }
-            }, CONFIG.recordingDuration);
-          }, CONFIG.recordingDelay);
-        } else {
-          log(`No trigger word in: "${transcript}"`);
-          updateStatus('Listening for "about"...', 'listening');
-        }
-      } catch (error) {
-        log(`Error in handleSpeechResult: ${error.message}`, 'error');
-        updateStatus('Error processing speech', 'error');
       }
     }
 
