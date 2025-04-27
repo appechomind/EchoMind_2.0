@@ -439,32 +439,125 @@
     function processSearchQuery(transcript) {
       log(`Processing transcript: "${transcript}"`);
       
-      // Remove trigger word and clean the query
+      // Get everything after the trigger word
       const triggerIndex = transcript.toLowerCase().indexOf(CONFIG.triggerWord);
       if (triggerIndex === -1) {
-        log('Trigger word not found in transcript', 'warn');
+        log('No trigger word found in transcript', 'warn');
         return;
       }
 
-      // Get everything after the trigger word
-      const query = transcript.slice(triggerIndex + CONFIG.triggerWord.length).trim();
-      log(`Extracted query: "${query}"`);
-      
+      // Extract the search query
+      let query = transcript.slice(triggerIndex + CONFIG.triggerWord.length).trim();
+      log(`Raw query: "${query}"`);
+
+      // Clean up the query
+      query = query.replace(/[^\w\s]/g, ' ').trim(); // Remove special characters
+      query = query.replace(/\s+/g, ' '); // Normalize spaces
+      log(`Cleaned query: "${query}"`);
+
       if (!query) {
-        log('Empty query after processing', 'warn');
+        log('Empty query after cleaning', 'warn');
+        updateStatus('No search terms found', 'error');
         return;
       }
 
       const wordCount = query.split(/\s+/).length;
       log(`Query word count: ${wordCount}`);
-      
+
       if (wordCount < CONFIG.minWords || wordCount > CONFIG.maxWords) {
         log(`Query word count (${wordCount}) outside acceptable range`, 'warn');
+        updateStatus('Please try your search again', 'error');
         return;
       }
 
-      log(`Executing search for query: "${query}"`);
-      performSearch(query);
+      log(`Executing search for: "${query}"`);
+      executeSearch(query);
+    }
+
+    // Execute the search
+    function executeSearch(query) {
+      try {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        log(`Search URL: ${searchUrl}`);
+        updateStatus('Searching...', 'processing');
+
+        // For mobile devices
+        if (state.isMobile) {
+          log('Using mobile search method');
+          // Try different navigation methods
+          try {
+            window.location.href = searchUrl;
+          } catch (error) {
+            log(`Primary navigation failed, trying alternate: ${error.message}`, 'warn');
+            window.location.assign(searchUrl);
+          }
+        } else {
+          // For desktop
+          log('Using desktop search method');
+          window.open(searchUrl, '_blank');
+        }
+      } catch (error) {
+        log(`Search failed: ${error.message}`, 'error');
+        updateStatus('Search failed - Please try again', 'error');
+      }
+    }
+
+    // Handle speech results
+    function handleSpeechResult(data) {
+      try {
+        // Process final results
+        if (!data.finalTranscript) {
+          return;
+        }
+        
+        const transcript = data.finalTranscript.toLowerCase().trim();
+        log(`Received transcript: "${transcript}"`);
+        
+        // Avoid processing duplicate transcripts
+        if (transcript === state.lastTranscript) {
+          log('Duplicate transcript, skipping');
+          return;
+        }
+        state.lastTranscript = transcript;
+
+        if (state.isRecording) {
+          log('Currently recording, processing transcript');
+          processSearchQuery(transcript);
+          state.isRecording = false;
+        } else if (transcript.includes(CONFIG.triggerWord)) {
+          log('Trigger word detected, starting recording');
+          updateStatus('Trigger word detected!', 'processing');
+          
+          // Clear any existing timeout
+          if (state.processingTimeout) {
+            clearTimeout(state.processingTimeout);
+            state.processingTimeout = null;
+          }
+
+          // Start recording after delay
+          setTimeout(() => {
+            state.isRecording = true;
+            state.lastTranscript = ''; // Reset last transcript
+            updateStatus('Recording query...', 'listening');
+            log('Started recording');
+            
+            // Stop recording after duration
+            state.processingTimeout = setTimeout(() => {
+              if (state.isRecording) {
+                state.isRecording = false;
+                log('Recording timeout reached');
+                updateStatus('Listening for "about"...', 'listening');
+              }
+            }, CONFIG.recordingDuration);
+          }, CONFIG.recordingDelay);
+        } else {
+          log(`No trigger word in: "${transcript}"`);
+          updateStatus('Listening for "about"...', 'listening');
+        }
+      } catch (error) {
+        log(`Error in handleSpeechResult: ${error.message}`, 'error');
+        updateStatus('Error processing speech', 'error');
+      }
     }
 
     // Mobile-specific initialization
@@ -581,104 +674,6 @@
       }
       
       return false;
-    }
-
-    // Handle speech results
-    function handleSpeechResult(data) {
-      try {
-        // Handle interim results for visual feedback
-        if (data.interimTranscript) {
-          const interimText = data.interimTranscript.toLowerCase().trim();
-          if (checkForTriggerWord(interimText)) {
-            updateStatus('Trigger word detected...', 'processing');
-          }
-        }
-
-        // Process final results
-        if (!data.finalTranscript) {
-          return;
-        }
-        
-        const transcript = data.finalTranscript.toLowerCase().trim();
-        log(`Received transcript: "${transcript}"`);
-        
-        // Avoid processing duplicate transcripts
-        if (transcript === state.lastTranscript) {
-          log('Duplicate transcript, skipping');
-          return;
-        }
-        state.lastTranscript = transcript;
-
-        if (state.isRecording) {
-          log('Currently recording, processing transcript');
-          processSearchQuery(transcript);
-          state.isRecording = false;
-          updateStatus('Processing...', 'processing');
-        } else if (checkForTriggerWord(transcript)) {
-          log('Trigger word detected, starting recording');
-          updateStatus('Trigger word detected!', 'processing');
-          
-          // Clear any existing timeout
-          if (state.processingTimeout) {
-            clearTimeout(state.processingTimeout);
-            state.processingTimeout = null;
-          }
-
-          // Start recording after delay
-          setTimeout(() => {
-            state.isRecording = true;
-            state.lastTranscript = ''; // Reset last transcript
-            updateStatus('Recording query...', 'listening');
-            log('Started recording');
-            
-            // Stop recording after duration
-            state.processingTimeout = setTimeout(() => {
-              if (state.isRecording) {
-                state.isRecording = false;
-                log('Recording timeout reached');
-                updateStatus('Listening for trigger word...', 'listening');
-              }
-            }, CONFIG.recordingDuration);
-          }, CONFIG.recordingDelay);
-        } else {
-          log(`No trigger word in: "${transcript}"`);
-          updateStatus('Listening for "about"...', 'listening');
-        }
-      } catch (error) {
-        log(`Error in handleSpeechResult: ${error.message}`, 'error');
-        updateStatus('Error processing speech', 'error');
-      }
-    }
-
-    // Perform the search
-    function performSearch(query) {
-      if (!query) {
-        log('Empty query provided to performSearch', 'error');
-        return;
-      }
-
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-      log(`Search URL: ${searchUrl}`);
-      
-      try {
-        if (state.isMobile) {
-          log('Using mobile navigation method');
-          // For mobile, try multiple navigation methods
-          try {
-            window.location.assign(searchUrl);
-          } catch (error) {
-            log(`Primary navigation failed: ${error.message}, trying fallback`, 'warn');
-            window.location.href = searchUrl;
-          }
-        } else {
-          log('Using desktop navigation method');
-          window.open(searchUrl, '_blank');
-        }
-        updateStatus('Redirecting to search...', 'processing');
-      } catch (error) {
-        log(`Search navigation failed: ${error.message}`, 'error');
-        updateStatus('Search failed, please try again', 'error');
-      }
     }
 
     // Handle search on Enter key
