@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
-  <!-- Load dependencies in correct order -->
-  <script src="../../js/echomind-permissions.js"></script>
-  <script src="../../js/echomind-speech.js"></script>
-  <script src="../../js/echomind-commands.js"></script>
+  <!-- Update paths to be absolute from repository root -->
+  <script src="/EchoMind_2.0/js/echomind-permissions.js"></script>
+  <script src="/EchoMind_2.0/js/echomind-speech.js"></script>
+  <script src="/EchoMind_2.0/js/echomind-commands.js"></script>
   <script>
     // Check if scripts loaded correctly
     window.addEventListener('load', function() {
@@ -271,7 +271,7 @@
     const state = {
       isRecording: false,
       recordingTimeout: null,
-      currentRecording: '',
+      recordedText: [],  // Array to store all recorded phrases
       lastTriggerTime: 0
     };
 
@@ -344,9 +344,10 @@
       
       console.log('Heard:', transcript);
 
-      // If we're recording, add to current recording
+      // If we're recording, add to recorded text
       if (state.isRecording) {
-        state.currentRecording = transcript;
+        // Add this phrase to our recorded text
+        state.recordedText.push(transcript);
         updateStatus('Recording: ' + transcript, 'waiting');
         return;
       }
@@ -355,6 +356,13 @@
       const words = transcript.split(/\s+/);
       for (const word of words) {
         if (TRIGGER_VARIATIONS.some(trigger => word.includes(trigger))) {
+          console.log('Trigger word detected:', word);
+          // Get the text after the trigger word
+          const startIndex = transcript.indexOf(word) + word.length;
+          const initialText = transcript.slice(startIndex).trim();
+          if (initialText) {
+            state.recordedText.push(initialText);
+          }
           startRecording();
           return;
         }
@@ -365,7 +373,7 @@
     function startRecording() {
       console.log('Starting 18-second recording...');
       state.isRecording = true;
-      state.currentRecording = '';
+      state.recordedText = [];  // Reset recorded text array
       updateStatus('Recording started...', 'waiting');
 
       // Clear any existing timeout
@@ -381,17 +389,19 @@
 
     // Process the recording and perform search
     function processRecording() {
-      console.log('Processing recording:', state.currentRecording);
+      console.log('Processing recording:', state.recordedText);
       
-      if (!state.currentRecording) {
+      if (state.recordedText.length === 0) {
         console.log('No recording to process');
         state.isRecording = false;
         updateStatus('Listening...', 'listening');
         return;
       }
 
+      // Join all recorded phrases and clean up
+      let searchQuery = state.recordedText.join(' ');
+      
       // Clean up the recording by removing trigger words
-      let searchQuery = state.currentRecording;
       TRIGGER_VARIATIONS.forEach(trigger => {
         searchQuery = searchQuery.replace(new RegExp(trigger, 'gi'), '');
       });
@@ -405,7 +415,7 @@
 
       // Reset state
       state.isRecording = false;
-      state.currentRecording = '';
+      state.recordedText = [];
       updateStatus('Listening...', 'listening');
     }
 
