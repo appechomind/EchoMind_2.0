@@ -462,11 +462,8 @@
           // Process search query
           processSearchQuery(transcript);
         } else if (transcript.includes('about')) {
-          // Trigger word detected
-          console.log('Trigger word detected');
-          updateStatus('Ready to search! What would you like to see?', 'waiting');
-          // Small delay before recording to avoid catching the trigger word
-          setTimeout(() => startRecording(), 500);
+          // Trigger word detected, start recording after delay
+          setTimeout(() => startRecording(), CONFIG.startDelay);
         }
       });
 
@@ -503,7 +500,6 @@
     // Start recording mode
     function startRecording() {
       state.isRecording = true;
-      updateStatus('Recording... (speak now)', 'waiting');
 
       // Clear any existing timeout
       if (state.recordingTimeout) {
@@ -514,7 +510,6 @@
       state.recordingTimeout = setTimeout(() => {
         console.log('Recording timeout');
         state.isRecording = false;
-        updateStatus('Listening for "about"...', 'listening');
       }, CONFIG.recordingDuration);
     }
 
@@ -530,13 +525,11 @@
         
       if (!query) {
         console.log('Empty query after cleaning');
-        updateStatus('Could not understand the search term', 'error');
         state.isRecording = false;
         return;
       }
 
       console.log('Cleaned query:', query);
-      updateStatus('Searching for: ' + query, 'processing');
       
       // Perform the search with retry mechanism
       let retryCount = 0;
@@ -554,7 +547,6 @@
             setTimeout(attemptSearch, 1000 * retryCount);
           } else {
             console.error('Search failed after all retries');
-            updateStatus('Search failed - please try again', 'error');
             state.isRecording = false;
           }
         }
@@ -570,50 +562,21 @@
       const encodedQuery = encodeURIComponent(query);
       const searchUrl = `https://www.google.com/search?q=${encodedQuery}&tbm=isch`;
       
-      if (CONFIG.isMobile) {
-        console.log('Mobile device detected, using direct navigation');
-        try {
-          // Try modern navigation API first
-          if (window.navigation) {
-            window.navigation.navigate(searchUrl);
-          } else {
-            // Fallback to location replace
-            window.location.replace(searchUrl);
-          }
-        } catch (error) {
-          console.error('Navigation failed:', error);
-          // Final fallback
-          window.location.href = searchUrl;
-        }
-      } else {
-        console.log('Desktop device detected, using window open');
-        const searchWindow = window.open(searchUrl, '_blank');
-        if (!searchWindow) {
-          console.error('Popup blocked');
-          updateStatus('Popup blocked - please allow popups', 'error');
-          // Fallback to same window
-          window.location.href = searchUrl;
-        }
+      // Always open in new tab for both mobile and desktop
+      const searchWindow = window.open(searchUrl, '_blank');
+      if (!searchWindow) {
+        console.error('Popup blocked');
+        // Fallback to same window
+        window.location.href = searchUrl;
       }
       
       // Reset state
       state.isRecording = false;
-      updateStatus('Listening for "about"...', 'listening');
     }
 
     // Update status with clear feedback
     function updateStatus(message, type = 'listening') {
       console.log('Status:', message, '(', type, ')');
-      
-      if (!statusIndicator) {
-        statusIndicator = document.createElement('div');
-        statusIndicator.className = 'status-indicator';
-        document.body.appendChild(statusIndicator);
-      }
-      
-      statusIndicator.textContent = message;
-      statusIndicator.className = 'status-indicator visible ' + type;
-      statusIndicator.style.display = 'block';
       
       const micIcon = document.querySelector('.mic-icon');
       if (micIcon) {
