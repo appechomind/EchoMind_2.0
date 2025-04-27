@@ -307,14 +307,10 @@
     const state = {
       isRecording: false,
       recordingTimeout: null,
-      recordedText: [],  // Array to store all recorded phrases
-      lastTriggerTime: 0
+      recordedText: [],
+      lastTriggerTime: 0,
+      recognition: null
     };
-
-    // Trigger word variations
-    const TRIGGER_VARIATIONS = [
-      'about'  // Single trigger word
-    ];
 
     // Configuration
     const CONFIG = {
@@ -329,7 +325,7 @@
     let micIcon;
     let statusIndicator;
 
-    // Initialize Web Speech API
+    // Initialize speech recognition
     function initializeSpeechRecognition() {
       console.log('Initializing speech recognition...');
       console.log('Device type:', CONFIG.isMobile ? 'Mobile' : 'Desktop');
@@ -341,13 +337,8 @@
 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.interimResults = !CONFIG.isMobile; // Only final results on mobile
       recognition.lang = 'en-US';
-
-      // Mobile-specific settings
-      if (CONFIG.isMobile) {
-        recognition.interimResults = false; // Only get final results on mobile
-      }
 
       recognition.onstart = () => {
         console.log('Speech recognition started');
@@ -356,51 +347,80 @@
 
       recognition.onend = () => {
         console.log('Speech recognition ended - restarting...');
-        // Immediately restart recognition
-        recognition.start();
+        try {
+          recognition.start();
+        } catch (error) {
+          console.error('Error restarting recognition:', error);
+          setTimeout(() => recognition.start(), 1000);
+        }
       };
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         updateStatus('Error: ' + event.error, 'error');
-        // Try to restart on error
-        setTimeout(() => recognition.start(), 1000);
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (error) {
+              console.error('Error restarting after error:', error);
+            }
+          }, 1000);
+        }
       };
 
-      recognition.onresult = (event) => {
-        handleSpeechResult(event);
-      };
+      recognition.onresult = handleSpeechResult;
 
-      // Start recognition immediately
-      recognition.start();
-      return recognition;
+      // Store recognition instance in state
+      state.recognition = recognition;
+
+      // Start recognition
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        updateStatus('Error starting recognition. Please refresh.', 'error');
+      }
     }
 
     // Handle speech results
     function handleSpeechResult(event) {
-      const result = event.results[event.results.length - 1];
-      const transcript = result[0].transcript.toLowerCase().trim();
-      
-      console.log('Heard:', transcript);
+      try {
+        const result = event.results[event.results.length - 1];
+        if (!result) return;
 
-      // If we're recording and it's a final result
-      if (state.isRecording && result.isFinal) {
-        state.recordedText = [transcript];
-        console.log('Recorded:', transcript);
-        updateStatus('Recording: ' + transcript, 'waiting');
-        return;
-      }
+        const transcript = result[0].transcript.toLowerCase().trim();
+        console.log('Heard:', transcript);
 
-      // Check for trigger word
-      if (!state.isRecording && transcript.includes('about')) {
-        console.log('Trigger detected, starting soon...');
-        updateStatus('Starting...', 'waiting');
-        
-        // Start recording after short delay
-        setTimeout(() => {
-          state.recordedText = [];
-          startRecording();
-        }, CONFIG.startDelay);
+        // If we're recording and it's a final result
+        if (state.isRecording && result.isFinal) {
+          state.recordedText = [transcript];
+          console.log('Recorded:', transcript);
+          updateStatus('Recording: ' + transcript, 'waiting');
+          return;
+        }
+
+        // Check for trigger word if not recording
+        if (!state.isRecording && transcript.includes('about')) {
+          console.log('Trigger word detected:', transcript);
+          updateStatus('Starting...', 'waiting');
+          
+          // Prevent duplicate triggers
+          const now = Date.now();
+          if (now - state.lastTriggerTime < 2000) {
+            console.log('Ignoring duplicate trigger');
+            return;
+          }
+          state.lastTriggerTime = now;
+
+          // Start recording after delay
+          setTimeout(() => {
+            state.recordedText = [];
+            startRecording();
+          }, CONFIG.startDelay);
+        }
+      } catch (error) {
+        console.error('Error in handleSpeechResult:', error);
       }
     }
 
@@ -497,7 +517,7 @@
     function startRecording() {
       console.log('Starting recording...');
       state.isRecording = true;
-      updateStatus('Recording started...', 'waiting');
+      updateStatus('Recording...', 'waiting');
 
       // Clear any existing timeout
       if (state.recordingTimeout) {
@@ -506,7 +526,7 @@
 
       // Set timeout to process recording
       state.recordingTimeout = setTimeout(() => {
-        console.log('Recording timeout reached, processing...');
+        console.log('Recording timeout reached');
         processRecording();
       }, CONFIG.recordingDuration);
     }
