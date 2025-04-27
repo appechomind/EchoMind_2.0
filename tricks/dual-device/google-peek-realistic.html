@@ -401,7 +401,8 @@
       retryCount: 0,
       maxRetries: 3,
       isInitialized: false,
-      isInitializing: false
+      isInitializing: false,
+      lastTranscript: ''
     };
 
     // Configuration
@@ -412,7 +413,8 @@
       minWords: 1,
       maxWords: 15,
       retryDelay: 1000,
-      initTimeout: 10000 // 10 second timeout for initialization
+      initTimeout: 10000,
+      triggerThreshold: 0.7  // How close the match needs to be
     };
 
     // Debug logging with timestamp
@@ -557,87 +559,94 @@
       }
     }
 
-    // Initialize speech recognition with mobile optimizations
-    async function initializeSpeechRecognition() {
-      if (state.isInitializing || state.isInitialized) {
-        log('Already initialized or initializing, skipping');
-        return;
+    // Check for trigger word with fuzzy matching
+    function checkForTriggerWord(transcript) {
+      const words = transcript.toLowerCase().split(/\s+/);
+      log(`Checking words for trigger: ${words.join(', ')}`);
+      
+      // Check each word against the trigger
+      for (const word of words) {
+        if (word === CONFIG.triggerWord || 
+            word.includes(CONFIG.triggerWord) || 
+            CONFIG.triggerWord.includes(word)) {
+          log(`Trigger word match found: "${word}"`);
+          return true;
+        }
       }
+      
+      // Check the whole transcript for the trigger word
+      if (transcript.toLowerCase().includes(CONFIG.triggerWord)) {
+        log(`Trigger word found in full transcript`);
+        return true;
+      }
+      
+      return false;
+    }
 
+    // Handle speech results
+    function handleSpeechResult(data) {
       try {
-        state.isInitializing = true;
-        log(`Starting speech recognition initialization for ${state.isMobile ? 'mobile' : 'desktop'}`);
-        updateStatus('Initializing...', 'processing');
-
-        // Mobile-specific initialization
-        if (state.isMobile) {
-          const mobileInit = await initializeMobileRecognition();
-          if (!mobileInit) {
-            throw new Error('Mobile initialization failed');
+        // Handle interim results for visual feedback
+        if (data.interimTranscript) {
+          const interimText = data.interimTranscript.toLowerCase().trim();
+          if (checkForTriggerWord(interimText)) {
+            updateStatus('Trigger word detected...', 'processing');
           }
         }
 
-        // Initialize EchoMind modules
-        try {
-          await EchoMind.Permissions.init();
-          log('Permissions module initialized');
-        } catch (permError) {
-          log(`Warning: Permissions initialization error: ${permError.message}`, 'warn');
+        // Process final results
+        if (!data.finalTranscript) {
+          return;
         }
-
-        // Try to stop any existing recognition first
-        try {
-          await EchoMind.Speech.stop();
-        } catch (stopError) {
-          log(`Warning: Could not stop existing recognition: ${stopError.message}`, 'warn');
-        }
-
-        const speechInitialized = await EchoMind.Speech.init({
-          continuous: true,
-          interimResults: false,
-          maxAlternatives: 1,
-          lang: 'en-US',
-          mobileOptimized: state.isMobile
-        });
-
-        if (!speechInitialized) {
-          throw new Error('Failed to initialize EchoMind speech module');
-        }
-
-        // Set up event handlers
-        EchoMind.Speech.on('result', handleSpeechResult);
         
-        EchoMind.Speech.on('error', async (error) => {
-          log(`Speech error: ${error.message}`, 'error');
-          if (!state.isInitialized) {
-            updateStatus('Initialization failed, retrying...', 'error');
-          } else {
-            updateStatus('Error occurred, recovering...', 'error');
+        const transcript = data.finalTranscript.toLowerCase().trim();
+        log(`Received transcript: "${transcript}"`);
+        
+        // Avoid processing duplicate transcripts
+        if (transcript === state.lastTranscript) {
+          log('Duplicate transcript, skipping');
+          return;
+        }
+        state.lastTranscript = transcript;
+
+        if (state.isRecording) {
+          log('Currently recording, processing transcript');
+          processSearchQuery(transcript);
+          state.isRecording = false;
+          updateStatus('Processing...', 'processing');
+        } else if (checkForTriggerWord(transcript)) {
+          log('Trigger word detected, starting recording');
+          updateStatus('Trigger word detected!', 'processing');
+          
+          // Clear any existing timeout
+          if (state.processingTimeout) {
+            clearTimeout(state.processingTimeout);
+            state.processingTimeout = null;
           }
-          await recoverFromError();
-        });
 
-        EchoMind.Speech.on('end', async () => {
-          log('Speech recognition ended');
-          // Only attempt recovery if we were previously initialized and not currently initializing
-          if (state.isInitialized && !state.isInitializing) {
-            await recoverFromError();
-          }
-        });
-
-        // Start listening
-        await EchoMind.Speech.start();
-        state.isInitialized = true;
-        state.isInitializing = false;
-        updateStatus('Listening for trigger word...', 'listening');
-        log('Speech recognition successfully initialized');
-
+          // Start recording after delay
+          setTimeout(() => {
+            state.isRecording = true;
+            state.lastTranscript = ''; // Reset last transcript
+            updateStatus('Recording query...', 'listening');
+            log('Started recording');
+            
+            // Stop recording after duration
+            state.processingTimeout = setTimeout(() => {
+              if (state.isRecording) {
+                state.isRecording = false;
+                log('Recording timeout reached');
+                updateStatus('Listening for trigger word...', 'listening');
+              }
+            }, CONFIG.recordingDuration);
+          }, CONFIG.recordingDelay);
+        } else {
+          log(`No trigger word in: "${transcript}"`);
+          updateStatus('Listening for "about"...', 'listening');
+        }
       } catch (error) {
-        log(`Initialization error: ${error.message}`, 'error');
-        state.isInitialized = false;
-        state.isInitializing = false;
-        updateStatus('Failed to initialize, retrying...', 'error');
-        setTimeout(recoverFromError, CONFIG.retryDelay);
+        log(`Error in handleSpeechResult: ${error.message}`, 'error');
+        updateStatus('Error processing speech', 'error');
       }
     }
 
@@ -669,51 +678,6 @@
       } catch (error) {
         log(`Search navigation failed: ${error.message}`, 'error');
         updateStatus('Search failed, please try again', 'error');
-      }
-    }
-
-    // Handle speech results
-    function handleSpeechResult(data) {
-      if (!data.finalTranscript) {
-        log('No final transcript available');
-        return;
-      }
-      
-      const transcript = data.finalTranscript.toLowerCase().trim();
-      log(`Received transcript: "${transcript}"`);
-
-      if (state.isRecording) {
-        log('Currently recording, processing transcript');
-        processSearchQuery(transcript);
-        state.isRecording = false;
-        updateStatus('Processing...', 'processing');
-      } else if (transcript.includes(CONFIG.triggerWord)) {
-        log('Trigger word detected, starting recording');
-        updateStatus('Starting recording...', 'listening');
-        
-        // Clear any existing timeout
-        if (state.processingTimeout) {
-          clearTimeout(state.processingTimeout);
-          state.processingTimeout = null;
-        }
-
-        // Start recording after delay
-        setTimeout(() => {
-          state.isRecording = true;
-          updateStatus('Recording...', 'listening');
-          log('Started recording');
-          
-          // Stop recording after duration
-          state.processingTimeout = setTimeout(() => {
-            if (state.isRecording) {
-              state.isRecording = false;
-              log('Recording timeout reached');
-              updateStatus('Listening for trigger word...', 'listening');
-            }
-          }, CONFIG.recordingDuration);
-        }, CONFIG.recordingDelay);
-      } else {
-        log('No trigger word found in transcript');
       }
     }
 
