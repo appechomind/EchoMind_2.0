@@ -285,6 +285,54 @@
       cursor: pointer;
       display: none;
     }
+
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .status.listening {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status.processing {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+
+    #debugLog {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-family: monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .debug-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .debug-entry.info { color: #1976d2; }
+    .debug-entry.warn { color: #f57c00; }
+    .debug-entry.error { color: #d32f2f; }
   </style>
 </head>
 <body>
@@ -341,147 +389,229 @@
     <iframe class="search-iframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
   </div>
 
+  <div id="status" class="status">Initializing...</div>
+  <div id="debugLog"></div>
+
   <script>
     // State management
     const state = {
       isRecording: false,
-      recordingTimeout: null
+      processingTimeout: null,
+      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+      retryCount: 0,
+      maxRetries: 3,
+      isInitialized: false
     };
 
     // Configuration
     const CONFIG = {
-      recordingDuration: 5000,
-      startDelay: 500,
-      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      triggerWord: 'about',
+      recordingDelay: state.isMobile ? 300 : 500, // Faster delay for mobile
+      recordingDuration: state.isMobile ? 4000 : 5000, // Shorter duration for mobile
+      minWords: 1,
+      maxWords: 15,
+      retryDelay: 1000
     };
 
-    // Handle speech results
-    function handleSpeechResult(data) {
-      console.log('Speech result received:', data);
-
-      if (data.finalTranscript) {
-        const transcript = data.finalTranscript.toLowerCase().trim();
-        console.log('Processing transcript:', transcript);
-
-        if (state.isRecording) {
-          // Process the search query
-          const query = transcript.replace(/^about\s+/i, '').trim();
-          if (query) {
-            console.log('Opening search for:', query);
-            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            window.open(searchUrl, '_blank');
-          }
-          state.isRecording = false;
-        } else if (transcript.includes('about')) {
-          // Start recording after delay
-          setTimeout(() => {
-            state.isRecording = true;
-            // Stop recording after 5 seconds
-            setTimeout(() => {
-              state.isRecording = false;
-            }, 5000);
-          }, 500);
-        }
-      }
+    // Debug logging with timestamp
+    function log(message, level = 'info') {
+      const timestamp = new Date().toISOString();
+      const debugLog = document.getElementById('debugLog');
+      const entry = document.createElement('div');
+      entry.className = `debug-entry ${level}`;
+      entry.textContent = `${timestamp}: ${message}`;
+      debugLog.insertBefore(entry, debugLog.firstChild);
+      console.log(`[${level.toUpperCase()}][${timestamp}] ${message}`);
     }
 
-    // Update the initialization function
-    async function initializeSpeechRecognition() {
-      console.log('Initializing speech recognition');
-      
-      try {
-        // Try to use EchoMind speech module first
-        if (window.EchoMind && window.EchoMind.Speech) {
-          console.log('Using EchoMind speech module');
-          await window.EchoMind.Speech.initialize({
-            continuous: true,
-            interimResults: false,
-            maxAlternatives: 1,
-            lang: 'en-US'
-          });
-          
-          EchoMind.Speech.on('result', handleSpeechResult);
-          
-          EchoMind.Speech.on('end', () => {
-            console.log('Speech recognition ended');
-            // Auto-restart if not in recording mode
-            if (!state.isRecording) {
-              setTimeout(() => {
-                if (EchoMind.Speech.isInitialized) {
-                  EchoMind.Speech.start();
-                }
-              }, 100);
-            }
-          });
-          
-          console.log('Starting speech recognition');
-          EchoMind.Speech.start();
-        } else {
-          console.log('EchoMind speech module not available, using fallback');
-          tryFallbackSpeechRecognition();
-        }
-      } catch (error) {
-        console.error('Failed to initialize speech:', error);
-        tryFallbackSpeechRecognition();
-      }
+    // Update status display
+    function updateStatus(message, type = 'listening') {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
     }
 
-    // Update the fallback recognition
-    function tryFallbackSpeechRecognition() {
-      console.log('Using fallback speech recognition');
+    // Process the search query
+    function processSearchQuery(transcript) {
+      // Remove trigger word and clean the query
+      const query = transcript.replace(new RegExp(`^${CONFIG.triggerWord}\\s+`, 'i'), '').trim();
       
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error('No speech recognition support in this browser');
+      if (!query) {
+        log('Empty query after processing', 'warn');
         return;
       }
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      const wordCount = query.split(/\s+/).length;
+      if (wordCount < CONFIG.minWords || wordCount > CONFIG.maxWords) {
+        log(`Query word count (${wordCount}) outside acceptable range`, 'warn');
+        return;
+      }
 
-      recognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-        console.log('Fallback transcript:', transcript);
-        
-        if (state.isRecording) {
-          // Process the search query
-          const query = transcript.replace(/^about\s+/i, '').trim();
-          if (query) {
-            console.log('Opening search for:', query);
-            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            window.open(searchUrl, '_blank');
-          }
-          state.isRecording = false;
-        } else if (transcript.includes('about')) {
-          // Start recording after delay
-          setTimeout(() => {
-            state.isRecording = true;
-            // Stop recording after 5 seconds
-            setTimeout(() => {
-              state.isRecording = false;
-            }, 5000);
-          }, 500);
-        }
-      };
-
-      recognition.onend = () => {
-        console.log('Fallback recognition ended');
-        // Auto-restart if not in recording mode
-        if (!state.isRecording) {
-          setTimeout(() => recognition.start(), 100);
-        }
-      };
-
-      recognition.start();
+      log(`Processing search query: ${query}`);
+      performSearch(query);
     }
 
-    // Regular Google search
-    function performSearch() {
-      const query = document.getElementById('searchInput').value.trim();
-      if (query) {
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    // Mobile-specific initialization
+    async function initializeMobileRecognition() {
+      log('Initializing mobile recognition');
+      try {
+        // Request audio permission explicitly for mobile
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: true,
+          echoCancellation: true,
+          noiseSuppression: true
+        });
+        
+        // Keep the stream active
+        window.audioStream = stream;
+        log('Mobile audio stream initialized');
+        return true;
+      } catch (error) {
+        log(`Mobile audio initialization failed: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Enhanced error recovery
+    async function recoverFromError() {
+      log('Attempting to recover from error');
+      if (state.retryCount >= state.maxRetries) {
+        log('Max retries reached, requiring page reload', 'error');
+        updateStatus('Please reload the page', 'error');
+        return false;
+      }
+
+      state.retryCount++;
+      log(`Retry attempt ${state.retryCount}/${state.maxRetries}`);
+      
+      try {
+        if (window.audioStream) {
+          window.audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (state.isMobile) {
+          await initializeMobileRecognition();
+        }
+        
+        await EchoMind.Speech.stop();
+        await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
+        await EchoMind.Speech.start();
+        
+        log('Recovery successful');
+        updateStatus('Listening for trigger word...', 'listening');
+        return true;
+      } catch (error) {
+        log(`Recovery failed: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Initialize speech recognition with mobile optimizations
+    async function initializeSpeechRecognition() {
+      try {
+        log(`Initializing speech recognition for ${state.isMobile ? 'mobile' : 'desktop'}`);
+        
+        // Mobile-specific initialization
+        if (state.isMobile) {
+          const mobileInit = await initializeMobileRecognition();
+          if (!mobileInit) {
+            throw new Error('Mobile initialization failed');
+          }
+        }
+
+        // Initialize EchoMind modules
+        await EchoMind.Permissions.init();
+        const speechInitialized = await EchoMind.Speech.init({
+          continuous: true,
+          interimResults: false,
+          maxAlternatives: 1,
+          lang: 'en-US',
+          mobileOptimized: state.isMobile
+        });
+
+        if (!speechInitialized) {
+          throw new Error('Failed to initialize EchoMind speech module');
+        }
+
+        // Enhanced event handlers
+        EchoMind.Speech.on('result', handleSpeechResult);
+        EchoMind.Speech.on('error', async (error) => {
+          log(`Speech error: ${error.message}`, 'error');
+          updateStatus('Error occurred, recovering...', 'error');
+          await recoverFromError();
+        });
+
+        EchoMind.Speech.on('end', async () => {
+          log('Speech recognition ended');
+          if (!state.isInitialized) {
+            await recoverFromError();
+          }
+        });
+
+        // Start listening
+        await EchoMind.Speech.start();
+        state.isInitialized = true;
+        updateStatus('Listening for trigger word...', 'listening');
+        log('Speech recognition initialized successfully');
+
+      } catch (error) {
+        log(`Initialization error: ${error.message}`, 'error');
+        updateStatus('Failed to initialize speech recognition', 'error');
+        await recoverFromError();
+      }
+    }
+
+    // Enhanced search handling for mobile
+    function performSearch(query) {
+      if (!query) return;
+      
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      log(`Performing search: ${query}`);
+      
+      if (state.isMobile) {
+        // For mobile, use a more reliable navigation method
+        try {
+          window.location.assign(searchUrl);
+        } catch (error) {
+          log(`Navigation failed, using fallback: ${error.message}`, 'warn');
+          window.location.href = searchUrl;
+        }
+      } else {
+        window.open(searchUrl, '_blank');
+      }
+    }
+
+    // Handle speech results
+    function handleSpeechResult(data) {
+      if (!data.finalTranscript) return;
+      
+      const transcript = data.finalTranscript.toLowerCase().trim();
+      log(`Received transcript: ${transcript}`);
+
+      if (state.isRecording) {
+        processSearchQuery(transcript);
+        state.isRecording = false;
+        updateStatus('Processing...', 'processing');
+      } else if (transcript.includes(CONFIG.triggerWord)) {
+        log('Trigger word detected, starting recording');
+        updateStatus('Starting recording...', 'listening');
+        
+        // Clear any existing timeout
+        if (state.processingTimeout) {
+          clearTimeout(state.processingTimeout);
+        }
+
+        // Start recording after delay
+        setTimeout(() => {
+          state.isRecording = true;
+          updateStatus('Recording...', 'listening');
+          
+          // Stop recording after duration
+          state.processingTimeout = setTimeout(() => {
+            state.isRecording = false;
+            updateStatus('Listening for trigger word...', 'listening');
+          }, CONFIG.recordingDuration);
+        }, CONFIG.recordingDelay);
       }
     }
 
