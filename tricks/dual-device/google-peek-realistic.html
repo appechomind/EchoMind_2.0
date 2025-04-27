@@ -516,10 +516,12 @@
       log(`Retry attempt ${state.retryCount}/${state.maxRetries}`);
       
       try {
-        // Stop existing recognition
-        if (EchoMind.Speech.isActive()) {
+        // Stop any existing recognition
+        try {
           await EchoMind.Speech.stop();
           log('Stopped existing speech recognition');
+        } catch (stopError) {
+          log(`Warning: Could not stop speech recognition: ${stopError.message}`, 'warn');
         }
 
         // Wait before retrying
@@ -564,9 +566,18 @@
         }
 
         // Initialize EchoMind modules
-        if (!EchoMind.Permissions.isInitialized()) {
+        try {
           await EchoMind.Permissions.init();
           log('Permissions module initialized');
+        } catch (permError) {
+          log(`Warning: Permissions initialization error: ${permError.message}`, 'warn');
+        }
+
+        // Try to stop any existing recognition first
+        try {
+          await EchoMind.Speech.stop();
+        } catch (stopError) {
+          log(`Warning: Could not stop existing recognition: ${stopError.message}`, 'warn');
         }
 
         const speechInitialized = await EchoMind.Speech.init({
@@ -596,6 +607,7 @@
 
         EchoMind.Speech.on('end', async () => {
           log('Speech recognition ended');
+          // Only attempt recovery if we were previously initialized and not currently initializing
           if (state.isInitialized && !state.isInitializing) {
             await recoverFromError();
           }
