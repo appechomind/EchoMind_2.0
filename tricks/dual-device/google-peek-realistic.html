@@ -269,36 +269,36 @@
   <script>
     // State management
     const state = {
-      waitingForResponse: false,
-      lastTriggerTime: 0,
-      triggerTimeout: null,
-      processingTimeout: null,
-      lastTranscript: '',
-      usingWebSpeechAPI: false
+      isRecording: false,
+      recordingTimeout: null,
+      currentRecording: '',
+      lastTriggerTime: 0
     };
 
-    // Command phrases that trigger the search
-    const TRIGGER_PHRASES = [
-      'specifically'  // Make this the only trigger word for now
+    // Trigger word variations
+    const TRIGGER_VARIATIONS = [
+      'specific',
+      'specifically',
+      'spacific',
+      'spacifically',
+      'specifik',
+      'specifickly'
     ];
 
     // Configuration
     const CONFIG = {
-      responseWaitTime: 2000,
-      responseDuration: 18000,
+      recordingDuration: 18000, // 18 seconds
       minResponseLength: 2,
-      processingDelay: 20000,  // Changed to 20 seconds
-      minWordCount: 1,    // Changed to 1 word minimum
-      maxWordCount: 15    // Added maximum word limit
+      maxWordCount: 50 // Increased to allow for longer phrases
     };
 
     // UI Elements
     let micIcon;
     let statusIndicator;
 
-    // Initialize Web Speech API as fallback
-    function initializeWebSpeechAPI() {
-      console.log('Initializing Web Speech API fallback...');
+    // Initialize Web Speech API
+    function initializeSpeechRecognition() {
+      console.log('Initializing continuous speech recognition...');
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -311,290 +311,121 @@
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
-        console.log('Web Speech recognition started');
+        console.log('Speech recognition started');
         updateStatus('Listening...', 'listening');
       };
 
       recognition.onend = () => {
-        console.log('Web Speech recognition ended');
-        updateStatus('Not listening', 'error');
-        // Restart after a short delay
-        setTimeout(() => recognition.start(), 1000);
+        console.log('Speech recognition ended - restarting...');
+        // Immediately restart recognition
+        recognition.start();
       };
 
       recognition.onerror = (event) => {
-        console.error('Web Speech recognition error:', event.error);
+        console.error('Speech recognition error:', event.error);
         updateStatus('Error: ' + event.error, 'error');
+        // Try to restart on error
+        setTimeout(() => recognition.start(), 1000);
       };
 
       recognition.onresult = (event) => {
-        const results = event.results;
-        const lastResult = results[results.length - 1];
-        const transcript = lastResult[0].transcript.toLowerCase().trim();
-        
-        if (lastResult.isFinal) {
-          console.log('Final transcript:', transcript);
-          handleSpeechResult({
-            finalTranscript: transcript,
-            interimTranscript: ''
-          });
-        }
+        handleSpeechResult(event);
       };
 
+      // Start recognition immediately
+      recognition.start();
       return recognition;
     }
 
-    // Initialize the application
-    async function initialize() {
-      try {
-        console.log('Initializing application...');
-        
-        // Create and add status indicator first
-        statusIndicator = document.createElement('div');
-        statusIndicator.className = 'status-indicator';
-        document.body.appendChild(statusIndicator);
-        
-        // Get microphone icon
-        micIcon = document.querySelector('.mic-icon');
-        if (!micIcon) {
-          throw new Error('Microphone icon element not found');
-        }
-
-        // Try to use EchoMind modules first
-        if (window.EchoMind && window.EchoMind.Speech && window.EchoMind.Permissions) {
-          console.log('Using EchoMind modules...');
-          
-          try {
-            // Initialize permissions
-            await EchoMind.Permissions.init({
-              debugMode: true,
-              checkInterval: 2000,
-              onPermissionChange: (data) => {
-                console.log('Permission changed:', data);
-                if (data.granted) {
-                  EchoMind.Speech.start();
-                  updateStatus('Listening...', 'listening');
-                } else {
-                  updateStatus('Microphone access needed', 'error');
-                }
-              },
-              onError: (error) => {
-                console.error('Permissions error:', error);
-                updateStatus('Microphone permission error: ' + error.message, 'error');
-              }
-            });
-          } catch (permError) {
-            console.error('Permission initialization failed:', permError);
-            throw permError;
-          }
-
-          try {
-            // Initialize speech recognition
-            await EchoMind.Speech.init({
-              continuous: true,
-              interimResults: true,
-              lang: 'en-US',
-              maxAlternatives: 1,
-              debugMode: true,
-              autoRestart: true,
-              keepAlive: true
-            });
-          } catch (speechError) {
-            console.error('Speech initialization failed:', speechError);
-            throw speechError;
-          }
-
-          // Set up EchoMind event handlers
-          setupEchoMindHandlers();
-
-          // Start listening
-          try {
-            await EchoMind.Speech.start();
-            updateStatus('Listening...', 'listening');
-          } catch (startError) {
-            console.error('Failed to start speech recognition:', startError);
-            throw startError;
-          }
-
-        } else {
-          console.warn('EchoMind modules not available, using Web Speech API...');
-          state.usingWebSpeechAPI = true;
-          
-          // Initialize and start Web Speech API
-          const recognition = initializeWebSpeechAPI();
-          recognition.start();
-        }
-
-      } catch (error) {
-        console.error('Initialization error:', error);
-        updateStatus('Error: ' + error.message, 'error');
-        
-        // Try Web Speech API as fallback
-        if (!state.usingWebSpeechAPI) {
-          try {
-            console.log('Trying Web Speech API fallback...');
-            state.usingWebSpeechAPI = true;
-            const recognition = initializeWebSpeechAPI();
-            recognition.start();
-          } catch (fallbackError) {
-            console.error('Web Speech API fallback failed:', fallbackError);
-            updateStatus('Speech recognition not available', 'error');
-          }
-        }
-      }
-    }
-
-    // Set up EchoMind event handlers
-    function setupEchoMindHandlers() {
-      EchoMind.Speech.on('start', () => {
-        console.log('Speech recognition started');
-        updateStatus('Listening...', 'listening');
-      });
-
-      EchoMind.Speech.on('end', () => {
-        console.log('Speech recognition ended');
-        updateStatus('Not listening', 'error');
-        
-        // Try to restart if we have permission
-        if (EchoMind.Permissions.isGranted()) {
-          setTimeout(() => EchoMind.Speech.start(), 1000);
-        }
-      });
-
-      EchoMind.Speech.on('error', (error) => {
-        console.error('Speech recognition error:', error);
-        updateStatus('Error: ' + error.error, 'error');
-      });
-
-      EchoMind.Speech.on('onInterimResult', (data) => {
-        if (!data.transcript) return;
-        handleSpeechResult({ finalTranscript: '', interimTranscript: data.transcript });
-      });
-
-      EchoMind.Speech.on('onFinalResult', (data) => {
-        if (!data.transcript) return;
-        handleSpeechResult({ finalTranscript: data.transcript, interimTranscript: '' });
-      });
-    }
-
     // Handle speech results
-    function handleSpeechResult(data) {
-      const transcript = (data.finalTranscript || data.interimTranscript).toLowerCase().trim();
-      if (!transcript) return;
+    function handleSpeechResult(event) {
+      const result = event.results[event.results.length - 1];
+      const transcript = result[0].transcript.toLowerCase().trim();
       
-      console.log('Received transcript:', transcript);
+      console.log('Heard:', transcript);
 
-      // Clear any existing processing timeout
-      if (state.processingTimeout) {
-        clearTimeout(state.processingTimeout);
-      }
-
-      // Set a new timeout to process the speech after a delay
-      state.processingTimeout = setTimeout(() => {
-        processSpeechInput(transcript);
-      }, CONFIG.processingDelay);
-    }
-
-    // Process speech input after delay
-    function processSpeechInput(transcript) {
-      console.log('Processing transcript:', transcript);
-      
-      // If we're already waiting for a response, handle it differently
-      if (state.waitingForResponse) {
-        handleResponse(transcript);
+      // If we're recording, add to current recording
+      if (state.isRecording) {
+        state.currentRecording = transcript;
+        updateStatus('Recording: ' + transcript, 'waiting');
         return;
       }
 
-      // Check word count limits
-      const wordCount = transcript.split(/\s+/).length;
-      if (wordCount < CONFIG.minWordCount) {
-        console.log('Transcript too short, waiting for more words...');
-        return;
-      }
-      if (wordCount > CONFIG.maxWordCount) {
-        console.log('Transcript too long, ignoring...');
-        return;
-      }
-
-      // Check for trigger word more precisely
-      const words = transcript.toLowerCase().trim().split(/\s+/);
+      // Check for trigger variations
+      const words = transcript.split(/\s+/);
       for (const word of words) {
-        if (TRIGGER_PHRASES.includes(word)) {
-          const now = Date.now();
-          // Prevent rapid re-triggering
-          if (now - state.lastTriggerTime < 2000) {
-            console.log('Preventing rapid re-trigger');
-            return;
-          }
-          
-          console.log('Trigger word detected:', word);
-          state.lastTriggerTime = now;
-          startWaitingForResponse();
+        if (TRIGGER_VARIATIONS.some(trigger => word.includes(trigger))) {
+          startRecording();
           return;
         }
       }
     }
 
-    // Start waiting for response
-    function startWaitingForResponse() {
-      console.log('Starting to wait for response');
-      state.waitingForResponse = true;
-      updateStatus('Waiting for response...', 'waiting');
-      
-      if (state.triggerTimeout) {
-        clearTimeout(state.triggerTimeout);
+    // Start recording for 18 seconds
+    function startRecording() {
+      console.log('Starting 18-second recording...');
+      state.isRecording = true;
+      state.currentRecording = '';
+      updateStatus('Recording started...', 'waiting');
+
+      // Clear any existing timeout
+      if (state.recordingTimeout) {
+        clearTimeout(state.recordingTimeout);
       }
 
-      state.triggerTimeout = setTimeout(() => {
-        state.waitingForResponse = false;
-        updateStatus('Listening...', 'listening');
-      }, CONFIG.responseDuration);
+      // Set timeout to process recording after 18 seconds
+      state.recordingTimeout = setTimeout(() => {
+        processRecording();
+      }, CONFIG.recordingDuration);
     }
 
-    // Handle response
-    function handleResponse(transcript) {
-      console.log('Handling response:', transcript);
+    // Process the recording and perform search
+    function processRecording() {
+      console.log('Processing recording:', state.currentRecording);
       
-      if (!state.waitingForResponse) return;
-      
-      // Check word count limits
-      const wordCount = transcript.split(/\s+/).length;
-      if (wordCount < CONFIG.minWordCount) {
-        console.log('Response too short, waiting for more words...');
-        return;
-      }
-      if (wordCount > CONFIG.maxWordCount) {
-        console.log('Response too long, ignoring...');
+      if (!state.currentRecording) {
+        console.log('No recording to process');
+        state.isRecording = false;
+        updateStatus('Listening...', 'listening');
         return;
       }
 
-      // Compare with last processed transcript to avoid duplicates
-      if (transcript === state.lastTranscript) {
-        console.log('Duplicate transcript, ignoring');
-        return;
-      }
-      
-      // Remove the trigger word from the response if it's present
-      const cleanTranscript = transcript.replace(/specifically/gi, '').trim();
-      
-      state.lastTranscript = cleanTranscript;
-      state.waitingForResponse = false;
-      
-      if (state.triggerTimeout) {
-        clearTimeout(state.triggerTimeout);
+      // Clean up the recording by removing trigger words
+      let searchQuery = state.currentRecording;
+      TRIGGER_VARIATIONS.forEach(trigger => {
+        searchQuery = searchQuery.replace(new RegExp(trigger, 'gi'), '');
+      });
+      searchQuery = searchQuery.trim();
+
+      // Perform search if we have valid input
+      if (searchQuery.length >= CONFIG.minResponseLength) {
+        console.log('Performing search for:', searchQuery);
+        performImageSearch(searchQuery);
       }
 
-      if (cleanTranscript.length >= CONFIG.minResponseLength) {
-        console.log('Performing search for:', cleanTranscript);
-        performImageSearch(cleanTranscript);
-      }
-      
+      // Reset state
+      state.isRecording = false;
+      state.currentRecording = '';
       updateStatus('Listening...', 'listening');
+    }
+
+    // Perform Google Image search in new tab
+    function performImageSearch(query) {
+      if (query) {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+        window.open(searchUrl, '_blank');
+      }
     }
 
     // Update status indicator
     function updateStatus(message, type = 'listening') {
       console.log('Status:', message);
+      
+      if (!statusIndicator) {
+        statusIndicator = document.createElement('div');
+        statusIndicator.className = 'status-indicator';
+        document.body.appendChild(statusIndicator);
+      }
       
       statusIndicator.textContent = message;
       statusIndicator.className = 'status-indicator visible';
@@ -603,13 +434,9 @@
         statusIndicator.classList.add(type);
       }
 
-      micIcon.classList.toggle('listening', type === 'listening' || type === 'waiting');
-    }
-
-    // Perform Google Image search
-    function performImageSearch(query) {
-      if (query) {
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+      const micIcon = document.querySelector('.mic-icon');
+      if (micIcon) {
+        micIcon.classList.toggle('listening', type === 'listening' || type === 'waiting');
       }
     }
 
@@ -629,7 +456,14 @@
     });
 
     // Initialize when the page loads
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        initializeSpeechRecognition();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        updateStatus('Error: ' + error.message, 'error');
+      }
+    });
   </script>
 </body>
 </html> 
