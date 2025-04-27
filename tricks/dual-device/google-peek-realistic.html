@@ -215,6 +215,37 @@
         margin: 5px;
       }
     }
+
+    .search-iframe-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      background: white;
+    }
+
+    .search-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .close-iframe {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -266,6 +297,11 @@
     </div>
   </div>
 
+  <div class="search-iframe-container">
+    <button class="close-iframe">Close Search</button>
+    <iframe class="search-iframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+  </div>
+
   <script>
     // State management
     const state = {
@@ -283,9 +319,10 @@
     // Configuration
     const CONFIG = {
       recordingDuration: 5000, // 5 seconds
-      startDelay: 500,       // Reduced to 0.5 seconds for faster response
+      startDelay: 500,       // 0.5 seconds
       minResponseLength: 2,
-      maxWordCount: 50
+      maxWordCount: 50,
+      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     };
 
     // UI Elements
@@ -294,7 +331,8 @@
 
     // Initialize Web Speech API
     function initializeSpeechRecognition() {
-      console.log('Initializing continuous speech recognition...');
+      console.log('Initializing speech recognition...');
+      console.log('Device type:', CONFIG.isMobile ? 'Mobile' : 'Desktop');
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -305,6 +343,11 @@
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+
+      // Mobile-specific settings
+      if (CONFIG.isMobile) {
+        recognition.interimResults = false; // Only get final results on mobile
+      }
 
       recognition.onstart = () => {
         console.log('Speech recognition started');
@@ -391,14 +434,42 @@
       if (searchQuery.length >= CONFIG.minResponseLength) {
         console.log('Performing search for:', searchQuery);
         updateStatus('Searching...', 'waiting');
-        performImageSearch(searchQuery);
+        
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&tbm=isch`;
+
+        if (CONFIG.isMobile) {
+          showMobileSearch(searchUrl);
+        } else {
+          performImageSearch(searchQuery);
+        }
       } else {
         console.log('Search query too short');
         updateStatus('Listening...', 'listening');
       }
     }
 
-    // Perform Google Image search
+    // Show mobile search in iframe
+    function showMobileSearch(searchUrl) {
+      const container = document.querySelector('.search-iframe-container');
+      const iframe = document.querySelector('.search-iframe');
+      const closeButton = document.querySelector('.close-iframe');
+      
+      // Set iframe source
+      iframe.src = searchUrl;
+      
+      // Show container and close button
+      container.style.display = 'block';
+      closeButton.style.display = 'block';
+      
+      // Handle close button
+      closeButton.onclick = () => {
+        container.style.display = 'none';
+        closeButton.style.display = 'none';
+        iframe.src = 'about:blank';
+      };
+    }
+
+    // Perform Google Image search (for desktop)
     function performImageSearch(query) {
       if (!query) {
         console.log('No query provided');
@@ -408,23 +479,17 @@
       console.log('Starting search for:', query);
       const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
       
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        console.log('Mobile device detected, redirecting...');
-        window.location.replace(searchUrl);
-      } else {
-        console.log('Desktop device detected, opening new tab...');
-        try {
-          const newWindow = window.open(searchUrl, '_blank');
-          if (newWindow) {
-            newWindow.opener = null;
-          } else {
-            console.log('Popup blocked, trying direct navigation');
-            window.location.href = searchUrl;
-          }
-        } catch (error) {
-          console.error('Error opening window:', error);
+      try {
+        const newWindow = window.open(searchUrl, '_blank');
+        if (newWindow) {
+          newWindow.opener = null;
+        } else {
+          console.log('Popup blocked, trying direct navigation');
           window.location.href = searchUrl;
         }
+      } catch (error) {
+        console.error('Error opening window:', error);
+        window.location.href = searchUrl;
       }
     }
 
@@ -487,6 +552,16 @@
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', () => {
       try {
+        // Prevent iframe from opening in Google app
+        if (CONFIG.isMobile) {
+          document.querySelector('.search-iframe').addEventListener('load', function(e) {
+            const meta = document.createElement('meta');
+            meta.name = 'google';
+            meta.content = 'notranslate';
+            document.head.appendChild(meta);
+          });
+        }
+        
         initializeSpeechRecognition();
       } catch (error) {
         console.error('Initialization error:', error);
