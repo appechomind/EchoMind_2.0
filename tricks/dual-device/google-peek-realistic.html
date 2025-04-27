@@ -292,8 +292,9 @@
       responseWaitTime: 2000,
       responseDuration: 18000,
       minResponseLength: 2,
-      processingDelay: 1000,  // Delay before processing speech
-      minWordCount: 2  // Minimum number of words required before processing
+      processingDelay: 20000,  // Changed to 20 seconds
+      minWordCount: 1,    // Changed to 1 word minimum
+      maxWordCount: 15    // Added maximum word limit
     };
 
     // UI Elements
@@ -509,10 +510,14 @@
         return;
       }
 
-      // Check if the transcript is too short
+      // Check word count limits
       const wordCount = transcript.split(/\s+/).length;
       if (wordCount < CONFIG.minWordCount) {
         console.log('Transcript too short, waiting for more words...');
+        return;
+      }
+      if (wordCount > CONFIG.maxWordCount) {
+        console.log('Transcript too long, ignoring...');
         return;
       }
 
@@ -556,10 +561,14 @@
       
       if (!state.waitingForResponse) return;
       
-      // Check if the transcript is too short
+      // Check word count limits
       const wordCount = transcript.split(/\s+/).length;
       if (wordCount < CONFIG.minWordCount) {
         console.log('Response too short, waiting for more words...');
+        return;
+      }
+      if (wordCount > CONFIG.maxWordCount) {
+        console.log('Response too long, ignoring...');
         return;
       }
 
