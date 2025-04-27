@@ -287,7 +287,7 @@
 
     // Configuration
     const CONFIG = {
-      recordingDuration: 18000, // 18 seconds
+      recordingDuration: 8000, // 8 seconds
       minResponseLength: 2,
       maxWordCount: 50 // Increased to allow for longer phrases
     };
@@ -369,9 +369,9 @@
       }
     }
 
-    // Start recording for 18 seconds
+    // Start recording for 8 seconds
     function startRecording() {
-      console.log('Starting 18-second recording...');
+      console.log('Starting 8-second recording...');
       state.isRecording = true;
       state.recordedText = [];  // Reset recorded text array
       updateStatus('Recording started...', 'waiting');
@@ -381,7 +381,7 @@
         clearTimeout(state.recordingTimeout);
       }
 
-      // Set timeout to process recording after 18 seconds
+      // Set timeout to process recording after 8 seconds
       state.recordingTimeout = setTimeout(() => {
         processRecording();
       }, CONFIG.recordingDuration);
