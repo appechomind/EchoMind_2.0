@@ -272,6 +272,8 @@
       waitingForResponse: false,
       lastTriggerTime: 0,
       triggerTimeout: null,
+      processingTimeout: null,
+      lastTranscript: '',
       usingWebSpeechAPI: false
     };
 
@@ -288,8 +290,10 @@
     // Configuration
     const CONFIG = {
       responseWaitTime: 2000,
-      responseDuration: 15000,
-      minResponseLength: 2
+      responseDuration: 18000,
+      minResponseLength: 2,
+      processingDelay: 1000,  // Delay before processing speech
+      minWordCount: 2  // Minimum number of words required before processing
     };
 
     // UI Elements
@@ -356,50 +360,68 @@
         
         // Get microphone icon
         micIcon = document.querySelector('.mic-icon');
+        if (!micIcon) {
+          throw new Error('Microphone icon element not found');
+        }
 
         // Try to use EchoMind modules first
         if (window.EchoMind && window.EchoMind.Speech && window.EchoMind.Permissions) {
           console.log('Using EchoMind modules...');
           
-          // Initialize permissions
-          await EchoMind.Permissions.init({
-            debugMode: true,
-            checkInterval: 2000,
-            onPermissionChange: (data) => {
-              console.log('Permission changed:', data);
-              if (data.granted) {
-                EchoMind.Speech.start();
-                updateStatus('Listening...', 'listening');
-              } else {
-                updateStatus('Microphone access needed', 'error');
+          try {
+            // Initialize permissions
+            await EchoMind.Permissions.init({
+              debugMode: true,
+              checkInterval: 2000,
+              onPermissionChange: (data) => {
+                console.log('Permission changed:', data);
+                if (data.granted) {
+                  EchoMind.Speech.start();
+                  updateStatus('Listening...', 'listening');
+                } else {
+                  updateStatus('Microphone access needed', 'error');
+                }
+              },
+              onError: (error) => {
+                console.error('Permissions error:', error);
+                updateStatus('Microphone permission error: ' + error.message, 'error');
               }
-            },
-            onError: (error) => {
-              console.error('Permissions error:', error);
-              updateStatus('Microphone permission error: ' + error.message, 'error');
-            }
-          });
+            });
+          } catch (permError) {
+            console.error('Permission initialization failed:', permError);
+            throw permError;
+          }
 
-          // Initialize speech recognition
-          await EchoMind.Speech.init({
-            continuous: true,
-            interimResults: true,
-            lang: 'en-US',
-            maxAlternatives: 1,
-            debugMode: true,
-            autoRestart: true,
-            keepAlive: true
-          });
+          try {
+            // Initialize speech recognition
+            await EchoMind.Speech.init({
+              continuous: true,
+              interimResults: true,
+              lang: 'en-US',
+              maxAlternatives: 1,
+              debugMode: true,
+              autoRestart: true,
+              keepAlive: true
+            });
+          } catch (speechError) {
+            console.error('Speech initialization failed:', speechError);
+            throw speechError;
+          }
 
           // Set up EchoMind event handlers
           setupEchoMindHandlers();
 
           // Start listening
-          await EchoMind.Speech.start();
-          updateStatus('Listening...', 'listening');
+          try {
+            await EchoMind.Speech.start();
+            updateStatus('Listening...', 'listening');
+          } catch (startError) {
+            console.error('Failed to start speech recognition:', startError);
+            throw startError;
+          }
 
         } else {
-          console.log('EchoMind modules not available, using Web Speech API...');
+          console.warn('EchoMind modules not available, using Web Speech API...');
           state.usingWebSpeechAPI = true;
           
           // Initialize and start Web Speech API
@@ -464,10 +486,33 @@
       const transcript = (data.finalTranscript || data.interimTranscript).toLowerCase().trim();
       if (!transcript) return;
       
-      console.log('Processing transcript:', transcript);
+      console.log('Received transcript:', transcript);
 
+      // Clear any existing processing timeout
+      if (state.processingTimeout) {
+        clearTimeout(state.processingTimeout);
+      }
+
+      // Set a new timeout to process the speech after a delay
+      state.processingTimeout = setTimeout(() => {
+        processSpeechInput(transcript);
+      }, CONFIG.processingDelay);
+    }
+
+    // Process speech input after delay
+    function processSpeechInput(transcript) {
+      console.log('Processing transcript:', transcript);
+      
+      // If we're already waiting for a response, handle it differently
       if (state.waitingForResponse) {
         handleResponse(transcript);
+        return;
+      }
+
+      // Check if the transcript is too short
+      const wordCount = transcript.split(/\s+/).length;
+      if (wordCount < CONFIG.minWordCount) {
+        console.log('Transcript too short, waiting for more words...');
         return;
       }
 
@@ -475,8 +520,13 @@
       for (const phrase of TRIGGER_PHRASES) {
         if (transcript.includes(phrase)) {
           const now = Date.now();
-          if (now - state.lastTriggerTime < 1000) return;
+          // Prevent rapid re-triggering
+          if (now - state.lastTriggerTime < 2000) {
+            console.log('Preventing rapid re-trigger');
+            return;
+          }
           
+          console.log('Trigger phrase detected:', phrase);
           state.lastTriggerTime = now;
           startWaitingForResponse();
           return;
@@ -506,7 +556,22 @@
       
       if (!state.waitingForResponse) return;
       
+      // Check if the transcript is too short
+      const wordCount = transcript.split(/\s+/).length;
+      if (wordCount < CONFIG.minWordCount) {
+        console.log('Response too short, waiting for more words...');
+        return;
+      }
+
+      // Compare with last processed transcript to avoid duplicates
+      if (transcript === state.lastTranscript) {
+        console.log('Duplicate transcript, ignoring');
+        return;
+      }
+      
+      state.lastTranscript = transcript;
       state.waitingForResponse = false;
+      
       if (state.triggerTimeout) {
         clearTimeout(state.triggerTimeout);
       }
