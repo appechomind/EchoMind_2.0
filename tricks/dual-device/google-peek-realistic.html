@@ -335,16 +335,19 @@
 
     // Handle speech results
     function handleSpeechResult(event) {
+      // Only process the latest result
       const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript.toLowerCase().trim();
       
       console.log('Heard:', transcript);
 
-      // If we're recording, add to recorded text
+      // If we're recording, add to recorded text only if it's a final result
       if (state.isRecording) {
-        // Add this phrase to our recorded text
-        state.recordedText.push(transcript);
-        updateStatus('Recording: ' + transcript, 'waiting');
+        if (result.isFinal) {
+          // Only store the complete phrase once
+          state.recordedText = [transcript];
+          updateStatus('Recording: ' + transcript, 'waiting');
+        }
         return;
       }
 
@@ -353,18 +356,13 @@
       for (const word of words) {
         if (TRIGGER_VARIATIONS.some(trigger => word.includes(trigger))) {
           console.log('Trigger word detected:', word);
-          // Get the text after the trigger word
-          const startIndex = transcript.indexOf(word) + word.length;
-          const initialText = transcript.slice(startIndex).trim();
           
           // Show waiting status immediately
           updateStatus('Starting in 1 second...', 'waiting');
           
           // Start recording after delay
           setTimeout(() => {
-            if (initialText) {
-              state.recordedText.push(initialText);
-            }
+            state.recordedText = []; // Clear any previous text
             startRecording();
           }, CONFIG.startDelay);
           return;
@@ -400,8 +398,8 @@
         return;
       }
 
-      // Join all recorded phrases and clean up
-      let searchQuery = state.recordedText.join(' ');
+      // Take the last recorded phrase as it's the most complete
+      let searchQuery = state.recordedText[state.recordedText.length - 1];
       
       // Clean up the recording by removing trigger words
       TRIGGER_VARIATIONS.forEach(trigger => {
@@ -424,11 +422,32 @@
     // Perform Google Image search in new tab
     function performImageSearch(query) {
       if (query) {
-        // Force mobile Safari to open in new tab with _blank and add noopener
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
-        const newWindow = window.open(searchUrl, '_blank');
-        if (newWindow) {
-          newWindow.opener = null;
+        try {
+          // Try to open in new tab first
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=isch`;
+          
+          // For iOS Safari and other mobile browsers
+          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            // Try window.open with special handling for mobile
+            const newWindow = window.open();
+            if (newWindow) {
+              newWindow.opener = null;
+              newWindow.location = searchUrl;
+            } else {
+              // If window.open fails, try changing location
+              window.location.href = searchUrl;
+            }
+          } else {
+            // Desktop browsers
+            const newWindow = window.open(searchUrl, '_blank');
+            if (newWindow) {
+              newWindow.opener = null;
+            }
+          }
+        } catch (error) {
+          console.error('Error opening search:', error);
+          // Fallback to changing current window location
+          window.location.href = searchUrl;
         }
       }
     }
