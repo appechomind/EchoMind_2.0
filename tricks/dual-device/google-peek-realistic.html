@@ -6,9 +6,18 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   <!-- Load dependencies in correct order -->
-  <script src="/EchoMind_2.0/js/echomind-permissions.js"></script>
-  <script src="/EchoMind_2.0/js/echomind-speech.js"></script>
-  <script src="/EchoMind_2.0/js/echomind-commands.js"></script>
+  <script src="../../js/echomind-permissions.js"></script>
+  <script src="../../js/echomind-speech.js"></script>
+  <script src="../../js/echomind-commands.js"></script>
+  <script>
+    // Check if scripts loaded correctly
+    window.addEventListener('load', function() {
+      if (!window.EchoMind || !window.EchoMind.Speech || !window.EchoMind.Permissions) {
+        console.error('EchoMind modules not loaded correctly');
+        updateStatus('Error: Required modules not loaded', 'error');
+      }
+    });
+  </script>
   <style>
     body {
       font-family: arial,sans-serif;
@@ -298,39 +307,66 @@
         
         // Get microphone icon
         micIcon = document.querySelector('.mic-icon');
-
-        // Initialize EchoMind modules
-        if (!window.EchoMind) {
-          throw new Error('EchoMind modules not found');
+        
+        // Check if modules are available
+        if (!window.EchoMind || !window.EchoMind.Speech || !window.EchoMind.Permissions) {
+          throw new Error('EchoMind modules not found. Please check your internet connection and reload the page.');
         }
 
-        // Initialize permissions first
+        // Initialize permissions first with more detailed logging
+        console.log('Initializing permissions...');
         await EchoMind.Permissions.init({
           debugMode: true,
-          checkInterval: 5000
+          checkInterval: 5000,
+          onError: (error) => {
+            console.error('Permissions error:', error);
+            updateStatus('Microphone permission error: ' + error.message, 'error');
+          }
         });
 
-        // Initialize speech recognition
+        // Check if permission is granted
+        if (!EchoMind.Permissions.isGranted()) {
+          console.log('Requesting microphone permission...');
+          const granted = await EchoMind.Permissions.requestPermission();
+          if (!granted) {
+            throw new Error('Microphone permission denied');
+          }
+        }
+
+        // Initialize speech recognition with more detailed logging
+        console.log('Initializing speech recognition...');
         await EchoMind.Speech.init({
           continuous: true,
           interimResults: true,
           lang: 'en-US',
           maxAlternatives: 1,
           debugMode: true,
-          autoRestart: false,
-          keepAlive: true
+          autoRestart: true,
+          keepAlive: true,
+          onError: (error) => {
+            console.error('Speech recognition error:', error);
+            updateStatus('Speech recognition error: ' + error.message, 'error');
+          }
         });
 
         // Set up event handlers
         setupEventHandlers();
 
         // Start listening
+        console.log('Starting speech recognition...');
         await EchoMind.Speech.start();
         updateStatus('Listening...', 'listening');
 
       } catch (error) {
         console.error('Initialization error:', error);
-        updateStatus('Error initializing speech recognition', 'error');
+        updateStatus('Error: ' + error.message, 'error');
+        
+        // Try to recover from errors
+        if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
+          updateStatus('Please grant microphone permission and reload the page', 'error');
+        } else {
+          updateStatus('Error initializing speech recognition. Please reload the page.', 'error');
+        }
       }
     }
 
