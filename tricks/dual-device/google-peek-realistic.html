@@ -6,8 +6,8 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
-  <!-- Load scripts with relative paths -->
-  <script src="../../js/mobile-permissions.js"></script>
+  <!-- Load scripts with correct file names -->
+  <script src="../../js/echomind-permissions.js"></script>
   <script src="../../js/echomind-speech.js"></script>
   <script src="../../js/echomind-commands.js"></script>
   
@@ -40,9 +40,9 @@
         
         // Try to load from backup location with relative paths
         const backupScripts = [
-          '../../backup/js/mobile-permissions.js',
-          '../../backup/js/echomind-speech.js',
-          '../../backup/js/echomind-commands.js'
+          '../../js/permissions-handler.js',  // Try permissions handler as backup
+          '../../js/mind-reader.js',          // Try mind reader as backup
+          '../../js/echomind-commands.js'     // Keep commands module
         ];
         
         Promise.all(backupScripts.map(src => {
@@ -66,13 +66,13 @@
             location.reload();
           } else {
             console.error('Modules still not available after backup load');
-            statusDiv.textContent = 'Error: Failed to load modules even from backup location';
+            statusDiv.textContent = 'Falling back to browser speech recognition...';
             // Fall back to Web Speech API
             initializeFallbackSpeech();
           }
         }).catch(error => {
           console.error('Failed to load backup scripts:', error);
-          statusDiv.textContent = 'Error: Failed to load modules from any location';
+          statusDiv.textContent = 'Using browser speech recognition...';
           // Fall back to Web Speech API
           initializeFallbackSpeech();
         });
