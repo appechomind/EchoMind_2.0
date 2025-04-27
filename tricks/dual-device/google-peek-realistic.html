@@ -379,7 +379,41 @@
       isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     };
 
-    // Initialize EchoMind speech recognition
+    // Initialize when the page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Initialize permissions first
+        if (window.EchoMind?.Permissions) {
+          await EchoMind.Permissions.init();
+          
+          // Request microphone permission explicitly
+          const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+          if (permissionResult === 'granted') {
+            console.log('Microphone permission granted');
+            initializeSpeechRecognition();
+          } else {
+            console.error('Microphone permission denied');
+            updateStatus('Please allow microphone access', 'error');
+          }
+        } else {
+          console.error('EchoMind Permissions module not loaded');
+          // Try fallback permission request
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop()); // Clean up
+            initializeSpeechRecognition();
+          } catch (error) {
+            console.error('Microphone permission denied:', error);
+            updateStatus('Microphone access required', 'error');
+          }
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        updateStatus('Error: ' + error.message, 'error');
+      }
+    });
+
+    // Update the initialization function to handle permissions properly
     async function initializeSpeechRecognition() {
       console.log('Initializing speech recognition');
       
@@ -387,29 +421,36 @@
       state.isRecording = false;
       
       try {
-        // Try to use EchoMind speech module first
-        if (window.EchoMind && window.EchoMind.Speech) {
-          console.log('Using EchoMind speech module');
-          await window.EchoMind.Speech.initialize({
-            continuous: true,
-            interimResults: !CONFIG.isMobile,
-            maxAlternatives: 3,
-            lang: 'en-US',
-            audioConfig: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 16000
-            }
-          });
-          setupSpeechHandlers();
+        // Check permission status before initializing
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+        if (permissionStatus.state === 'granted') {
+          // Try to use EchoMind speech module first
+          if (window.EchoMind && window.EchoMind.Speech) {
+            console.log('Using EchoMind speech module');
+            await window.EchoMind.Speech.initialize({
+              continuous: true,
+              interimResults: !CONFIG.isMobile,
+              maxAlternatives: 3,
+              lang: 'en-US',
+              audioConfig: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 16000
+              }
+            });
+            setupSpeechHandlers();
+            startListening();
+          } else {
+            console.log('EchoMind speech module not available, using fallback');
+            tryFallbackSpeechRecognition();
+          }
         } else {
-          console.log('EchoMind speech module not available, using fallback');
-          tryFallbackSpeechRecognition();
+          console.error('Microphone permission not granted');
+          updateStatus('Microphone access required', 'error');
         }
       } catch (error) {
-        console.error('Failed to initialize EchoMind speech:', error);
-        console.log('Falling back to browser speech recognition');
+        console.error('Failed to initialize speech:', error);
         tryFallbackSpeechRecognition();
       }
     }
@@ -617,27 +658,6 @@
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         performSearch();
-      }
-    });
-
-    // Initialize when the page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      try {
-        // Wait for permissions module to be ready
-        if (window.EchoMind && window.EchoMind.Permissions) {
-          EchoMind.Permissions.init().then(() => {
-            initializeSpeechRecognition();
-          }).catch(error => {
-            console.error('Failed to initialize permissions:', error);
-            updateStatus('Failed to initialize permissions', 'error');
-          });
-        } else {
-          console.error('EchoMind Permissions module not loaded');
-          updateStatus('Required modules not loaded', 'error');
-        }
-      } catch (error) {
-        console.error('Initialization error:', error);
-        updateStatus('Error: ' + error.message, 'error');
       }
     });
 
