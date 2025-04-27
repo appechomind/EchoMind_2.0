@@ -283,6 +283,7 @@
     // Configuration
     const CONFIG = {
       recordingDuration: 5000, // 5 seconds
+      startDelay: 1000,      // 1 second delay before recording
       minResponseLength: 2,
       maxWordCount: 50 // Increased to allow for longer phrases
     };
@@ -355,10 +356,17 @@
           // Get the text after the trigger word
           const startIndex = transcript.indexOf(word) + word.length;
           const initialText = transcript.slice(startIndex).trim();
-          if (initialText) {
-            state.recordedText.push(initialText);
-          }
-          startRecording();
+          
+          // Show waiting status immediately
+          updateStatus('Starting in 1 second...', 'waiting');
+          
+          // Start recording after delay
+          setTimeout(() => {
+            if (initialText) {
+              state.recordedText.push(initialText);
+            }
+            startRecording();
+          }, CONFIG.startDelay);
           return;
         }
       }
@@ -368,7 +376,6 @@
     function startRecording() {
       console.log('Starting 5-second recording...');
       state.isRecording = true;
-      state.recordedText = [];  // Reset recorded text array
       updateStatus('Recording started...', 'waiting');
 
       // Clear any existing timeout
