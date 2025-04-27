@@ -381,29 +381,35 @@
 
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM Content Loaded - Starting initialization');
       try {
         // Initialize permissions first
         if (window.EchoMind?.Permissions) {
+          console.log('EchoMind Permissions module found');
           await EchoMind.Permissions.init();
+          console.log('Permissions initialized, requesting microphone access');
           
           // Request microphone permission explicitly
           const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+          console.log('Permission request result:', permissionResult);
+          
           if (permissionResult === 'granted') {
-            console.log('Microphone permission granted');
-            initializeSpeechRecognition();
+            console.log('Microphone permission granted, initializing speech');
+            await initializeSpeechRecognition();
           } else {
             console.error('Microphone permission denied');
             updateStatus('Please allow microphone access', 'error');
           }
         } else {
-          console.error('EchoMind Permissions module not loaded');
+          console.warn('EchoMind Permissions module not found, trying browser API');
           // Try fallback permission request
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('Browser microphone permission granted');
             stream.getTracks().forEach(track => track.stop()); // Clean up
-            initializeSpeechRecognition();
+            await initializeSpeechRecognition();
           } catch (error) {
-            console.error('Microphone permission denied:', error);
+            console.error('Browser microphone permission denied:', error);
             updateStatus('Microphone access required', 'error');
           }
         }
@@ -421,33 +427,30 @@
       state.isRecording = false;
       
       try {
-        // Check permission status before initializing
-        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-        if (permissionStatus.state === 'granted') {
-          // Try to use EchoMind speech module first
-          if (window.EchoMind && window.EchoMind.Speech) {
-            console.log('Using EchoMind speech module');
-            await window.EchoMind.Speech.initialize({
-              continuous: true,
-              interimResults: !CONFIG.isMobile,
-              maxAlternatives: 3,
-              lang: 'en-US',
-              audioConfig: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 16000
-              }
-            });
-            setupSpeechHandlers();
-            startListening();
-          } else {
-            console.log('EchoMind speech module not available, using fallback');
-            tryFallbackSpeechRecognition();
-          }
+        // Try to use EchoMind speech module first
+        if (window.EchoMind && window.EchoMind.Speech) {
+          console.log('Using EchoMind speech module');
+          await window.EchoMind.Speech.initialize({
+            continuous: true,
+            interimResults: !CONFIG.isMobile,
+            maxAlternatives: 3,
+            lang: 'en-US',
+            audioConfig: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 16000
+            }
+          });
+          
+          console.log('Speech module initialized, setting up handlers');
+          setupSpeechHandlers();
+          
+          console.log('Starting speech recognition');
+          EchoMind.Speech.start();
         } else {
-          console.error('Microphone permission not granted');
-          updateStatus('Microphone access required', 'error');
+          console.log('EchoMind speech module not available, using fallback');
+          tryFallbackSpeechRecognition();
         }
       } catch (error) {
         console.error('Failed to initialize speech:', error);
@@ -455,14 +458,14 @@
       }
     }
 
-    // Set up speech event handlers
     function setupSpeechHandlers() {
+      console.log('Setting up speech handlers');
+      
       // Remove any existing handlers first
       EchoMind.Speech.removeAllListeners();
 
       EchoMind.Speech.on('start', () => {
         console.log('Speech recognition started');
-        updateStatus('Listening for "about"...', 'listening');
         document.querySelector('.mic-icon').classList.add('listening');
       });
 
@@ -471,16 +474,13 @@
         document.querySelector('.mic-icon').classList.remove('listening');
         // Auto-restart if not in recording mode
         if (!state.isRecording && EchoMind.Speech.isInitialized) {
+          console.log('Restarting speech recognition');
           setTimeout(() => EchoMind.Speech.start(), 100);
         }
       });
 
       EchoMind.Speech.on('error', (data) => {
         console.error('Speech error:', data.error);
-        const errorMessage = data.error.includes('network') ? 
-          'Network error - check your connection' : 
-          'Speech recognition error';
-        updateStatus(errorMessage, 'error');
         
         state.isRecording = false;
         if (state.recordingTimeout) {
@@ -490,7 +490,8 @@
         // Try to recover
         setTimeout(() => {
           if (EchoMind.Speech.isInitialized) {
-            startListening();
+            console.log('Attempting to restart after error');
+            EchoMind.Speech.start();
           }
         }, 1000);
       });
@@ -500,10 +501,8 @@
         console.log('Final transcript:', transcript);
 
         if (state.isRecording) {
-          // Process search query
           processSearchQuery(transcript);
         } else if (transcript.includes('about')) {
-          // Trigger word detected, start recording after delay
           setTimeout(() => startRecording(), CONFIG.startDelay);
         }
       });
@@ -512,28 +511,23 @@
       if (!CONFIG.isMobile) {
         EchoMind.Speech.on('onInterimResult', (data) => {
           const transcript = data.transcript.toLowerCase().trim();
-          if (state.isRecording) {
-            updateStatus('Hearing: ' + transcript, 'waiting');
-          }
+          console.log('Interim result:', transcript);
         });
       }
     }
 
-    // Start listening with better error handling
     function startListening() {
       if (!EchoMind.Speech.isInitialized) {
         console.error('Speech module not initialized');
-        updateStatus('Speech not ready - refreshing...', 'error');
-        setTimeout(() => window.location.reload(), 2000);
+        initializeSpeechRecognition();
         return;
       }
 
       try {
+        console.log('Starting listening');
         EchoMind.Speech.start();
-        updateStatus('Listening for "about"...', 'listening');
       } catch (error) {
         console.error('Failed to start listening:', error);
-        updateStatus('Failed to start - retrying...', 'error');
         setTimeout(() => startListening(), 1000);
       }
     }
