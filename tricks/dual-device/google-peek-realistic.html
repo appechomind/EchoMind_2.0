@@ -316,128 +316,116 @@
       isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     };
 
-    // Initialize speech recognition
+    // Initialize EchoMind speech recognition
     function initializeSpeechRecognition() {
-      console.log('Starting speech recognition...');
+      console.log('Initializing EchoMind speech...');
       
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        updateStatus('Speech recognition not supported', 'error');
+      if (!window.EchoMind || !window.EchoMind.Speech) {
+        updateStatus('EchoMind Speech module not loaded', 'error');
         return;
       }
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;  // Changed to false for more reliable results
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.maxAlternatives = 1;
+      // Initialize with our configuration
+      EchoMind.Speech.init({
+        continuous: true,
+        interimResults: !CONFIG.isMobile,
+        debugMode: true,
+        autoRestart: true,
+        keepAlive: true
+      }).then(() => {
+        console.log('Speech module initialized');
+        setupSpeechHandlers();
+        startListening();
+      }).catch(error => {
+        console.error('Failed to initialize speech:', error);
+        updateStatus('Failed to initialize speech', 'error');
+      });
+    }
 
-      recognition.onstart = () => {
-        console.log('Listening started');
+    // Set up speech event handlers
+    function setupSpeechHandlers() {
+      EchoMind.Speech.on('start', () => {
+        console.log('Speech recognition started');
         updateStatus('Listening for "about"...', 'listening');
         document.querySelector('.mic-icon').classList.add('listening');
-      };
+      });
 
-      recognition.onend = () => {
-        console.log('Recognition ended, restarting...');
+      EchoMind.Speech.on('end', () => {
+        console.log('Speech recognition ended');
         document.querySelector('.mic-icon').classList.remove('listening');
-        // Wait a moment before restarting
-        setTimeout(() => {
-          try {
-            if (!state.isRecording) {
-              recognition.start();
-            }
-          } catch (e) {
-            console.error('Failed to restart:', e);
-          }
-        }, 100);
-      };
+      });
 
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase().trim();
-        console.log('Heard:', transcript);
-
-        if (state.isRecording) {
-          // We're recording the search query
-          console.log('Search query:', transcript);
-          updateStatus('Processing: ' + transcript, 'waiting');
-          performSearch(transcript);
-        } else if (transcript.includes('about')) {
-          // Trigger word detected
-          console.log('Trigger detected');
-          updateStatus('Trigger detected, say your search...', 'waiting');
-          startRecording(recognition);
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Recognition error:', event.error);
-        updateStatus('Error: ' + event.error, 'error');
-        
-        // Reset state on error
+      EchoMind.Speech.on('error', (data) => {
+        console.error('Speech error:', data.error);
+        updateStatus('Error: ' + data.error, 'error');
         state.isRecording = false;
         if (state.recordingTimeout) {
           clearTimeout(state.recordingTimeout);
         }
-        
-        // Restart after error
-        setTimeout(() => {
-          try {
-            recognition.start();
-          } catch (e) {
-            console.error('Failed to restart after error:', e);
-          }
-        }, 1000);
-      };
+      });
 
-      // Initial start
+      EchoMind.Speech.on('onFinalResult', (data) => {
+        const transcript = data.transcript.toLowerCase().trim();
+        console.log('Final transcript:', transcript);
+
+        if (state.isRecording) {
+          // Process search query
+          processSearchQuery(transcript);
+        } else if (transcript.includes('about')) {
+          // Trigger word detected
+          console.log('Trigger word detected');
+          updateStatus('Trigger detected, say your search...', 'waiting');
+          startRecording();
+        }
+      });
+
+      // For non-mobile, show interim results
+      if (!CONFIG.isMobile) {
+        EchoMind.Speech.on('onInterimResult', (data) => {
+          const transcript = data.transcript.toLowerCase().trim();
+          if (state.isRecording) {
+            updateStatus('Hearing: ' + transcript, 'waiting');
+          }
+        });
+      }
+    }
+
+    // Start listening
+    function startListening() {
+      if (!EchoMind.Speech.isInitialized) {
+        console.error('Speech module not initialized');
+        return;
+      }
+
       try {
-        recognition.start();
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-        updateStatus('Failed to start. Please refresh.', 'error');
+        EchoMind.Speech.start();
+        updateStatus('Listening for "about"...', 'listening');
+      } catch (error) {
+        console.error('Failed to start listening:', error);
+        updateStatus('Failed to start listening', 'error');
       }
     }
 
     // Start recording mode
-    function startRecording(recognition) {
+    function startRecording() {
       state.isRecording = true;
-      
-      // Stop the continuous recognition
-      try {
-        recognition.stop();
-      } catch (e) {
-        console.error('Error stopping recognition:', e);
-      }
+      updateStatus('Recording... (speak now)', 'waiting');
 
-      // Wait a moment before starting recording mode
-      setTimeout(() => {
-        try {
-          recognition.start();
-          updateStatus('Recording... (speak now)', 'waiting');
-        } catch (e) {
-          console.error('Error starting recording mode:', e);
-          state.isRecording = false;
-          updateStatus('Error starting recording', 'error');
-        }
-      }, CONFIG.startDelay);
+      // Clear any existing timeout
+      if (state.recordingTimeout) {
+        clearTimeout(state.recordingTimeout);
+      }
 
       // Set timeout to reset if no result
       state.recordingTimeout = setTimeout(() => {
         console.log('Recording timeout');
         state.isRecording = false;
-        try {
-          recognition.stop();
-          recognition.start();
-          updateStatus('Listening for "about"...', 'listening');
-        } catch (e) {
-          console.error('Error resetting after timeout:', e);
-        }
+        updateStatus('Listening for "about"...', 'listening');
       }, CONFIG.recordingDuration);
     }
 
-    // Perform search
-    function performSearch(query) {
+    // Process the search query
+    function processSearchQuery(transcript) {
       // Clean up recording state
       state.isRecording = false;
       if (state.recordingTimeout) {
@@ -445,7 +433,7 @@
       }
 
       // Clean up the query
-      query = query.replace(/about/gi, '').trim();
+      const query = transcript.replace(/about/gi, '').trim();
       
       if (query.length < 2) {
         updateStatus('Search query too short', 'error');
@@ -476,11 +464,8 @@
       
       statusIndicator.textContent = message;
       statusIndicator.className = 'status-indicator visible ' + type;
-      
-      // Make sure the status is visible
       statusIndicator.style.display = 'block';
       
-      // Update mic icon
       const micIcon = document.querySelector('.mic-icon');
       if (micIcon) {
         micIcon.classList.toggle('listening', type === 'listening' || type === 'waiting');
@@ -526,17 +511,18 @@
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', () => {
       try {
-        // Prevent iframe from opening in Google app
-        if (CONFIG.isMobile) {
-          document.querySelector('.search-iframe').addEventListener('load', function(e) {
-            const meta = document.createElement('meta');
-            meta.name = 'google';
-            meta.content = 'notranslate';
-            document.head.appendChild(meta);
+        // Wait for permissions module to be ready
+        if (window.EchoMind && window.EchoMind.Permissions) {
+          EchoMind.Permissions.init().then(() => {
+            initializeSpeechRecognition();
+          }).catch(error => {
+            console.error('Failed to initialize permissions:', error);
+            updateStatus('Failed to initialize permissions', 'error');
           });
+        } else {
+          console.error('EchoMind Permissions module not loaded');
+          updateStatus('Required modules not loaded', 'error');
         }
-        
-        initializeSpeechRecognition();
       } catch (error) {
         console.error('Initialization error:', error);
         updateStatus('Error: ' + error.message, 'error');
