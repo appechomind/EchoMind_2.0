@@ -355,12 +355,39 @@
       isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     };
 
-    // Update the initialization function to handle permissions properly
+    // Handle speech results
+    function handleSpeechResult(data) {
+      console.log('Speech result received:', data);
+
+      if (data.finalTranscript) {
+        const transcript = data.finalTranscript.toLowerCase().trim();
+        console.log('Processing transcript:', transcript);
+
+        if (state.isRecording) {
+          // Process the search query
+          const query = transcript.replace(/^about\s+/i, '').trim();
+          if (query) {
+            console.log('Opening search for:', query);
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            window.open(searchUrl, '_blank');
+          }
+          state.isRecording = false;
+        } else if (transcript.includes('about')) {
+          // Start recording after delay
+          setTimeout(() => {
+            state.isRecording = true;
+            // Stop recording after 5 seconds
+            setTimeout(() => {
+              state.isRecording = false;
+            }, 5000);
+          }, 500);
+        }
+      }
+    }
+
+    // Update the initialization function
     async function initializeSpeechRecognition() {
       console.log('Initializing speech recognition');
-      
-      // Clear any existing state
-      state.isRecording = false;
       
       try {
         // Try to use EchoMind speech module first
@@ -368,19 +395,24 @@
           console.log('Using EchoMind speech module');
           await window.EchoMind.Speech.initialize({
             continuous: true,
-            interimResults: !CONFIG.isMobile,
-            maxAlternatives: 3,
-            lang: 'en-US',
-            audioConfig: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 16000
-            }
+            interimResults: false,
+            maxAlternatives: 1,
+            lang: 'en-US'
           });
           
-          console.log('Speech module initialized, setting up handlers');
-          setupSpeechHandlers();
+          EchoMind.Speech.on('result', handleSpeechResult);
+          
+          EchoMind.Speech.on('end', () => {
+            console.log('Speech recognition ended');
+            // Auto-restart if not in recording mode
+            if (!state.isRecording) {
+              setTimeout(() => {
+                if (EchoMind.Speech.isInitialized) {
+                  EchoMind.Speech.start();
+                }
+              }, 100);
+            }
+          });
           
           console.log('Starting speech recognition');
           EchoMind.Speech.start();
@@ -394,186 +426,55 @@
       }
     }
 
-    function setupSpeechHandlers() {
-      console.log('Setting up speech handlers');
+    // Update the fallback recognition
+    function tryFallbackSpeechRecognition() {
+      console.log('Using fallback speech recognition');
       
-      // Remove any existing handlers first
-      EchoMind.Speech.removeAllListeners();
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error('No speech recognition support in this browser');
+        return;
+      }
 
-      EchoMind.Speech.on('start', () => {
-        console.log('Speech recognition started');
-        document.querySelector('.mic-icon').classList.add('listening');
-      });
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-      EchoMind.Speech.on('end', () => {
-        console.log('Speech recognition ended');
-        document.querySelector('.mic-icon').classList.remove('listening');
-        // Auto-restart if not in recording mode
-        if (!state.isRecording && EchoMind.Speech.isInitialized) {
-          console.log('Restarting speech recognition');
-          setTimeout(() => EchoMind.Speech.start(), 100);
-        }
-      });
-
-      EchoMind.Speech.on('error', (data) => {
-        console.error('Speech error:', data.error);
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+        console.log('Fallback transcript:', transcript);
         
-        state.isRecording = false;
-        if (state.recordingTimeout) {
-          clearTimeout(state.recordingTimeout);
-        }
-
-        // Try to recover
-        setTimeout(() => {
-          if (EchoMind.Speech.isInitialized) {
-            console.log('Attempting to restart after error');
-            EchoMind.Speech.start();
-          }
-        }, 1000);
-      });
-
-      EchoMind.Speech.on('onFinalResult', (data) => {
-        const transcript = data.transcript.toLowerCase().trim();
-        console.log('Final transcript:', transcript);
-
         if (state.isRecording) {
-          processSearchQuery(transcript);
-        } else if (transcript.includes('about')) {
-          setTimeout(() => startRecording(), CONFIG.startDelay);
-        }
-      });
-
-      // For non-mobile, show interim results
-      if (!CONFIG.isMobile) {
-        EchoMind.Speech.on('onInterimResult', (data) => {
-          const transcript = data.transcript.toLowerCase().trim();
-          console.log('Interim result:', transcript);
-        });
-      }
-    }
-
-    function startListening() {
-      if (!EchoMind.Speech.isInitialized) {
-        console.error('Speech module not initialized');
-        initializeSpeechRecognition();
-        return;
-      }
-
-      try {
-        console.log('Starting listening');
-        EchoMind.Speech.start();
-      } catch (error) {
-        console.error('Failed to start listening:', error);
-        setTimeout(() => startListening(), 1000);
-      }
-    }
-
-    // Start recording mode
-    function startRecording() {
-      state.isRecording = true;
-
-      // Clear any existing timeout
-      if (state.recordingTimeout) {
-        clearTimeout(state.recordingTimeout);
-      }
-
-      // Set timeout to reset if no result
-      state.recordingTimeout = setTimeout(() => {
-        console.log('Recording timeout');
-        state.isRecording = false;
-      }, CONFIG.recordingDuration);
-    }
-
-    // Process the search query with better validation
-    function processSearchQuery(transcript) {
-      console.log('Processing search query:', transcript);
-      
-      // Clean and validate the query
-      const query = transcript
-        .replace(/^about\s+/i, '') // Remove trigger word if present
-        .replace(/[^\w\s-]/g, '') // Remove special characters
-        .trim();
-        
-      if (!query) {
-        console.log('Empty query after cleaning');
-        state.isRecording = false;
-        return;
-      }
-
-      console.log('Cleaned query:', query);
-      
-      // Perform the search with retry mechanism
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      function attemptSearch() {
-        try {
-          performImageSearch(query);
-        } catch (error) {
-          console.error('Search attempt failed:', error);
-          retryCount++;
-          
-          if (retryCount < maxRetries) {
-            console.log(`Retrying search (attempt ${retryCount + 1}/${maxRetries})`);
-            setTimeout(attemptSearch, 1000 * retryCount);
-          } else {
-            console.error('Search failed after all retries');
-            state.isRecording = false;
+          // Process the search query
+          const query = transcript.replace(/^about\s+/i, '').trim();
+          if (query) {
+            console.log('Opening search for:', query);
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            window.open(searchUrl, '_blank');
           }
+          state.isRecording = false;
+        } else if (transcript.includes('about')) {
+          // Start recording after delay
+          setTimeout(() => {
+            state.isRecording = true;
+            // Stop recording after 5 seconds
+            setTimeout(() => {
+              state.isRecording = false;
+            }, 5000);
+          }, 500);
         }
-      }
-      
-      attemptSearch();
-    }
-
-    function performImageSearch(query) {
-      console.log('Performing image search for:', query);
-      
-      // Encode the query properly
-      const encodedQuery = encodeURIComponent(query);
-      const searchUrl = `https://www.google.com/search?q=${encodedQuery}&tbm=isch`;
-      
-      // Always open in new tab for both mobile and desktop
-      const searchWindow = window.open(searchUrl, '_blank');
-      if (!searchWindow) {
-        console.error('Popup blocked');
-        // Fallback to same window
-        window.location.href = searchUrl;
-      }
-      
-      // Reset state
-      state.isRecording = false;
-    }
-
-    // Update status with clear feedback
-    function updateStatus(message, type = 'listening') {
-      console.log('Status:', message, '(', type, ')');
-      
-      const micIcon = document.querySelector('.mic-icon');
-      if (micIcon) {
-        micIcon.classList.toggle('listening', type === 'listening' || type === 'waiting');
-      }
-    }
-
-    // Show mobile search in iframe
-    function showMobileSearch(searchUrl) {
-      const container = document.querySelector('.search-iframe-container');
-      const iframe = document.querySelector('.search-iframe');
-      const closeButton = document.querySelector('.close-iframe');
-      
-      // Set iframe source
-      iframe.src = searchUrl;
-      
-      // Show container and close button
-      container.style.display = 'block';
-      closeButton.style.display = 'block';
-      
-      // Handle close button
-      closeButton.onclick = () => {
-        container.style.display = 'none';
-        closeButton.style.display = 'none';
-        iframe.src = 'about:blank';
       };
+
+      recognition.onend = () => {
+        console.log('Fallback recognition ended');
+        // Auto-restart if not in recording mode
+        if (!state.isRecording) {
+          setTimeout(() => recognition.start(), 100);
+        }
+      };
+
+      recognition.start();
     }
 
     // Regular Google search
@@ -590,134 +491,6 @@
         performSearch();
       }
     });
-
-    function tryFallbackSpeechRecognition() {
-      console.log('Trying fallback speech recognition');
-      
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error('No speech recognition support in this browser');
-        updateStatus('Speech not supported in this browser', 'error');
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = !CONFIG.isMobile;
-      recognition.maxAlternatives = 3;
-      recognition.lang = 'en-US';
-
-      // Store the recognition instance in localStorage for recovery
-      if (CONFIG.isMobile) {
-        try {
-          localStorage.setItem('speechRecognitionActive', 'true');
-        } catch (e) {
-          console.warn('Could not store recognition state:', e);
-        }
-      }
-
-      recognition.onstart = () => {
-        console.log('Fallback recognition started');
-        updateStatus('Listening for "about"...', 'listening');
-        document.querySelector('.mic-icon').classList.add('listening');
-        state.isListening = true;
-      };
-
-      recognition.onend = () => {
-        console.log('Fallback recognition ended');
-        document.querySelector('.mic-icon').classList.remove('listening');
-        state.isListening = false;
-
-        // Auto-restart with exponential backoff
-        if (!state.isRecording) {
-          const backoffTime = Math.min(1000 * Math.pow(2, state.restartAttempts || 0), 10000);
-          state.restartAttempts = (state.restartAttempts || 0) + 1;
-          
-          setTimeout(() => {
-            try {
-              recognition.start();
-              state.restartAttempts = 0;
-            } catch (e) {
-              console.error('Failed to restart recognition:', e);
-              updateStatus('Recognition error - retrying...', 'error');
-            }
-          }, backoffTime);
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Recognition error:', event.error);
-        let errorMessage = 'Speech recognition error';
-        
-        switch (event.error) {
-          case 'network':
-            errorMessage = 'Network error - check your connection';
-            break;
-          case 'not-allowed':
-            errorMessage = 'Microphone access denied';
-            break;
-          case 'aborted':
-            errorMessage = 'Recognition stopped';
-            break;
-          case 'audio-capture':
-            errorMessage = 'No microphone found';
-            break;
-          case 'service-not-allowed':
-            errorMessage = 'Speech service not available';
-            break;
-        }
-        
-        updateStatus(errorMessage, 'error');
-        
-        // Try to recover
-        if (event.error !== 'not-allowed') {
-          setTimeout(() => {
-            try {
-              recognition.start();
-            } catch (e) {
-              console.error('Failed to restart after error:', e);
-            }
-          }, 1000);
-        }
-      };
-
-      recognition.onresult = (event) => {
-        const last = event.results.length - 1;
-        const transcript = event.results[last][0].transcript.toLowerCase().trim();
-        
-        // Log confidence level
-        console.log('Recognition confidence:', event.results[last][0].confidence);
-
-        if (state.isRecording) {
-          processSearchQuery(transcript);
-        } else if (transcript.includes('about')) {
-          console.log('Trigger word detected');
-          updateStatus('Ready to search! What would you like to see?', 'waiting');
-          
-          // Small delay before recording to avoid catching the trigger word
-          setTimeout(() => {
-            state.isRecording = true;
-            updateStatus('Listening for search term...', 'listening');
-            
-            // Set timeout to stop recording
-            setTimeout(() => {
-              if (state.isRecording) {
-                state.isRecording = false;
-                updateStatus('Listening for "about"...', 'listening');
-              }
-            }, CONFIG.recordingDuration);
-          }, CONFIG.startDelay);
-        }
-      };
-
-      try {
-        recognition.start();
-        console.log('Started fallback recognition');
-      } catch (error) {
-        console.error('Failed to start fallback recognition:', error);
-        updateStatus('Could not start speech recognition', 'error');
-      }
-    }
   </script>
 </body>
 </html> 
