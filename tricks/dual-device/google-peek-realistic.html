@@ -7,86 +7,63 @@
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
   <!-- Load EchoMind modules in correct order -->
-  <script src="../../../js/core/echomind-nlp.js"></script>
-  <script src="../../../js/core/echomind-ml.js"></script>
-  <script src="../../../js/core/echomind-knowledge.js"></script>
-  <script src="../../../js/core/language-model.js"></script>
-  <script src="../../../js/core/echomind-core.js"></script>
-  <script src="../../../js/core/echomind-permissions.js"></script>
-  <script src="../../../js/core/echomind-speech.js"></script>
-  <script src="../../../js/core/mind-reader.js"></script>
+  <script src="../../js/core/echomind-nlp.js"></script>
+  <script src="../../js/core/echomind-ml.js"></script>
+  <script src="../../js/core/echomind-knowledge.js"></script>
+  <script src="../../js/core/language-model.js"></script>
+  <script src="../../js/core/echomind-core.js"></script>
+  <script src="../../js/core/echomind-permissions.js"></script>
+  <script src="../../js/core/echomind-speech.js"></script>
+  <script src="../../js/core/mind-reader.js"></script>
   
   <script>
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM Content Loaded - Starting initialization');
       try {
         // Check if all required modules are loaded
-        if (!window.EchoMind || !window.EchoMindNLP || !window.EchoMindML || !window.EchoMindKnowledge) {
-          throw new Error('Required EchoMind modules not loaded');
+        if (!window.EchoMindNLP || !window.EchoMindML || !window.EchoMindKnowledge) {
+          throw new Error('Required AI modules not loaded');
         }
 
-        // Initialize EchoMind core with advanced features
-        await EchoMind.init({
-          debug: true,
-          aiModel: 'advanced',
-          useGPU: true,
-          contextWindow: 1000
-        });
-
-        // Verify module initialization
-        if (!EchoMind.Speech || !EchoMind.Permissions) {
-          throw new Error('Speech or Permissions module not initialized');
+        // Wait for EchoMind core to be ready
+        if (!window.EchoMind) {
+          throw new Error('EchoMind core module not loaded');
         }
-
-        // Initialize mind reader
-        await checkSetupStatus();
-
-        // Set up speech recognition handlers
-        const speech = EchoMind.Speech;
-        speech.on('result', async (data) => {
-          try {
-            // Process through NLP and ML pipeline
-            const result = await EchoMind.process(data.finalTranscript);
-            
-            if (result.predictions && result.predictions.intent) {
-              // Handle predicted intent
-              switch (result.predictions.intent.type) {
-                case 'QUESTION':
-                  await handleQuestion(result);
-                  break;
-                case 'COMMAND':
-                  await handleCommand(result);
-                  break;
-                default:
-                  await processVoiceInput(data.finalTranscript);
-              }
-            } else {
-              // Fallback to basic processing
-              await processVoiceInput(data.finalTranscript);
-            }
-          } catch (error) {
-            console.error('Error processing speech result:', error);
-            updateStatus('Error processing speech', 'error');
+        
+        // Initialize permissions first
+        if (window.EchoMind?.Permissions) {
+          console.log('EchoMind Permissions module found');
+          await EchoMind.Permissions.init();
+          console.log('Permissions initialized, requesting microphone access');
+          
+          // Request microphone permission explicitly
+          const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+          console.log('Permission request result:', permissionResult);
+          
+          if (permissionResult === 'granted') {
+            console.log('Microphone permission granted, initializing speech');
+            await initializeSpeechRecognition();
+          } else {
+            console.error('Microphone permission denied');
+            tryFallbackSpeechRecognition();
           }
-        });
-
-        speech.on('error', (error) => {
-          console.error('Speech error:', error);
-          updateStatus('Speech error: ' + error.message, 'error');
-        });
-
-        // Start speech recognition
-        const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
-        if (permissionResult === 'granted') {
-          await speech.start();
-          updateStatus('Listening for "about"...', 'listening');
         } else {
-          updateStatus('Microphone access denied', 'error');
+          console.warn('EchoMind Permissions module not found, trying browser API');
+          // Try fallback permission request
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('Browser microphone permission granted');
+            stream.getTracks().forEach(track => track.stop()); // Clean up
+            await initializeSpeechRecognition();
+          } catch (error) {
+            console.error('Browser microphone permission denied:', error);
+            updateStatus('Microphone access denied', 'error');
+          }
         }
       } catch (error) {
         console.error('Initialization error:', error);
         updateStatus('Error: ' + error.message, 'error');
-        log(error.message, 'error');
       }
     });
 
