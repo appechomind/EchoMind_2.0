@@ -1,0 +1,233 @@
+/**
+ * EchoMind Core Module - Advanced AI Integration
+ * Version 2.0
+ */
+class EchoMindCore {
+    constructor() {
+        this.initialized = false;
+        this.modules = {
+            permissions: null,
+            speech: null,
+            language: null,
+            commands: null,
+            nlp: null,
+            ml: null,
+            knowledge: null
+        };
+        this.debug = false;
+        this.context = {
+            session: {},
+            global: {},
+            history: []
+        };
+        this.config = {
+            aiModel: 'advanced',
+            contextWindow: 1000,
+            temperature: 0.7,
+            maxTokens: 2048
+        };
+    }
+
+    /**
+     * Initialize the EchoMind core and required modules
+     * @param {Object} config Configuration options
+     * @returns {Promise} Resolves when initialization is complete
+     */
+    async init(config = {}) {
+        if (this.initialized) {
+            console.warn('EchoMind core already initialized');
+            return;
+        }
+
+        this.debug = config.debug || false;
+        this.config = { ...this.config, ...config };
+        
+        try {
+            // Initialize core AI components first
+            if (window.EchoMindNLP) {
+                this.modules.nlp = new EchoMindNLP(this.config);
+                await this.modules.nlp.init();
+            }
+
+            if (window.EchoMindML) {
+                this.modules.ml = new EchoMindML(this.config);
+                await this.modules.ml.init();
+            }
+
+            if (window.EchoMindKnowledge) {
+                this.modules.knowledge = new EchoMindKnowledge(this.config);
+                await this.modules.knowledge.init();
+            }
+
+            // Initialize standard modules
+            if (window.EchoMindPermissions) {
+                this.modules.permissions = new EchoMindPermissions();
+                await this.modules.permissions.init();
+            }
+
+            if (window.EchoMindSpeech) {
+                this.modules.speech = new EchoMindSpeech({
+                    nlp: this.modules.nlp,
+                    ml: this.modules.ml
+                });
+                await this.modules.speech.init();
+            }
+
+            if (window.LanguageModel) {
+                this.modules.language = new LanguageModel({
+                    nlp: this.modules.nlp,
+                    knowledge: this.modules.knowledge
+                });
+                await this.modules.language.init();
+            }
+
+            if (window.EchoMindCommands) {
+                this.modules.commands = new EchoMindCommands({
+                    nlp: this.modules.nlp,
+                    ml: this.modules.ml
+                });
+                await this.modules.commands.init();
+            }
+
+            this.initialized = true;
+            if (this.debug) {
+                console.log('EchoMind core initialized successfully');
+            }
+
+            // Start context tracking
+            this._initializeContext();
+        } catch (error) {
+            console.error('Error initializing EchoMind core:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Initialize context tracking system
+     * @private
+     */
+    _initializeContext() {
+        this.context.session.startTime = Date.now();
+        this.context.session.interactions = 0;
+        
+        // Load any persisted global context
+        try {
+            const savedContext = localStorage.getItem('echomind_global_context');
+            if (savedContext) {
+                this.context.global = JSON.parse(savedContext);
+            }
+        } catch (e) {
+            console.warn('Failed to load persisted context:', e);
+        }
+    }
+
+    /**
+     * Process input through all relevant modules
+     * @param {Object} input Input data (text, speech, etc.)
+     * @returns {Promise<Object>} Processing results
+     */
+    async process(input) {
+        if (!this.initialized) {
+            throw new Error('EchoMind core not initialized');
+        }
+
+        try {
+            // Update context
+            this.context.session.interactions++;
+            this.context.history.push({
+                timestamp: Date.now(),
+                input: input
+            });
+
+            // Trim history if needed
+            if (this.context.history.length > this.config.contextWindow) {
+                this.context.history = this.context.history.slice(-this.config.contextWindow);
+            }
+
+            // Process through NLP
+            let processedInput = input;
+            if (this.modules.nlp) {
+                processedInput = await this.modules.nlp.process(input, this.context);
+            }
+
+            // Get ML predictions if available
+            let predictions = null;
+            if (this.modules.ml) {
+                predictions = await this.modules.ml.predict(processedInput, this.context);
+            }
+
+            // Query knowledge base
+            let knowledge = null;
+            if (this.modules.knowledge) {
+                knowledge = await this.modules.knowledge.query(processedInput);
+            }
+
+            // Generate response using language model
+            let response = null;
+            if (this.modules.language) {
+                response = await this.modules.language.generateResponse(processedInput, {
+                    predictions,
+                    knowledge,
+                    context: this.context
+                });
+            }
+
+            return {
+                input: processedInput,
+                predictions,
+                knowledge,
+                response,
+                context: this.context
+            };
+        } catch (error) {
+            console.error('Error processing input:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get a module instance
+     * @param {string} moduleName Name of the module to get
+     * @returns {Object|null} Module instance or null if not found
+     */
+    getModule(moduleName) {
+        return this.modules[moduleName] || null;
+    }
+
+    /**
+     * Check if a module is available
+     * @param {string} moduleName Name of the module to check
+     * @returns {boolean} True if module is available
+     */
+    hasModule(moduleName) {
+        return this.modules[moduleName] !== null;
+    }
+
+    /**
+     * Enable or disable debug mode
+     * @param {boolean} enabled Whether to enable debug mode
+     */
+    setDebug(enabled) {
+        this.debug = enabled;
+        // Propagate debug setting to modules
+        Object.values(this.modules).forEach(module => {
+            if (module && typeof module.setDebug === 'function') {
+                module.setDebug(enabled);
+            }
+        });
+    }
+
+    /**
+     * Save current context to persistent storage
+     */
+    async saveContext() {
+        try {
+            localStorage.setItem('echomind_global_context', JSON.stringify(this.context.global));
+        } catch (e) {
+            console.warn('Failed to save context:', e);
+        }
+    }
+}
+
+// Create global instance
+window.echomind = new EchoMindCore(); 

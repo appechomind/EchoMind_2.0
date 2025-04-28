@@ -29,6 +29,10 @@ class GizmoAI {
             contextTracking: {
                 maxHistory: 10,
                 features: ['topic extraction', 'sentiment analysis', 'user preferences']
+            },
+            githubIntegration: {
+                features: ['repository analysis', 'code search', 'issue management', 'pull requests'],
+                actions: ['analyze', 'search', 'suggest', 'create']
             }
         };
     }
@@ -51,7 +55,11 @@ class GizmoAI {
             // Process text message with advanced context
             const messageContext = this.analyzeMessageContext(message);
             
-            if (messageContext.isCodeRelated) {
+            if (messageContext.isGitHubRelated) {
+                const githubAnalysis = await this.handleGitHubRequest(message);
+                response.text = gizmoPersonality.generateResponse(githubAnalysis, 'github');
+                response.type = 'github';
+            } else if (messageContext.isCodeRelated) {
                 const codeAnalysis = await this.analyzeCode(message);
                 response.text += gizmoPersonality.generateResponse(codeAnalysis, 'code');
                 response.type = 'code';
@@ -79,12 +87,22 @@ class GizmoAI {
 
     analyzeMessageContext(message) {
         return {
+            isGitHubRelated: this.detectGitHubContent(message),
             isCodeRelated: this.detectCodeContent(message),
             isModification: this.detectModificationIntent(message),
             topics: this.extractTopics(message),
             sentiment: gizmoPersonality.analyzeSentiment(message),
             complexity: this.assessComplexity(message)
         };
+    }
+
+    detectGitHubContent(message) {
+        const githubPatterns = [
+            /\b(github|repo|repository|issue|pull request|pr|commit)\b/i,
+            /github\.com/,
+            /\b(clone|fork|branch|merge)\b/i
+        ];
+        return githubPatterns.some(pattern => pattern.test(message));
     }
 
     detectCodeContent(message) {
@@ -422,6 +440,45 @@ class GizmoAI {
         });
         
         return suggestions.slice(0, 3); // Limit to top 3 suggestions
+    }
+
+    async handleGitHubRequest(message) {
+        // Extract GitHub URL if present
+        const urlMatch = message.match(/https:\/\/github\.com\/[^\/]+\/[^\/\s]+/);
+        if (urlMatch) {
+            const repoUrl = urlMatch[0];
+            const analysis = await gizmoGitHub.analyzeRepository(repoUrl);
+            return {
+                type: 'repository',
+                url: repoUrl,
+                ...analysis
+            };
+        }
+
+        // Handle other GitHub-related requests
+        if (message.toLowerCase().includes('search')) {
+            const query = message.replace(/^.*search\s+/i, '').trim();
+            const results = await gizmoGitHub.searchCode(query);
+            return {
+                type: 'search',
+                query,
+                results
+            };
+        }
+
+        if (message.toLowerCase().includes('issue')) {
+            const title = message.replace(/^.*issue\s+/i, '').trim();
+            const issue = await gizmoGitHub.createIssue(title, 'Created by Gizmo AI');
+            return {
+                type: 'issue',
+                issue
+            };
+        }
+
+        return {
+            type: 'unknown',
+            message: 'I can help you with GitHub repositories. Try providing a repository URL or asking me to search for something specific.'
+        };
     }
 
     getImageGallery() {
