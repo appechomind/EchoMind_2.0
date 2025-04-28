@@ -35,6 +35,8 @@
       align-items: center;
       justify-content: center;
       background: #ffffff;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
     }
 
     .card img {
@@ -42,6 +44,7 @@
       height: 100%;
       object-fit: contain;
       border-radius: 15px;
+      backface-visibility: hidden;
     }
 
     #status {
@@ -195,13 +198,13 @@
       // Reset card display
       const cardImage = document.getElementById('card-image');
       cardImage.src = '../../images/cards/back.png';
-      cardImage.style.transform = 'rotateY(0deg)';
+      document.getElementById('card').style.transform = 'rotateY(0deg)';
     }
 
     function revealCard(cardName) {
       const cardImage = document.getElementById('card-image');
       cardImage.src = `../../images/cards/${cardName}.png`;
-      cardImage.style.transform = 'rotateY(180deg)';
+      document.getElementById('card').style.transform = 'rotateY(180deg)';
     }
 
     // Initialize when the page loads
