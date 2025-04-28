@@ -54,6 +54,7 @@
       background: #000000;
       font-size: 2em;
       color: white;
+      display: none; /* Hide the front face initially */
     }
 
     .card-back {
@@ -112,11 +113,21 @@
       };
 
       recognition.onerror = function(event) {
-        recognition.start();
+        console.log('Speech recognition error:', event.error);
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+          // Only restart if we're not already running
+          if (recognition.state !== 'running') {
+            recognition.start();
+          }
+        }
       };
 
       recognition.onend = function() {
-        recognition.start();
+        console.log('Speech recognition ended');
+        // Only restart if we're not already running
+        if (recognition.state !== 'running') {
+          recognition.start();
+        }
       };
 
       navigator.mediaDevices.getUserMedia({ audio: true })
@@ -129,6 +140,7 @@
     }
 
     async function processSpeechInput(transcript) {
+      console.log('Processing speech input:', transcript);
       const cardNames = {
         "ace": "ace",
         "two": "2",
@@ -160,9 +172,12 @@
         .replace(/\b9\b/g, "nine")
         .replace(/\b10\b/g, "ten");
 
+      console.log('Processed transcript:', transcript);
+
       for (const [word, value] of Object.entries(cardNames)) {
         if (transcript.includes(word)) {
           detectedCard = value;
+          console.log('Detected card:', detectedCard);
           break;
         }
       }
@@ -170,20 +185,31 @@
       for (const suit of suits) {
         if (transcript.includes(suit)) {
           detectedSuit = suit;
+          console.log('Detected suit:', detectedSuit);
           break;
         }
       }
 
       if (detectedCard && detectedSuit) {
-        return `${detectedCard}_of_${detectedSuit}`;
+        const cardName = `${detectedCard}_of_${detectedSuit}`;
+        console.log('Generated card name:', cardName);
+        return cardName;
       }
 
+      console.log('No card detected');
       return null;
     }
 
     function revealCard(cardName) {
-      cardImage.src = `./images/cards/${cardName}.png`;
+      console.log('Revealing card:', cardName);
+      const imagePath = `./images/cards/${cardName}.png`;
+      console.log('Image path:', imagePath);
+      cardImage.src = imagePath;
+      cardImage.onload = () => console.log('Image loaded successfully');
+      cardImage.onerror = (e) => console.error('Error loading image:', e);
       cardDisplay.classList.add('flipped');
+      // Show the front face when revealing a card
+      document.querySelector('.card-front').style.display = 'flex';
     }
 
     // Start listening immediately when the page loads
