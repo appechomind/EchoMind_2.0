@@ -271,34 +271,28 @@
     }
     
     .search-container {
-      width: 580px;
-      margin: 0 auto;
-      position: relative;
-    }
-    
-    .search-box {
-      width: 100%;
+      flex: 1;
       display: flex;
-      border: 1px solid #dfe1e5;
-      border-radius: 24px;
-      padding: 8px 14px;
-      box-shadow: none;
-      height: 44px;
+      flex-direction: column;
       align-items: center;
-    }
-    
-    .search-box:hover, .search-box:focus-within {
-      box-shadow: 0 1px 6px rgba(32,33,36,.28);
-      border-color: rgba(223,225,229,0);
+      justify-content: center;
+      padding: 20px;
     }
     
     .search-input {
-      border: none;
-      outline: none;
-      flex: 1;
-      height: 34px;
+      width: 100%;
+      max-width: 584px;
+      height: 44px;
+      padding: 0 20px;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
       font-size: 16px;
-      margin-left: 10px;
+      outline: none;
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+    }
+    
+    .search-input:focus {
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
     }
     
     .search-icons {
@@ -384,31 +378,25 @@
       display: flex;
     }
 
-    .status-indicator {
+    .status-message {
       position: fixed;
       bottom: 20px;
-      right: 20px;
-      background: rgba(66, 133, 244, 0.9);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.8);
       color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
+      border-radius: 4px;
       font-size: 14px;
       display: none;
-      z-index: 1000;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
     }
 
-    .status-indicator.visible {
-      display: block;
+    .status-message.error {
+      background: rgba(220,53,69,0.8);
     }
 
-    .status-indicator.waiting {
-      background: rgba(251, 188, 5, 0.9);
-    }
-
-    .status-indicator.error {
-      background: rgba(234, 67, 53, 0.9);
+    .status-message.success {
+      background: rgba(40,167,69,0.8);
     }
 
     @media (max-width: 600px) {
@@ -501,28 +489,19 @@
     .debug-entry.error { color: #d32f2f; }
 
     .search-suggestions {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
+      width: 100%;
+      max-width: 584px;
+      margin-top: 10px;
       background: white;
-      border: 1px solid #dfe1e5;
-      border-radius: 0 0 24px 24px;
-      margin-top: -1px;
-      box-shadow: 0 4px 6px rgba(32,33,36,.28);
+      border-radius: 8px;
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
       display: none;
-      z-index: 1000;
-      max-height: 300px;
-      overflow-y: auto;
     }
     
     .suggestion-item {
-      padding: 10px 20px;
+      padding: 12px 20px;
       cursor: pointer;
-      font-size: 16px;
-      color: #212121;
-      display: flex;
-      align-items: center;
+      border-bottom: 1px solid #f1f1f1;
     }
     
     .suggestion-item:hover {
@@ -557,58 +536,15 @@
   <div class="header">
     <a href="#">Gmail</a>
     <a href="#">Images</a>
+    <a href="#">Sign in</a>
   </div>
 
-  <div class="content">
-    <div class="logo">
-      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
-    </div>
-    
-    <div class="search-container">
-      <div class="search-box">
-        <svg class="search-icon" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
-        </svg>
-        <input type="text" class="search-input" id="searchInput" autocomplete="off" autofocus>
-        <div class="search-icons">
-          <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
-            <path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path>
-            <path fill="#fbbc05" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path>
-            <path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path>
-          </svg>
-        </div>
-      </div>
-      <div class="buttons">
-        <button onclick="performSearch()">Google Search</button>
-        <button>I'm Feeling Lucky</button>
-      </div>
-    </div>
+  <div class="search-container">
+    <input type="text" class="search-input" placeholder="Search Google or type a URL" readonly>
+    <div class="search-suggestions"></div>
   </div>
 
-  <div class="footer">
-    <div class="footer-content">
-      <div class="left-footer">
-        <a href="#">About</a>
-        <a href="#">Advertising</a>
-        <a href="#">Business</a>
-        <a href="#">How Search works</a>
-      </div>
-      <div class="right-footer">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Settings</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="search-iframe-container">
-    <button class="close-iframe">Close Search</button>
-    <iframe class="search-iframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
-  </div>
-
-  <div id="status" class="status">Initializing...</div>
-  <div id="debugLog"></div>
+  <div class="status-message"></div>
 
   <script>
     // State management
@@ -944,6 +880,17 @@
         });
       }, 1000); // Short delay before starting
     });
+
+    function showStatus(message, type = '') {
+      const status = document.querySelector('.status-message');
+      status.textContent = message;
+      status.className = 'status-message';
+      if (type) status.classList.add(type);
+      status.style.display = 'block';
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 3000);
+    }
   </script>
 </body>
 </html> 
