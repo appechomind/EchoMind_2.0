@@ -79,7 +79,7 @@
         <span>?</span>
       </div>
       <div class="card-face card-back">
-        <img id="card-image" src="/tricks/dual-device/images/cards/back.png" alt="Playing Card" onerror="handleImageError(this)">
+        <img id="card-image" src="images/cards/back.png" alt="Playing Card">
       </div>
     </div>
   </div>
@@ -90,13 +90,6 @@
     const cardDisplay = document.getElementById('card');
     const cardImage = document.getElementById('card-image');
     const status = document.getElementById('status');
-
-    function handleImageError(img) {
-      console.error('Failed to load image:', img.src);
-      // Try alternative path
-      const altPath = img.src.replace('/tricks/dual-device/', '');
-      img.src = altPath;
-    }
 
     function initializeSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -189,8 +182,7 @@
     }
 
     function revealCard(cardName) {
-      const imagePath = `/tricks/dual-device/images/cards/${cardName}.png`;
-      cardImage.src = imagePath;
+      cardImage.src = `images/cards/${cardName}.png`;
       cardDisplay.classList.add('flipped');
     }
 
