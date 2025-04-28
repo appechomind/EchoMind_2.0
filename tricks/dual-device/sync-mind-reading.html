@@ -117,6 +117,21 @@
         return 'back';
       }
 
+      // Check for jokers
+      if (transcript.includes('joker')) {
+        if (transcript.includes('red')) {
+          console.log('Red joker detected');
+          return 'red_joker';
+        } else if (transcript.includes('black')) {
+          console.log('Black joker detected');
+          return 'black_joker';
+        } else {
+          // Default to red joker if no color specified
+          console.log('Joker detected (defaulting to red)');
+          return 'red_joker';
+        }
+      }
+
       const cardNames = {
         "ace": "ace",
         "two": "2",
