@@ -271,8 +271,10 @@
         // Execute search immediately
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
         if (isMobile) {
+          // On mobile, open in same tab
           window.location.href = searchUrl;
         } else {
+          // On desktop, open in new tab
           window.open(searchUrl, '_blank');
         }
       }
@@ -751,8 +753,10 @@
         // Execute search immediately
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
         if (isMobile) {
+          // On mobile, open in same tab
           window.location.href = searchUrl;
         } else {
+          // On desktop, open in new tab
           window.open(searchUrl, '_blank');
         }
       }
