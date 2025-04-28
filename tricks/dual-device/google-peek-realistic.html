@@ -225,7 +225,7 @@
 
     // Add search functionality
     function performSearch() {
-      const searchInput = document.querySelector('.search-input');
+      const searchInput = document.getElementById('searchInput');
       const query = searchInput.value.trim();
       
       if (query) {
@@ -239,31 +239,38 @@
     }
 
     // Add event listeners for search
-    document.querySelector('.search-input').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        performSearch();
-      }
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchIcon = document.querySelector('.search-icon');
+      const searchButton = document.querySelector('.buttons button:first-child');
+      const luckyButton = document.querySelector('.buttons button:last-child');
 
-    document.querySelector('.search-icon').addEventListener('click', function() {
-      performSearch();
-    });
+      // Make sure the input is focusable and interactive
+      searchInput.removeAttribute('readonly');
+      searchInput.removeAttribute('disabled');
+      searchInput.tabIndex = 0;
 
-    document.querySelector('.buttons button:first-child').addEventListener('click', function() {
-      performSearch();
-    });
-
-    document.querySelector('.buttons button:last-child').addEventListener('click', function() {
-      const searchInput = document.querySelector('.search-input');
-      const query = searchInput.value.trim();
-      if (query) {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I%27m+Feeling+Lucky`;
-        if (state.isMobile) {
-          window.location.href = searchUrl;
-        } else {
-          window.open(searchUrl, '_blank');
+      // Add event listeners
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          performSearch();
         }
-      }
+      });
+
+      searchIcon.addEventListener('click', performSearch);
+      searchButton.addEventListener('click', performSearch);
+
+      luckyButton.addEventListener('click', function() {
+        const query = searchInput.value.trim();
+        if (query) {
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I%27m+Feeling+Lucky`;
+          if (state.isMobile) {
+            window.location.href = searchUrl;
+          } else {
+            window.open(searchUrl, '_blank');
+          }
+        }
+      });
     });
   </script>
   <style>
@@ -523,7 +530,7 @@
         <svg class="search-icon" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
         </svg>
-        <input type="text" class="search-input" placeholder="Search Google or type a URL">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Google or type a URL" autocomplete="off">
         <div class="search-icons">
           <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
