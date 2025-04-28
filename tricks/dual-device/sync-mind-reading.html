@@ -52,7 +52,7 @@
 <body>
   <div class="card-display">
     <div class="card" id="card">
-      <img id="card-image" src="./images/cards/back.png" alt="Playing Card">
+      <img id="card-image" src="../../images/cards/back.png" alt="Playing Card">
     </div>
   </div>
 
@@ -191,23 +191,17 @@
       return null;
     }
 
+    function resetEffect() {
+      // Reset card display
+      const cardImage = document.getElementById('card-image');
+      cardImage.src = '../../images/cards/back.png';
+      cardImage.style.transform = 'rotateY(0deg)';
+    }
+
     function revealCard(cardName) {
-      console.log('Revealing card:', cardName);
-      const imagePath = `./images/cards/${cardName}.png`;
-      console.log('Image path:', imagePath);
-      
-      // Create a new image to preload
-      const img = new Image();
-      img.onload = () => {
-        console.log('Image loaded successfully');
-        cardImage.src = imagePath;
-      };
-      img.onerror = (e) => {
-        console.error('Error loading image:', e);
-        // If image fails to load, show the back
-        cardImage.src = './images/cards/back.png';
-      };
-      img.src = imagePath;
+      const cardImage = document.getElementById('card-image');
+      cardImage.src = `../../images/cards/${cardName}.png`;
+      cardImage.style.transform = 'rotateY(180deg)';
     }
 
     // Initialize when the page loads
@@ -216,14 +210,14 @@
       const img = new Image();
       img.onload = () => {
         console.log('Back image loaded successfully');
-        cardImage.src = './images/cards/back.png';
+        cardImage.src = '../../images/cards/back.png';
         // Initialize speech recognition
         initializeSpeechRecognition();
       };
       img.onerror = (e) => {
         console.error('Error loading back image:', e);
       };
-      img.src = './images/cards/back.png';
+      img.src = '../../images/cards/back.png';
     });
   </script>
 </body>
