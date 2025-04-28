@@ -70,7 +70,7 @@ class GizmoAI {
         } catch (error) {
             console.error('Error processing message:', error);
             return {
-                text: gizmoPersonality.getErrorResponse('unknown'),
+                text: gizmoPersonality.generateResponse('unknown', 'error'),
                 type: 'error',
                 error: error.message
             };
@@ -89,9 +89,9 @@ class GizmoAI {
 
     detectCodeContent(message) {
         const codePatterns = [
-            /\b(function|class|const|let|var|import|export)\b/,
+            /\b(function|class|var|const|let)\b/,
             /[{}\[\]()=>;]/,
-            /\b(javascript|python|html|css|code)\b/i
+            /\b(code|script|program|debug|error)\b/i
         ];
         return codePatterns.some(pattern => pattern.test(message));
     }
@@ -99,7 +99,8 @@ class GizmoAI {
     detectModificationIntent(message) {
         const modificationPatterns = [
             /\b(change|modify|update|add|remove|delete)\b/i,
-            /\b(feature|functionality|behavior|style)\b/i
+            /\b(make|create|implement)\b/i,
+            /\b(improve|optimize|enhance)\b/i
         ];
         return modificationPatterns.some(pattern => pattern.test(message));
     }
@@ -107,10 +108,13 @@ class GizmoAI {
     extractTopics(message) {
         const topics = new Set();
         
-        // Extract technical topics
-        const technicalPattern = /\b(API|function|class|method|component|algorithm|code|image|analysis)\b/gi;
-        const matches = message.match(technicalPattern) || [];
-        matches.forEach(match => topics.add(match.toLowerCase()));
+        // Extract technical terms
+        const technicalTerms = message.match(/\b(API|function|code|image|analysis|data|UI|app)\b/gi) || [];
+        technicalTerms.forEach(term => topics.add(term.toLowerCase()));
+        
+        // Extract action words
+        const actions = message.match(/\b(create|modify|analyze|implement|change|update)\b/gi) || [];
+        actions.forEach(action => topics.add(action.toLowerCase()));
         
         return Array.from(topics);
     }
@@ -132,29 +136,35 @@ class GizmoAI {
 
     async analyzeImage(image) {
         try {
-            const base64Image = await this.imageToBase64(image);
+            // Convert image to base64
+            const base64Image = await this.convertImageToBase64(image);
+            
+            // Perform image analysis
             const analysis = await this.performImageAnalysis(base64Image);
             
-            // Store enhanced analysis results
-            const imageUrl = URL.createObjectURL(image);
-            this.imageGallery.push({
-                url: imageUrl,
-                timestamp: new Date().toISOString(),
-                analysis: analysis,
-                metadata: {
-                    size: image.size,
-                    type: image.type,
-                    dimensions: await this.getImageDimensions(image)
-                }
-            });
-            
+            // Store in gallery
+            const imageInfo = {
+                url: URL.createObjectURL(image),
+                analysis: analysis.description,
+                timestamp: Date.now()
+            };
+            this.imageGallery.push(imageInfo);
             localStorage.setItem('gizmo_images', JSON.stringify(this.imageGallery));
             
             return analysis;
         } catch (error) {
-            console.error('Error analyzing image:', error);
-            return gizmoPersonality.getErrorResponse('image_analysis');
+            console.error('Image analysis error:', error);
+            throw error;
         }
+    }
+
+    async convertImageToBase64(image) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(image);
+        });
     }
 
     async performImageAnalysis(base64Image) {
@@ -193,88 +203,78 @@ class GizmoAI {
     }
 
     extractCodeSnippets(message) {
-        const codeBlocks = message.match(/```[\s\S]*?```/g) || [];
-        const inlineCode = message.match(/`[^`]+`/g) || [];
-        
-        return {
-            blocks: codeBlocks.map(block => block.replace(/```/g, '')),
-            inline: inlineCode.map(code => code.replace(/`/g, ''))
-        };
+        const codeBlocks = message.match(/`{1,3}[\s\S]*?`{1,3}/g) || [];
+        return codeBlocks.map(block => block.replace(/`/g, ''));
     }
 
     detectLanguage(codeSnippets) {
-        // Combine all code snippets for analysis
-        const allCode = [...codeSnippets.blocks, ...codeSnippets.inline].join('\n');
-        
-        // Check for language-specific patterns
-        if (allCode.includes('function') || allCode.includes('const')) return 'javascript';
-        if (allCode.includes('def') || allCode.includes('class:')) return 'python';
-        if (allCode.includes('<') && allCode.includes('>')) return 'html';
-        if (allCode.includes('{') && allCode.includes('}')) return 'css';
+        // Simple language detection based on keywords and syntax
+        const languages = {
+            javascript: /\b(function|const|let|var|=>)\b/,
+            python: /\b(def|class|import|from)\b/,
+            html: /<[^>]+>/,
+            css: /[^{]*{[^}]*}/
+        };
+
+        for (const [lang, pattern] of Object.entries(languages)) {
+            if (codeSnippets.some(snippet => pattern.test(snippet))) {
+                return lang;
+            }
+        }
         
         return 'unknown';
     }
 
     generateCodeSuggestions(codeSnippets) {
         const suggestions = [];
-        const language = this.detectLanguage(codeSnippets);
         
-        // Language-specific suggestions
-        switch (language) {
-            case 'javascript':
-                suggestions.push('Consider using modern ES6+ features');
-                suggestions.push('Add error handling with try/catch');
-                break;
-            case 'python':
-                suggestions.push('Use type hints for better code clarity');
-                suggestions.push('Implement error handling with try/except');
-                break;
-            case 'html':
-                suggestions.push('Ensure proper semantic markup');
-                suggestions.push('Add ARIA attributes for accessibility');
-                break;
-            case 'css':
-                suggestions.push('Consider using CSS variables');
-                suggestions.push('Implement responsive design patterns');
-                break;
-        }
+        // Check for common patterns and generate suggestions
+        codeSnippets.forEach(snippet => {
+            if (snippet.includes('var ')) {
+                suggestions.push('Consider using const or let instead of var');
+            }
+            if (snippet.includes('function ') && !snippet.includes('=>')) {
+                suggestions.push('Consider using arrow functions for cleaner syntax');
+            }
+            if (snippet.includes('.innerHTML')) {
+                suggestions.push('Consider using safer alternatives to innerHTML');
+            }
+        });
         
         return suggestions;
     }
 
     checkBestPractices(codeSnippets) {
         const practices = [];
-        const allCode = [...codeSnippets.blocks, ...codeSnippets.inline].join('\n');
         
-        // General best practices
-        if (!allCode.includes('try')) {
-            practices.push('Add error handling');
-        }
-        if (allCode.includes('var ')) {
-            practices.push('Use const/let instead of var');
-        }
-        if (allCode.length > 500) {
-            practices.push('Consider breaking down into smaller functions');
-        }
+        // Check for common best practices
+        codeSnippets.forEach(snippet => {
+            if (snippet.length > 100) {
+                practices.push('Consider breaking down long functions');
+            }
+            if ((snippet.match(/if/g) || []).length > 3) {
+                practices.push('Consider simplifying complex conditions');
+            }
+            if (snippet.includes('console.log')) {
+                practices.push('Remember to remove debug statements');
+            }
+        });
         
         return practices;
     }
 
     async handleAppModification(message) {
-        try {
-            const request = this.parseModificationRequest(message);
-            const plan = this.generateModificationPlan(request);
-            
-            return {
-                request: request,
-                plan: plan,
-                impact: this.assessModificationImpact(plan),
-                timeline: this.estimateTimeline(plan)
-            };
-        } catch (error) {
-            console.error('Error handling app modification:', error);
-            return gizmoPersonality.getErrorResponse('modification');
-        }
+        const request = this.parseModificationRequest(message);
+        const plan = this.generateModificationPlan(request);
+        const impact = this.assessModificationImpact(plan);
+        const timeline = this.estimateTimeline(plan);
+        
+        return {
+            request,
+            plan,
+            impact,
+            timeline
+        };
     }
 
     parseModificationRequest(message) {
@@ -289,19 +289,18 @@ class GizmoAI {
 
     detectModificationType(message) {
         const types = {
-            'change': 'modify',
-            'add': 'create',
-            'remove': 'delete',
-            'update': 'update'
+            create: /\b(create|add|implement|new)\b/i,
+            modify: /\b(change|update|modify|improve)\b/i,
+            delete: /\b(remove|delete|eliminate)\b/i
         };
         
-        for (const [key, value] of Object.entries(types)) {
-            if (message.toLowerCase().includes(key)) {
-                return value;
+        for (const [type, pattern] of Object.entries(types)) {
+            if (pattern.test(message)) {
+                return type;
             }
         }
         
-        return 'modify';
+        return 'modify'; // Default type
     }
 
     detectModificationTarget(message) {
@@ -425,22 +424,8 @@ class GizmoAI {
         return suggestions.slice(0, 3); // Limit to top 3 suggestions
     }
 
-    async imageToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
     getImageGallery() {
         return this.imageGallery;
-    }
-
-    clearImageGallery() {
-        this.imageGallery = [];
-        localStorage.setItem('gizmo_images', JSON.stringify([]));
     }
 }
 
