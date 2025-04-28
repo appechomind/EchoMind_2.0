@@ -7,8 +7,7 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f0f1a;
-      color: #e0e0ff;
+      background-color: #000000;
       margin: 0;
       padding: 0;
       display: flex;
@@ -49,7 +48,7 @@
     }
 
     .card-front {
-      background: #442379;
+      background: #000000;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -69,15 +68,7 @@
     }
 
     #status {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      right: 10px;
-      text-align: center;
-      padding: 10px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 5px;
-      font-size: 0.9em;
+      display: none;
     }
   </style>
 </head>
@@ -101,66 +92,39 @@
     const status = document.getElementById('status');
 
     function initializeSpeechRecognition() {
-      console.log('Initializing speech recognition...');
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        console.error('Speech recognition not supported');
-        status.textContent = 'Speech recognition not supported in this browser.';
         return;
       }
 
-      console.log('Speech recognition API found:', SpeechRecognition);
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
-      recognition.onstart = function() {
-        console.log('Speech recognition started successfully');
-        status.textContent = 'Listening for card names...';
-      };
-
       recognition.onresult = async function(event) {
-        console.log('Speech recognition result received');
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        console.log('Raw transcript:', transcript);
         const card = await processSpeechInput(transcript);
         
         if (card) {
-          console.log('Card detected:', card);
           revealCard(card);
-        } else {
-          console.log('No card detected in speech');
-          status.textContent = 'No card detected. Try saying a card name like "ace of spades"';
         }
       };
 
       recognition.onerror = function(event) {
-        console.error('Speech recognition error:', event.error);
-        status.textContent = 'Error: ' + event.error;
-        // Try to restart recognition after an error
-        setTimeout(() => {
-          console.log('Restarting speech recognition after error');
-          recognition.start();
-        }, 1000);
+        recognition.start();
       };
 
       recognition.onend = function() {
-        console.log('Speech recognition ended, restarting...');
-        setTimeout(() => {
-          recognition.start();
-        }, 100);
+        recognition.start();
       };
 
-      // Request microphone permission
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => {
-          console.log('Microphone permission granted');
           recognition.start();
         })
-        .catch(err => {
-          console.error('Microphone permission denied:', err);
-          status.textContent = 'Microphone permission required. Please allow access to your microphone.';
+        .catch(() => {
+          // Silently handle permission denial
         });
     }
 
@@ -214,17 +178,12 @@
         return `${detectedCard}_of_${detectedSuit}`;
       }
 
-      console.log("Transcript:", transcript);
-      console.log("Detected card:", detectedCard);
-      console.log("Detected suit:", detectedSuit);
-
       return null;
     }
 
     function revealCard(cardName) {
       cardImage.src = `images/cards/${cardName}.png`;
       cardDisplay.classList.add('flipped');
-      status.textContent = `Card revealed: ${cardName.replace(/_/g, ' ')}`;
     }
 
     // Start listening immediately when the page loads
