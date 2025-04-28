@@ -51,10 +51,15 @@
     }
 
     .card-front {
-      background: #000000;
-      font-size: 2em;
-      color: white;
+      background: #ffffff;
       transform: rotateY(180deg);
+    }
+
+    .card-front img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 15px;
     }
 
     .card-back {
@@ -78,7 +83,7 @@
   <div class="card-display">
     <div class="card" id="card">
       <div class="card-face card-front">
-        <span>?</span>
+        <img id="front-image" src="" alt="Card Front">
       </div>
       <div class="card-face card-back">
         <img id="card-image" src="./images/cards/back.png" alt="Playing Card">
@@ -91,6 +96,7 @@
   <script>
     const cardDisplay = document.getElementById('card');
     const cardImage = document.getElementById('card-image');
+    const frontImage = document.getElementById('front-image');
     const status = document.getElementById('status');
 
     function initializeSpeechRecognition() {
@@ -216,10 +222,11 @@
       const img = new Image();
       img.onload = () => {
         console.log('Image loaded successfully');
-        cardImage.src = imagePath;
         if (cardName === 'back') {
+          cardImage.src = imagePath;
           cardDisplay.classList.remove('flipped');
         } else {
+          frontImage.src = imagePath;
           cardDisplay.classList.add('flipped');
         }
       };
