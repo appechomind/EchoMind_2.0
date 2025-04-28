@@ -57,17 +57,23 @@ EchoMind.Permissions = (function() {
 
     // Request microphone access
     async function requestMicrophoneAccess() {
+        // Check if permission was already granted
+        const storedPermission = localStorage.getItem('echomind_mic_permission');
+        if (storedPermission === 'granted') {
+            state.permissionGranted = true;
+            return true;
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
-                    sampleRate: 16000 // Optimal for speech recognition
+                    sampleRate: 16000
                 }
             });
 
-            // Always keep the stream active on mobile
             if (state.platform.isMobile) {
                 if (state.stream) {
                     state.stream.getTracks().forEach(track => {
@@ -77,16 +83,7 @@ EchoMind.Permissions = (function() {
                     });
                 }
                 state.stream = stream;
-                
-                // Ensure tracks stay active
-                stream.getTracks().forEach(track => {
-                    track.onended = async () => {
-                        log('Track ended unexpectedly, attempting to restart', 'warn');
-                        await requestMicrophoneAccess();
-                    };
-                });
             } else {
-                // For desktop, we don't need to keep the stream
                 if (state.stream) {
                     state.stream.getTracks().forEach(track => track.stop());
                 }
@@ -102,18 +99,10 @@ EchoMind.Permissions = (function() {
             
             return true;
         } catch (error) {
-            log(`Microphone access error: ${error.message}`, 'error');
             state.permissionGranted = false;
-            
-            // Handle specific error cases
-            if (error.name === 'NotAllowedError') {
-                emit('onError', { error, type: 'permission_denied' });
-            } else if (error.name === 'NotFoundError') {
-                emit('onError', { error, type: 'no_microphone' });
-            } else {
-                emit('onError', { error, type: 'unknown' });
-            }
-            
+            localStorage.setItem('echomind_mic_permission', 'denied');
+            emit('onError', { error, type: error.name === 'NotAllowedError' ? 'permission_denied' : 
+                                    error.name === 'NotFoundError' ? 'no_microphone' : 'unknown' });
             return false;
         }
     }
@@ -144,25 +133,12 @@ EchoMind.Permissions = (function() {
         }
     }
 
-    // Check and renew permissions periodically
+    // Simplified permission check
     async function checkAndRenewPermissions() {
-        if (isPermissionsApiSupported()) {
-            try {
-                const status = await navigator.permissions.query({ name: 'microphone' });
-                const isGranted = status.state === 'granted';
-                
-                if (isGranted !== state.permissionGranted) {
-                    state.permissionGranted = isGranted;
-                    emit('onPermissionChange', { granted: isGranted });
-                }
-
-                return isGranted;
-            } catch (error) {
-                log(`Error checking permission status: ${error.message}`, 'error');
-            }
+        const storedPermission = localStorage.getItem('echomind_mic_permission');
+        if (storedPermission === 'granted') {
+            return true;
         }
-
-        // Fallback to checking stored permission
         return state.permissionGranted;
     }
 

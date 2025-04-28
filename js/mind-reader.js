@@ -78,24 +78,18 @@ function normalizeTranscript(transcript) {
 }
 
 function showCard(cardName) {
-  if (!cardName) return;
-  
-  // Special handling for "back" - also show joker
-  if (cardName === "back") {
-    showCard("redjoker");
-  }
+  if (!cardName || cardName === "back") return;
   
   let index = 0;
   function tryNextExt() {
     if (index >= extensions.length) {
-      cardDisplay.src = `/EchoMind_2.0/images/cards/${fallbackCard}.png`;
       return;
     }
     const ext = extensions[index++];
     const imgPath = `/EchoMind_2.0/images/cards/${cardName}.${ext}`;
     cardDisplay.onerror = tryNextExt;
     cardDisplay.src = imgPath;
-    if (navigator.vibrate && cardName !== fallbackCard) navigator.vibrate(100);
+    if (navigator.vibrate) navigator.vibrate(100);
   }
   tryNextExt();
 }
