@@ -227,12 +227,12 @@
           processingTimeout = null;
         }
 
-        // Start recording
+        // Start recording immediately
         isRecording = true;
         updateStatus('Recording query...', 'listening');
         log('Started recording');
         
-        // Set timeout to process recording
+        // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
           processRecording();
         }, recordingDuration);
@@ -724,8 +724,8 @@
 
     // Configuration
     const triggerWord = 'about';
-    const recordingDelay = 300;
-    const recordingDuration = 5000;
+    const recordingDelay = 0; // Start immediately
+    const recordingDuration = 3000; // 3 seconds
     const minWords = 1;
     const maxWords = 15;
     const retryDelay = 1000;
@@ -793,12 +793,12 @@
           processingTimeout = null;
         }
 
-        // Start recording
+        // Start recording immediately
         isRecording = true;
         updateStatus('Recording query...', 'listening');
         log('Started recording');
         
-        // Set timeout to process recording
+        // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
           processRecording();
         }, recordingDuration);
