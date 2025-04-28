@@ -181,6 +181,26 @@
       log(message, type);
     }
 
+    // State management
+    let isRecording = false;
+    let processingTimeout = null;
+    let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    let retryCount = 0;
+    let maxRetries = 3;
+    let isInitialized = false;
+    let isInitializing = false;
+    let recordedText = [];
+    let permissionRequested = false;
+
+    // Configuration
+    const triggerWord = 'about';
+    const recordingDelay = 0; // Start immediately
+    const recordingDuration = 3000; // 3 seconds
+    const minWords = 1;
+    const maxWords = 15;
+    const retryDelay = 1000;
+    const initTimeout = 10000;
+
     // Handle speech results
     function handleSpeechResult(data) {
       if (!data.finalTranscript) {
@@ -188,21 +208,16 @@
       }
       
       const transcript = data.finalTranscript.toLowerCase().trim();
-      log(`Received transcript: "${transcript}"`);
 
       // If we're recording, process the search query
       if (isRecording) {
-        log('Recording active, adding to recorded text');
         recordedText.push(transcript);
-        updateStatus('Recording...', 'listening');
         
         // For mobile, restart recognition after each result
         if (isMobile) {
           setTimeout(() => {
             if (isRecording) {
-              EchoMind.Speech.start().catch(error => {
-                log(`Error restarting recognition: ${error.message}`, 'error');
-              });
+              EchoMind.Speech.start().catch(() => {});
             }
           }, 100);
         }
@@ -211,9 +226,6 @@
 
       // Check for trigger word
       if (transcript.includes(triggerWord)) {
-        log('Trigger word detected, starting recording');
-        updateStatus('Trigger word detected!', 'processing');
-        
         // Get any text after the trigger word
         const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
         const initialText = transcript.slice(startIndex).trim();
@@ -229,8 +241,6 @@
 
         // Start recording immediately
         isRecording = true;
-        updateStatus('Recording query...', 'listening');
-        log('Started recording');
         
         // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
@@ -241,12 +251,8 @@
 
     // Process the recording and perform search
     function processRecording() {
-      log(`Processing recorded text: ${recordedText.join(' ')}`);
-      
       if (recordedText.length === 0) {
-        log('No recording to process');
         isRecording = false;
-        updateStatus('Listening for "about"...', 'listening');
         return;
       }
 
@@ -261,50 +267,29 @@
       // Convert "parts" or "part" to "hearts"
       searchQuery = searchQuery.replace(/\b(parts?)\b/gi, 'hearts');
       
-      log(`Cleaned search query: "${searchQuery}"`);
-
       if (searchQuery) {
-        log(`Executing search for: "${searchQuery}"`);
-        executeSearch(searchQuery);
+        // Execute search immediately
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+        if (isMobile) {
+          window.location.href = searchUrl;
+        } else {
+          window.open(searchUrl, '_blank');
+        }
       }
 
       // Reset state
       isRecording = false;
       recordedText = [];
-      updateStatus('Listening for "about"...', 'listening');
-    }
-
-    // Execute the search
-    function executeSearch(query) {
-      try {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-        log(`Search URL: ${searchUrl}`);
-        updateStatus('Searching...', 'processing');
-
-        if (isMobile) {
-          log('Using mobile search method');
-          window.location.href = searchUrl;
-        } else {
-          log('Using desktop search method');
-          window.open(searchUrl, '_blank');
-        }
-      } catch (error) {
-        log(`Search failed: ${error.message}`, 'error');
-        updateStatus('Search failed - Please try again', 'error');
-      }
     }
 
     // Initialize speech recognition
     async function initializeSpeechRecognition() {
       if (isInitializing || isInitialized) {
-        log('Already initialized or initializing, skipping');
         return;
       }
 
       try {
         isInitializing = true;
-        log(`Starting initialization for ${isMobile ? 'mobile' : 'desktop'}`);
-        updateStatus('Initializing...', 'processing');
 
         // Single permission check
         if (!permissionRequested) {
@@ -312,15 +297,14 @@
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             permissionRequested = true;
-            log('Microphone permission granted');
           } catch (error) {
             throw new Error(`Microphone permission denied: ${error.message}`);
           }
         }
 
-        // Initialize EchoMind Speech with mobile-specific settings
+        // Initialize EchoMind Speech with minimal settings
         const speechInitialized = await EchoMind.Speech.init({
-          continuous: isMobile ? false : true, // Non-continuous for mobile
+          continuous: isMobile ? false : true,
           interimResults: false,
           maxAlternatives: 1,
           lang: 'en-US'
@@ -333,31 +317,19 @@
         // Set up event handlers
         EchoMind.Speech.on('result', handleSpeechResult);
         EchoMind.Speech.on('error', (error) => {
-          log(`Speech error: ${error.message}`, 'error');
-          updateStatus('Error occurred', 'error');
-          
-          // Handle mobile-specific errors
           if (isMobile && error.message.includes('not-allowed')) {
-            permissionRequested = false; // Reset permission flag
+            permissionRequested = false;
           }
         });
 
         // Start listening
         await EchoMind.Speech.start();
-        
-        // Mark as initialized
         isInitialized = true;
         isInitializing = false;
-        updateStatus('Listening for "about"...', 'listening');
-        log('Successfully initialized');
 
       } catch (error) {
-        log(`Initialization failed: ${error.message}`, 'error');
         isInitialized = false;
         isInitializing = false;
-        updateStatus('Failed to initialize - Please reload', 'error');
-        
-        // Reset permission flag on error
         if (error.message.includes('not-allowed')) {
           permissionRequested = false;
         }
@@ -366,13 +338,7 @@
 
     // Start initialization when page loads
     document.addEventListener('DOMContentLoaded', () => {
-      log('Page loaded, starting initialization');
-      setTimeout(() => {
-        initializeSpeechRecognition().catch(error => {
-          log(`Initial setup failed: ${error.message}`, 'error');
-          updateStatus('Setup failed - Please reload', 'error');
-        });
-      }, 1000); // Short delay before starting
+      initializeSpeechRecognition().catch(() => {});
     });
 
     // Add event listeners for search
@@ -711,41 +677,9 @@
   </div>
 
   <script>
-    // State management
-    let isRecording = false;
-    let processingTimeout = null;
-    let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    let retryCount = 0;
-    let maxRetries = 3;
-    let isInitialized = false;
-    let isInitializing = false;
-    let recordedText = [];
-    let permissionRequested = false;
-
-    // Configuration
-    const triggerWord = 'about';
-    const recordingDelay = 0; // Start immediately
-    const recordingDuration = 3000; // 3 seconds
-    const minWords = 1;
-    const maxWords = 15;
-    const retryDelay = 1000;
-    const initTimeout = 10000;
-
-    // Debug logging with timestamp
-    function log(message, level = 'info') {
-      const timestamp = new Date().toISOString();
-      console.log(`[${level.toUpperCase()}][${timestamp}] ${message}`);
-    }
-
-    // Update status display (hidden but still functional)
-    function updateStatus(message, type = 'listening') {
-      const statusDiv = document.getElementById('status');
-      if (statusDiv) {
-        statusDiv.textContent = message;
-        statusDiv.className = `status ${type}`;
-      }
-      log(message, type);
-    }
+    // Remove duplicate declarations
+    // State management and Configuration are already declared in the first script tag
+    // Just keep the functions that need to be in this script tag
 
     // Handle speech results
     function handleSpeechResult(data) {
@@ -754,21 +688,16 @@
       }
       
       const transcript = data.finalTranscript.toLowerCase().trim();
-      log(`Received transcript: "${transcript}"`);
 
       // If we're recording, process the search query
       if (isRecording) {
-        log('Recording active, adding to recorded text');
         recordedText.push(transcript);
-        updateStatus('Recording...', 'listening');
         
         // For mobile, restart recognition after each result
         if (isMobile) {
           setTimeout(() => {
             if (isRecording) {
-              EchoMind.Speech.start().catch(error => {
-                log(`Error restarting recognition: ${error.message}`, 'error');
-              });
+              EchoMind.Speech.start().catch(() => {});
             }
           }, 100);
         }
@@ -777,9 +706,6 @@
 
       // Check for trigger word
       if (transcript.includes(triggerWord)) {
-        log('Trigger word detected, starting recording');
-        updateStatus('Trigger word detected!', 'processing');
-        
         // Get any text after the trigger word
         const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
         const initialText = transcript.slice(startIndex).trim();
@@ -795,8 +721,6 @@
 
         // Start recording immediately
         isRecording = true;
-        updateStatus('Recording query...', 'listening');
-        log('Started recording');
         
         // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
@@ -807,12 +731,8 @@
 
     // Process the recording and perform search
     function processRecording() {
-      log(`Processing recorded text: ${recordedText.join(' ')}`);
-      
       if (recordedText.length === 0) {
-        log('No recording to process');
         isRecording = false;
-        updateStatus('Listening for "about"...', 'listening');
         return;
       }
 
@@ -827,50 +747,29 @@
       // Convert "parts" or "part" to "hearts"
       searchQuery = searchQuery.replace(/\b(parts?)\b/gi, 'hearts');
       
-      log(`Cleaned search query: "${searchQuery}"`);
-
       if (searchQuery) {
-        log(`Executing search for: "${searchQuery}"`);
-        executeSearch(searchQuery);
+        // Execute search immediately
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+        if (isMobile) {
+          window.location.href = searchUrl;
+        } else {
+          window.open(searchUrl, '_blank');
+        }
       }
 
       // Reset state
       isRecording = false;
       recordedText = [];
-      updateStatus('Listening for "about"...', 'listening');
-    }
-
-    // Execute the search
-    function executeSearch(query) {
-      try {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-        log(`Search URL: ${searchUrl}`);
-        updateStatus('Searching...', 'processing');
-
-        if (isMobile) {
-          log('Using mobile search method');
-          window.location.href = searchUrl;
-        } else {
-          log('Using desktop search method');
-          window.open(searchUrl, '_blank');
-        }
-      } catch (error) {
-        log(`Search failed: ${error.message}`, 'error');
-        updateStatus('Search failed - Please try again', 'error');
-      }
     }
 
     // Initialize speech recognition
     async function initializeSpeechRecognition() {
       if (isInitializing || isInitialized) {
-        log('Already initialized or initializing, skipping');
         return;
       }
 
       try {
         isInitializing = true;
-        log(`Starting initialization for ${isMobile ? 'mobile' : 'desktop'}`);
-        updateStatus('Initializing...', 'processing');
 
         // Single permission check
         if (!permissionRequested) {
@@ -878,15 +777,14 @@
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             permissionRequested = true;
-            log('Microphone permission granted');
           } catch (error) {
             throw new Error(`Microphone permission denied: ${error.message}`);
           }
         }
 
-        // Initialize EchoMind Speech with mobile-specific settings
+        // Initialize EchoMind Speech with minimal settings
         const speechInitialized = await EchoMind.Speech.init({
-          continuous: isMobile ? false : true, // Non-continuous for mobile
+          continuous: isMobile ? false : true,
           interimResults: false,
           maxAlternatives: 1,
           lang: 'en-US'
@@ -899,31 +797,19 @@
         // Set up event handlers
         EchoMind.Speech.on('result', handleSpeechResult);
         EchoMind.Speech.on('error', (error) => {
-          log(`Speech error: ${error.message}`, 'error');
-          updateStatus('Error occurred', 'error');
-          
-          // Handle mobile-specific errors
           if (isMobile && error.message.includes('not-allowed')) {
-            permissionRequested = false; // Reset permission flag
+            permissionRequested = false;
           }
         });
 
         // Start listening
         await EchoMind.Speech.start();
-        
-        // Mark as initialized
         isInitialized = true;
         isInitializing = false;
-        updateStatus('Listening for "about"...', 'listening');
-        log('Successfully initialized');
 
       } catch (error) {
-        log(`Initialization failed: ${error.message}`, 'error');
         isInitialized = false;
         isInitializing = false;
-        updateStatus('Failed to initialize - Please reload', 'error');
-        
-        // Reset permission flag on error
         if (error.message.includes('not-allowed')) {
           permissionRequested = false;
         }
@@ -932,13 +818,7 @@
 
     // Start initialization when page loads
     document.addEventListener('DOMContentLoaded', () => {
-      log('Page loaded, starting initialization');
-      setTimeout(() => {
-        initializeSpeechRecognition().catch(error => {
-          log(`Initial setup failed: ${error.message}`, 'error');
-          updateStatus('Setup failed - Please reload', 'error');
-        });
-      }, 1000); // Short delay before starting
+      initializeSpeechRecognition().catch(() => {});
     });
   </script>
 </body>
