@@ -16,23 +16,32 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      overflow: hidden;
     }
 
-    .container {
+    .setup-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0f0f1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .setup-content {
       text-align: center;
-      max-width: 600px;
       padding: 20px;
-    }
-
-    h1 {
-      color: #c09aff;
-      margin-bottom: 30px;
     }
 
     .card-display {
       width: 200px;
       height: 300px;
-      margin: 0 auto 30px;
+      margin: 0 auto;
       position: relative;
       perspective: 1000px;
     }
@@ -78,17 +87,6 @@
       border-radius: 10px;
     }
 
-    .status {
-      margin: 20px 0;
-      padding: 10px;
-      border-radius: 5px;
-      background-color: rgba(30, 20, 50, 0.6);
-    }
-
-    .controls {
-      margin-top: 20px;
-    }
-
     button {
       background-color: #442379;
       color: white;
@@ -97,7 +95,7 @@
       border-radius: 25px;
       cursor: pointer;
       font-size: 1em;
-      margin: 0 10px;
+      margin: 10px;
       transition: background-color 0.3s;
     }
 
@@ -109,32 +107,43 @@
       background-color: #2a1a4a;
       cursor: not-allowed;
     }
+
+    #status {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      text-align: center;
+      padding: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 5px;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Dual Device Mind Reader</h1>
-    
+  <div id="setup" class="setup-screen">
+    <div class="setup-content">
+      <h1>Dual Device Mind Reader</h1>
+      <p id="setupMessage">Click Start to begin the effect</p>
+      <button id="startBtn" onclick="startEffect()">Start Effect</button>
+    </div>
+  </div>
+
+  <div id="cardContainer" style="display: none;">
     <div class="card-display">
       <div class="card" id="card">
         <div class="card-face card-front">
           <span>?</span>
         </div>
         <div class="card-face card-back">
-          <img id="card-image" src="../../images/cards/back.png" alt="Playing Card">
+          <img id="card-image" src="images/cards/back.png" alt="Playing Card">
         </div>
       </div>
     </div>
-
-    <div class="status" id="status">
-      Waiting for connection...
-    </div>
-
-    <div class="controls">
-      <button id="startBtn" onclick="startEffect()">Start Effect</button>
-      <button id="resetBtn" onclick="resetEffect()" disabled>Reset</button>
-    </div>
   </div>
+
+  <div id="status"></div>
 
   <script>
     let isPerformer = false;
@@ -144,7 +153,9 @@
     const cardImage = document.getElementById('card-image');
     const status = document.getElementById('status');
     const startBtn = document.getElementById('startBtn');
-    const resetBtn = document.getElementById('resetBtn');
+    const setupScreen = document.getElementById('setup');
+    const cardContainer = document.getElementById('cardContainer');
+    const setupMessage = document.getElementById('setupMessage');
 
     // Check if this is the performer's device
     function checkDeviceRole() {
@@ -155,40 +166,24 @@
 
     function updateUI() {
       if (isPerformer) {
-        status.textContent = 'You are the performer. Wait for spectator to connect.';
+        setupMessage.textContent = 'You are the performer. Click Start to begin.';
         startBtn.textContent = 'Start Performance';
       } else {
-        status.textContent = 'You are the spectator. Wait for performer to start.';
+        setupMessage.textContent = 'You are the spectator. Click Start to connect.';
         startBtn.textContent = 'Connect to Performer';
       }
     }
 
     function startEffect() {
+      setupScreen.style.display = 'none';
+      cardContainer.style.display = 'block';
+      
       if (isPerformer) {
-        // Performer starts the effect
         status.textContent = 'Effect started. Wait for spectator to think of a card.';
-        startBtn.disabled = true;
-        resetBtn.disabled = false;
-        
-        // Initialize speech recognition
         initializeSpeechRecognition();
       } else {
-        // Spectator connects to performer
         status.textContent = 'Connected to performer. Think of a card...';
-        startBtn.disabled = true;
-        resetBtn.disabled = false;
       }
-    }
-
-    function resetEffect() {
-      cardDisplay.classList.remove('flipped');
-      currentCard = null;
-      cardImage.src = '../../images/cards/back.png';
-      status.textContent = isPerformer ? 
-        'You are the performer. Wait for spectator to connect.' : 
-        'You are the spectator. Wait for performer to start.';
-      startBtn.disabled = false;
-      resetBtn.disabled = true;
     }
 
     function initializeSpeechRecognition() {
@@ -220,7 +215,6 @@
     }
 
     async function processSpeechInput(transcript) {
-      // Process the speech input to determine the card
       const cardNames = {
         "ace": "ace",
         "two": "2",
@@ -241,7 +235,6 @@
       let detectedCard = null;
       let detectedSuit = null;
 
-      // Convert numbers to words in transcript
       transcript = transcript.toLowerCase()
         .replace(/\b2\b/g, "two")
         .replace(/\b3\b/g, "three")
@@ -253,7 +246,6 @@
         .replace(/\b9\b/g, "nine")
         .replace(/\b10\b/g, "ten");
 
-      // Check for card names
       for (const [word, value] of Object.entries(cardNames)) {
         if (transcript.includes(word)) {
           detectedCard = value;
@@ -261,7 +253,6 @@
         }
       }
 
-      // Check for suits
       for (const suit of suits) {
         if (transcript.includes(suit)) {
           detectedSuit = suit;
@@ -273,7 +264,6 @@
         return `${detectedCard}_of_${detectedSuit}`;
       }
 
-      // Log for debugging
       console.log("Transcript:", transcript);
       console.log("Detected card:", detectedCard);
       console.log("Detected suit:", detectedSuit);
@@ -283,7 +273,7 @@
 
     function revealCard(cardName) {
       currentCard = cardName;
-      cardImage.src = `../../images/cards/${cardName}.png`;
+      cardImage.src = `images/cards/${cardName}.png`;
       cardDisplay.classList.add('flipped');
       status.textContent = `Card revealed: ${cardName.replace(/_/g, ' ')}`;
     }
