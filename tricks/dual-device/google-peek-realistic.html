@@ -7,24 +7,25 @@
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
   <!-- Load EchoMind modules in correct order -->
-  <script src="../../../js/core/echomind-core.js"></script>
-  <script src="../../../js/core/echomind-permissions.js"></script>
-  <script src="../../../js/core/echomind-speech.js"></script>
   <script src="../../../js/core/echomind-nlp.js"></script>
   <script src="../../../js/core/echomind-ml.js"></script>
   <script src="../../../js/core/echomind-knowledge.js"></script>
   <script src="../../../js/core/language-model.js"></script>
+  <script src="../../../js/core/echomind-core.js"></script>
+  <script src="../../../js/core/echomind-permissions.js"></script>
+  <script src="../../../js/core/echomind-speech.js"></script>
   <script src="../../../js/mind-reader.js"></script>
   
   <script>
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // Initialize EchoMind core with advanced features
-        if (!window.EchoMind) {
-          throw new Error('EchoMind core module not loaded');
+        // Check if all required modules are loaded
+        if (!window.EchoMind || !window.EchoMindNLP || !window.EchoMindML || !window.EchoMindKnowledge) {
+          throw new Error('Required EchoMind modules not loaded');
         }
 
+        // Initialize EchoMind core with advanced features
         await EchoMind.init({
           debug: true,
           aiModel: 'advanced',
@@ -32,12 +33,13 @@
           contextWindow: 1000
         });
 
-        // Set up speech recognition handlers
-        const speech = EchoMind.Speech;
-        if (!speech) {
-          throw new Error('Speech module not available');
+        // Verify module initialization
+        if (!EchoMind.Speech || !EchoMind.Permissions) {
+          throw new Error('Speech or Permissions module not initialized');
         }
 
+        // Set up speech recognition handlers
+        const speech = EchoMind.Speech;
         speech.on('result', async (data) => {
           try {
             // Process through NLP and ML pipeline
