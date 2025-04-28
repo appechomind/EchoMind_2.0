@@ -67,61 +67,204 @@
       }
     });
 
+    // Optimize DOM manipulation by using document fragments
+    const fragment = document.createDocumentFragment();
+
     // Add mind reader card display
     const cardDisplay = document.createElement('div');
     cardDisplay.id = 'card-display';
-    cardDisplay.style.position = 'fixed';
-    cardDisplay.style.top = '50%';
-    cardDisplay.style.left = '50%';
-    cardDisplay.style.transform = 'translate(-50%, -50%)';
-    cardDisplay.style.zIndex = '1000';
-    cardDisplay.style.display = 'none';
-    document.body.appendChild(cardDisplay);
+    Object.assign(cardDisplay.style, {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: '1000',
+      display: 'none'
+    });
+    fragment.appendChild(cardDisplay);
 
     // Add mind reader container
     const container = document.createElement('div');
     container.id = 'container';
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.zIndex = '999';
-    container.style.display = 'none';
-    document.body.appendChild(container);
+    Object.assign(container.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      zIndex: '999',
+      display: 'none'
+    });
+    fragment.appendChild(container);
 
     // Add setup screen
     const setupScreen = document.createElement('div');
     setupScreen.id = 'setup';
-    setupScreen.style.position = 'fixed';
-    setupScreen.style.top = '0';
-    setupScreen.style.left = '0';
-    setupScreen.style.width = '100%';
-    setupScreen.style.height = '100%';
-    setupScreen.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    setupScreen.style.zIndex = '1001';
-    setupScreen.style.display = 'flex';
-    setupScreen.style.flexDirection = 'column';
-    setupScreen.style.justifyContent = 'center';
-    setupScreen.style.alignItems = 'center';
-    setupScreen.style.color = 'white';
-    document.body.appendChild(setupScreen);
+    Object.assign(setupScreen.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      zIndex: '1001',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      color: 'white'
+    });
 
     // Add setup button
     const setupBtn = document.createElement('button');
     setupBtn.id = 'setupBtn';
     setupBtn.textContent = 'Start Setup';
-    setupBtn.style.padding = '10px 20px';
-    setupBtn.style.fontSize = '16px';
-    setupBtn.style.marginTop = '20px';
+    Object.assign(setupBtn.style, {
+      padding: '10px 20px',
+      fontSize: '16px',
+      marginTop: '20px'
+    });
     setupScreen.appendChild(setupBtn);
 
     // Add setup instructions
     const setupInstructions = document.createElement('div');
     setupInstructions.textContent = 'Click the button below to start the setup process.';
-    setupInstructions.style.marginBottom = '20px';
-    setupInstructions.style.textAlign = 'center';
+    Object.assign(setupInstructions.style, {
+      marginBottom: '20px',
+      textAlign: 'center'
+    });
     setupScreen.appendChild(setupInstructions);
+
+    fragment.appendChild(setupScreen);
+    document.body.appendChild(fragment);
+
+    // Cache DOM elements
+    const searchInput = document.querySelector('.search-input');
+    const cachedElements = {
+      searchInput,
+      cardDisplay,
+      container,
+      setupScreen,
+      setupBtn
+    };
+
+    // Optimize event listeners
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Optimize speech recognition
+    let recognition = null;
+    let isListening = false;
+
+    async function initializeSpeechRecognition() {
+      if (recognition) return;
+      
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error('Speech recognition not supported');
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      // Cache event handlers
+      const handlers = {
+        onresult: debounce((event) => {
+          const transcript = event.results[event.results.length - 1][0].transcript;
+          processVoiceInput(transcript);
+        }, 300),
+        
+        onerror: (event) => {
+          console.error('Speech recognition error:', event.error);
+          if (event.error === 'not-allowed') {
+            updateStatus('Microphone access denied', 'error');
+          }
+        },
+        
+        onend: () => {
+          if (isListening) {
+            try {
+              recognition.start();
+            } catch (e) {
+              console.error('Error restarting recognition:', e);
+            }
+          }
+        }
+      };
+
+      // Assign cached handlers
+      recognition.onresult = handlers.onresult;
+      recognition.onerror = handlers.onerror;
+      recognition.onend = handlers.onend;
+
+      try {
+        recognition.start();
+        isListening = true;
+      } catch (e) {
+        console.error('Error starting recognition:', e);
+      }
+    }
+
+    // Optimize voice input processing
+    const processVoiceInput = debounce(async (transcript) => {
+      try {
+        if (window.languageModel) {
+          const response = await languageModel.processInput(transcript);
+          if (response.confidence > 0.7) {
+            cachedElements.searchInput.value = response.text;
+            simulateSearch(response.text);
+            if (response.suggestions?.length) {
+              showSuggestions(response.suggestions);
+            }
+          } else {
+            cachedElements.searchInput.value = transcript;
+            simulateSearch(transcript);
+          }
+        } else {
+          cachedElements.searchInput.value = transcript;
+          simulateSearch(transcript);
+        }
+      } catch (error) {
+        console.error('Error processing voice input:', error);
+        cachedElements.searchInput.value = transcript;
+        simulateSearch(transcript);
+      }
+    }, 300);
+
+    // Optimize search simulation
+    const simulateSearch = debounce((query) => {
+      if (!query) return;
+      
+      // Update search input
+      cachedElements.searchInput.value = query;
+      
+      // Show loading state
+      const searchButton = document.querySelector('button[type="submit"]');
+      if (searchButton) {
+        searchButton.disabled = true;
+        searchButton.innerHTML = '<div class="spinner"></div>';
+      }
+      
+      // Simulate search delay
+      setTimeout(() => {
+        if (searchButton) {
+          searchButton.disabled = false;
+          searchButton.innerHTML = 'Google Search';
+        }
+      }, 1000);
+    }, 300);
 
     async function handleQuestion(result) {
       try {
@@ -162,39 +305,6 @@
       } catch (error) {
         console.error('Error handling command:', error);
         processVoiceInput(result.input);
-      }
-    }
-
-    async function processVoiceInput(transcript) {
-      try {
-        // Process through language model if available
-        if (window.languageModel) {
-          const response = await languageModel.processInput(transcript);
-          console.log('Language model response:', response);
-          
-          // Use the processed response
-          if (response.confidence > 0.7) {
-            document.querySelector('.search-input').value = response.text;
-            simulateSearch(response.text);
-          } else {
-            // Fall back to direct transcript if confidence is low
-            document.querySelector('.search-input').value = transcript;
-            simulateSearch(transcript);
-          }
-          
-          // Show suggestions if available
-          if (response.suggestions && response.suggestions.length > 0) {
-            showSuggestions(response.suggestions);
-          }
-        } else {
-          // Fallback to direct transcript
-          document.querySelector('.search-input').value = transcript;
-          simulateSearch(transcript);
-        }
-      } catch (error) {
-        console.error('Error processing voice input:', error);
-        document.querySelector('.search-input').value = transcript;
-        simulateSearch(transcript);
       }
     }
 
