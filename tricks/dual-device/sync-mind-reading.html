@@ -54,7 +54,7 @@
       background: #000000;
       font-size: 2em;
       color: white;
-      display: none; /* Hide the front face initially */
+      display: none;
     }
 
     .card-back {
@@ -92,6 +92,9 @@
     const cardImage = document.getElementById('card-image');
     const status = document.getElementById('status');
 
+    // Set initial image
+    cardImage.src = './images/cards/back.png';
+
     function initializeSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -115,7 +118,6 @@
       recognition.onerror = function(event) {
         console.log('Speech recognition error:', event.error);
         if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          // Only restart if we're not already running
           if (recognition.state !== 'running') {
             recognition.start();
           }
@@ -124,7 +126,6 @@
 
       recognition.onend = function() {
         console.log('Speech recognition ended');
-        // Only restart if we're not already running
         if (recognition.state !== 'running') {
           recognition.start();
         }
@@ -222,11 +223,8 @@
       }
     }
 
-    // Initialize with back image
-    window.addEventListener('load', () => {
-      cardImage.src = './images/cards/back.png';
-      initializeSpeechRecognition();
-    });
+    // Initialize speech recognition when the page loads
+    window.addEventListener('load', initializeSpeechRecognition);
   </script>
 </body>
 </html> 
