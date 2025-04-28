@@ -54,7 +54,7 @@
       background: #000000;
       font-size: 2em;
       color: white;
-      display: none;
+      visibility: hidden;
     }
 
     .card-back {
@@ -92,12 +92,10 @@
     const cardImage = document.getElementById('card-image');
     const status = document.getElementById('status');
 
-    // Set initial image
-    cardImage.src = './images/cards/back.png';
-
     function initializeSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
+        console.error('Speech recognition not supported');
         return;
       }
 
@@ -135,8 +133,8 @@
         .then(() => {
           recognition.start();
         })
-        .catch(() => {
-          // Silently handle permission denial
+        .catch((error) => {
+          console.error('Microphone access denied:', error);
         });
     }
 
@@ -212,19 +210,42 @@
       console.log('Revealing card:', cardName);
       const imagePath = `./images/cards/${cardName}.png`;
       console.log('Image path:', imagePath);
-      cardImage.src = imagePath;
-      cardImage.onload = () => console.log('Image loaded successfully');
-      cardImage.onerror = (e) => console.error('Error loading image:', e);
       
-      if (cardName === 'back') {
+      // Create a new image to preload
+      const img = new Image();
+      img.onload = () => {
+        console.log('Image loaded successfully');
+        cardImage.src = imagePath;
+        if (cardName === 'back') {
+          cardDisplay.classList.remove('flipped');
+        } else {
+          cardDisplay.classList.add('flipped');
+        }
+      };
+      img.onerror = (e) => {
+        console.error('Error loading image:', e);
+        // If image fails to load, show the back
+        cardImage.src = './images/cards/back.png';
         cardDisplay.classList.remove('flipped');
-      } else {
-        cardDisplay.classList.add('flipped');
-      }
+      };
+      img.src = imagePath;
     }
 
-    // Initialize speech recognition when the page loads
-    window.addEventListener('load', initializeSpeechRecognition);
+    // Initialize when the page loads
+    window.addEventListener('load', () => {
+      // Ensure back image is loaded
+      const img = new Image();
+      img.onload = () => {
+        console.log('Back image loaded successfully');
+        cardImage.src = './images/cards/back.png';
+        // Initialize speech recognition
+        initializeSpeechRecognition();
+      };
+      img.onerror = (e) => {
+        console.error('Error loading back image:', e);
+      };
+      img.src = './images/cards/back.png';
+    });
   </script>
 </body>
 </html> 
