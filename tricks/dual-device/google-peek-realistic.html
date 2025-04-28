@@ -7,40 +7,121 @@
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
   <!-- Load EchoMind modules in correct order -->
-  <script src="../../js/core/echomind-core.js"></script>
-  <script src="../../js/core/echomind-permissions.js"></script>
-  <script src="../../js/core/echomind-speech.js"></script>
+  <script src="../../../js/core/echomind-core.js"></script>
+  <script>
+    // Ensure EchoMind namespace exists
+    if (typeof window.EchoMind === 'undefined') {
+      window.EchoMind = {};
+    }
+  </script>
+  <script src="../../../js/core/echomind-permissions.js"></script>
+  <script src="../../../js/core/echomind-speech.js"></script>
+  <script src="../../../js/core/language-model.js"></script>
   
   <script>
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        if (!window.EchoMind) {
+        // First check if EchoMind core exists
+        if (typeof window.echomind === 'undefined') {
           throw new Error('EchoMind core module not loaded');
         }
         
-        if (window.EchoMind?.Permissions) {
-          await EchoMind.Permissions.init();
-          const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
-          
-          if (permissionResult === 'granted') {
-            await initializeSpeechRecognition();
-          } else {
-            tryFallbackSpeechRecognition();
-          }
-        } else {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            await initializeSpeechRecognition();
-          } catch (error) {
-            tryFallbackSpeechRecognition();
-          }
+        // Initialize permissions first
+        if (!window.EchoMind.Permissions) {
+          throw new Error('EchoMind permissions module not loaded');
         }
+        await EchoMind.Permissions.init();
+        
+        // Then initialize speech recognition
+        if (!window.EchoMind.Speech) {
+          throw new Error('EchoMind speech module not loaded');
+        }
+        
+        const speechInitialized = await EchoMind.Speech.init({
+          continuous: true,
+          interimResults: true,
+          maxAlternatives: 1,
+          debugMode: true // Enable debug mode to see what's happening
+        });
+        
+        if (!speechInitialized) {
+          throw new Error('Speech initialization failed');
+        }
+        
+        // Request microphone permission
+        const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+        if (permissionResult === 'granted') {
+          await EchoMind.Speech.start();
+          updateStatus('Listening for "about"...', 'listening');
+        } else {
+          throw new Error('Microphone permission denied');
+        }
+        
       } catch (error) {
-        tryFallbackSpeechRecognition();
+        console.error('Initialization error:', error);
+        updateStatus('Error: ' + error.message, 'error');
+        log(error.message, 'error');
       }
     });
+
+    async function processVoiceInput(transcript) {
+      try {
+        // Process through language model if available
+        if (window.languageModel) {
+          const response = await languageModel.processInput(transcript);
+          console.log('Language model response:', response);
+          
+          // Use the processed response
+          if (response.confidence > 0.7) {
+            document.querySelector('.search-input').value = response.text;
+            simulateSearch(response.text);
+          } else {
+            // Fall back to direct transcript if confidence is low
+            document.querySelector('.search-input').value = transcript;
+            simulateSearch(transcript);
+          }
+          
+          // Show suggestions if available
+          if (response.suggestions && response.suggestions.length > 0) {
+            showSuggestions(response.suggestions);
+          }
+        } else {
+          // Fallback to direct transcript
+          document.querySelector('.search-input').value = transcript;
+          simulateSearch(transcript);
+        }
+      } catch (error) {
+        console.error('Error processing voice input:', error);
+        document.querySelector('.search-input').value = transcript;
+        simulateSearch(transcript);
+      }
+    }
+
+    function showSuggestions(suggestions) {
+      const container = document.querySelector('.search-suggestions') || createSuggestionsContainer();
+      
+      const suggestionsHtml = suggestions
+        .map(suggestion => `<div class="suggestion-item">${suggestion}</div>`)
+        .join('');
+      
+      container.innerHTML = suggestionsHtml;
+      container.style.display = 'block';
+    }
+
+    function createSuggestionsContainer() {
+      const suggestionsDiv = document.createElement('div');
+      suggestionsDiv.className = 'search-suggestions';
+      document.querySelector('.search-container').appendChild(suggestionsDiv);
+      return suggestionsDiv;
+    }
+
+    function hideSuggestions() {
+      const container = document.querySelector('.search-suggestions');
+      if (container) {
+        container.style.display = 'none';
+      }
+    }
   </script>
   <style>
     body {
@@ -318,6 +399,58 @@
     .debug-entry.info { color: #1976d2; }
     .debug-entry.warn { color: #f57c00; }
     .debug-entry.error { color: #d32f2f; }
+
+    .search-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #dfe1e5;
+      border-radius: 0 0 24px 24px;
+      margin-top: -1px;
+      box-shadow: 0 4px 6px rgba(32,33,36,.28);
+      display: none;
+      z-index: 1000;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .suggestion-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      color: #212121;
+      display: flex;
+      align-items: center;
+    }
+    
+    .suggestion-item:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .suggestion-item::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23757575"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>');
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: 0.6;
+    }
+    
+    .mic-icon.processing {
+      opacity: 1;
+      animation: processing 1s infinite;
+    }
+    
+    @keyframes processing {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
