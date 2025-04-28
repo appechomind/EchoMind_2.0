@@ -1,15 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoMind - Synchronized Mind Reading</title>
-  <script>
-    // Redirect to the actual mind reader implementation
-    window.location.href = '../mentalism/mind-reader.html';
-  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dual Device Mind Reader</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f0f1a;
+      color: #e0e0ff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 600px;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #c09aff;
+      margin-bottom: 30px;
+    }
+
+    .card-display {
+      width: 200px;
+      height: 300px;
+      margin: 0 auto 30px;
+      position: relative;
+      perspective: 1000px;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-front {
+      background: #442379;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      color: white;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    .card-back img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: rgba(30, 20, 50, 0.6);
+    }
+
+    .controls {
+      margin-top: 20px;
+    }
+
+    button {
+      background-color: #442379;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1em;
+      margin: 0 10px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #5e31a8;
+    }
+
+    button:disabled {
+      background-color: #2a1a4a;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
-  <p>Redirecting to Mind Reader...</p>
+  <div class="container">
+    <h1>Dual Device Mind Reader</h1>
+    
+    <div class="card-display">
+      <div class="card" id="card">
+        <div class="card-face card-front">
+          <span>?</span>
+        </div>
+        <div class="card-face card-back">
+          <img id="card-image" src="../../images/cards/back.png" alt="Playing Card">
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status">
+      Waiting for connection...
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" onclick="startEffect()">Start Effect</button>
+      <button id="resetBtn" onclick="resetEffect()" disabled>Reset</button>
+    </div>
+  </div>
+
+  <script>
+    let isPerformer = false;
+    let isConnected = false;
+    let currentCard = null;
+    const cardDisplay = document.getElementById('card');
+    const cardImage = document.getElementById('card-image');
+    const status = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Check if this is the performer's device
+    function checkDeviceRole() {
+      const urlParams = new URLSearchParams(window.location.search);
+      isPerformer = urlParams.get('role') === 'performer';
+      updateUI();
+    }
+
+    function updateUI() {
+      if (isPerformer) {
+        status.textContent = 'You are the performer. Wait for spectator to connect.';
+        startBtn.textContent = 'Start Performance';
+      } else {
+        status.textContent = 'You are the spectator. Wait for performer to start.';
+        startBtn.textContent = 'Connect to Performer';
+      }
+    }
+
+    function startEffect() {
+      if (isPerformer) {
+        // Performer starts the effect
+        status.textContent = 'Effect started. Wait for spectator to think of a card.';
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+        
+        // Initialize speech recognition
+        initializeSpeechRecognition();
+      } else {
+        // Spectator connects to performer
+        status.textContent = 'Connected to performer. Think of a card...';
+        startBtn.disabled = true;
+        resetBtn.disabled = false;
+      }
+    }
+
+    function resetEffect() {
+      cardDisplay.classList.remove('flipped');
+      currentCard = null;
+      cardImage.src = '../../images/cards/back.png';
+      status.textContent = isPerformer ? 
+        'You are the performer. Wait for spectator to connect.' : 
+        'You are the spectator. Wait for performer to start.';
+      startBtn.disabled = false;
+      resetBtn.disabled = true;
+    }
+
+    function initializeSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        status.textContent = 'Speech recognition not supported in this browser.';
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = async function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        const card = await processSpeechInput(transcript);
+        
+        if (card) {
+          revealCard(card);
+        }
+      };
+
+      recognition.onerror = function(event) {
+        status.textContent = 'Error: ' + event.error;
+      };
+
+      recognition.start();
+    }
+
+    async function processSpeechInput(transcript) {
+      // Process the speech input to determine the card
+      // This is a simplified version - you can enhance this with more sophisticated processing
+      const cardNames = ["ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king"];
+      const suits = ["hearts", "spades", "diamonds", "clubs"];
+      
+      let detectedCard = null;
+      let detectedSuit = null;
+
+      // Check for card names
+      for (const card of cardNames) {
+        if (transcript.includes(card)) {
+          detectedCard = card;
+          break;
+        }
+      }
+
+      // Check for suits
+      for (const suit of suits) {
+        if (transcript.includes(suit)) {
+          detectedSuit = suit;
+          break;
+        }
+      }
+
+      if (detectedCard && detectedSuit) {
+        return `${detectedCard}_of_${detectedSuit}`;
+      }
+
+      return null;
+    }
+
+    function revealCard(cardName) {
+      currentCard = cardName;
+      cardImage.src = `../../images/cards/${cardName}.png`;
+      cardDisplay.classList.add('flipped');
+      status.textContent = `Card revealed: ${cardName.replace('_', ' of ')}`;
+    }
+
+    // Initialize the effect
+    checkDeviceRole();
+  </script>
 </body>
 </html> 
