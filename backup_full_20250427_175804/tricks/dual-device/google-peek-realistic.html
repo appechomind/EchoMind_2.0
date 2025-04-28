@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Google</title>
+  <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
+  
+  <!-- Load EchoMind modules in correct order -->
+  <script src="/EchoMind_2.0/js/echomind-core.js"></script>
+  <script src="/EchoMind_2.0/js/echomind-permissions.js"></script>
+  <script src="/EchoMind_2.0/js/echomind-speech.js"></script>
+  
+  <script>
+    // Initialize when the page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM Content Loaded - Starting initialization');
+      try {
+        // Wait for EchoMind core to be ready
+        if (!window.EchoMind) {
+          throw new Error('EchoMind core module not loaded');
+        }
+        
+        // Initialize permissions first
+        if (window.EchoMind?.Permissions) {
+          console.log('EchoMind Permissions module found');
+          await EchoMind.Permissions.init();
+          console.log('Permissions initialized, requesting microphone access');
+          
+          // Request microphone permission explicitly
+          const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+          console.log('Permission request result:', permissionResult);
+          
+          if (permissionResult === 'granted') {
+            console.log('Microphone permission granted, initializing speech');
+            await initializeSpeechRecognition();
+          } else {
+            console.error('Microphone permission denied');
+            tryFallbackSpeechRecognition();
+          }
+        } else {
+          console.warn('EchoMind Permissions module not found, trying browser API');
+          // Try fallback permission request
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('Browser microphone permission granted');
+            stream.getTracks().forEach(track => track.stop()); // Clean up
+            await initializeSpeechRecognition();
+          } catch (error) {
+            console.error('Browser microphone permission denied:', error);
+            tryFallbackSpeechRecognition();
+          }
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        tryFallbackSpeechRecognition();
+      }
+    });
+  </script>
+  <style>
+    body {
+      font-family: arial,sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 6px;
+      height: 60px;
+    }
+    
+    .header a {
+      text-decoration: none;
+      color: rgba(0,0,0,0.87);
+      margin-right: 15px;
+      font-size: 13px;
+    }
+    
+    .header a:hover {
+      text-decoration: underline;
+    }
+    
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin-top: -120px;
+    }
+    
+    .logo {
+      margin-bottom: 25px;
+    }
+    
+    .logo img {
+      width: 272px;
+      height: 92px;
+    }
+    
+    .search-container {
+      width: 580px;
+      margin: 0 auto;
+      position: relative;
+    }
+    
+    .search-box {
+      width: 100%;
+      display: flex;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 8px 14px;
+      box-shadow: none;
+      height: 44px;
+      align-items: center;
+    }
+    
+    .search-box:hover, .search-box:focus-within {
+      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+      border-color: rgba(223,225,229,0);
+    }
+    
+    .search-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      height: 34px;
+      font-size: 16px;
+      margin-left: 10px;
+    }
+    
+    .search-icons {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding-right: 8px;
+    }
+    
+    .search-icon, .mic-icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.3s ease;
+    }
+    
+    .search-icon:hover, .mic-icon:hover {
+      opacity: 1;
+    }
+    
+    .mic-icon.listening {
+      opacity: 1;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .buttons {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    
+    .buttons button {
+      background-color: #f8f9fa;
+      border: 1px solid #f8f9fa;
+      border-radius: 4px;
+      color: #3c4043;
+      font-family: arial,sans-serif;
+      font-size: 14px;
+      padding: 0 16px;
+      height: 36px;
+      cursor: pointer;
+    }
+    
+    .buttons button:hover {
+      box-shadow: 0 1px 1px rgba(0,0,0,.1);
+      background-color: #f8f9fa;
+      border: 1px solid #dadce0;
+      color: #202124;
+    }
+    
+    .footer {
+      background: #f2f2f2;
+      margin-top: auto;
+    }
+    
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-top: 1px solid #dadce0;
+    }
+    
+    .footer-content a {
+      color: #70757a;
+      text-decoration: none;
+      font-size: 14px;
+      margin-right: 20px;
+    }
+    
+    .footer-content a:hover {
+      text-decoration: underline;
+    }
+    
+    .left-footer, .right-footer {
+      display: flex;
+    }
+
+    .status-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(66, 133, 244, 0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    .status-indicator.visible {
+      display: block;
+    }
+
+    .status-indicator.waiting {
+      background: rgba(251, 188, 5, 0.9);
+    }
+
+    .status-indicator.error {
+      background: rgba(234, 67, 53, 0.9);
+    }
+
+    @media (max-width: 600px) {
+      .search-container {
+        width: 90%;
+      }
+      
+      .buttons button {
+        margin: 5px;
+      }
+    }
+
+    .search-iframe-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      background: white;
+    }
+
+    .search-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .close-iframe {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: none;
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .status.listening {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status.processing {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+
+    #debugLog {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-family: monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .debug-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .debug-entry.info { color: #1976d2; }
+    .debug-entry.warn { color: #f57c00; }
+    .debug-entry.error { color: #d32f2f; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="#">Gmail</a>
+    <a href="#">Images</a>
+  </div>
+
+  <div class="content">
+    <div class="logo">
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+    </div>
+    
+    <div class="search-container">
+      <div class="search-box">
+        <svg class="search-icon" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+        </svg>
+        <input type="text" class="search-input" id="searchInput" autocomplete="off" autofocus>
+        <div class="search-icons">
+          <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
+            <path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path>
+            <path fill="#fbbc05" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path>
+            <path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="buttons">
+        <button onclick="performSearch()">Google Search</button>
+        <button>I'm Feeling Lucky</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-content">
+      <div class="left-footer">
+        <a href="#">About</a>
+        <a href="#">Advertising</a>
+        <a href="#">Business</a>
+        <a href="#">How Search works</a>
+      </div>
+      <div class="right-footer">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Settings</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-iframe-container">
+    <button class="close-iframe">Close Search</button>
+    <iframe class="search-iframe" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+  </div>
+
+  <div id="status" class="status">Initializing...</div>
+  <div id="debugLog"></div>
+
+  <script>
+    // State management
+    const state = {
+      isRecording: false,
+      processingTimeout: null,
+      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+      retryCount: 0,
+      maxRetries: 3,
+      isInitialized: false,
+      isInitializing: false,
+      recordedText: []  // Array to store recorded phrases
+    };
+
+    // Configuration
+    const CONFIG = {
+      triggerWord: 'about',
+      recordingDelay: 300,
+      recordingDuration: 5000,
+      minWords: 1,
+      maxWords: 15,
+      retryDelay: 1000,
+      initTimeout: 10000
+    };
+
+    // Debug logging with timestamp
+    function log(message, level = 'info') {
+      const timestamp = new Date().toISOString();
+      const debugLog = document.getElementById('debugLog');
+      const entry = document.createElement('div');
+      entry.className = `debug-entry ${level}`;
+      entry.textContent = `${timestamp}: ${message}`;
+      debugLog.insertBefore(entry, debugLog.firstChild);
+      console.log(`[${level.toUpperCase()}][${timestamp}] ${message}`);
+    }
+
+    // Update status display
+    function updateStatus(message, type = 'listening') {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+    }
+
+    // Handle speech results
+    function handleSpeechResult(data) {
+      if (!data.finalTranscript) {
+        return;
+      }
+      
+      const transcript = data.finalTranscript.toLowerCase().trim();
+      log(`Received transcript: "${transcript}"`);
+
+      // If we're recording, process the search query
+      if (state.isRecording) {
+        log('Recording active, adding to recorded text');
+        state.recordedText.push(transcript);
+        updateStatus('Recording...', 'listening');
+        return;
+      }
+
+      // Check for trigger word
+      if (transcript.includes(CONFIG.triggerWord)) {
+        log('Trigger word detected, starting recording');
+        updateStatus('Trigger word detected!', 'processing');
+        
+        // Get any text after the trigger word
+        const startIndex = transcript.indexOf(CONFIG.triggerWord) + CONFIG.triggerWord.length;
+        const initialText = transcript.slice(startIndex).trim();
+        if (initialText) {
+          state.recordedText.push(initialText);
+        }
+
+        // Clear any existing timeout
+        if (state.processingTimeout) {
+          clearTimeout(state.processingTimeout);
+          state.processingTimeout = null;
+        }
+
+        // Start recording
+        state.isRecording = true;
+        updateStatus('Recording query...', 'listening');
+        log('Started recording');
+        
+        // Set timeout to process recording
+        state.processingTimeout = setTimeout(() => {
+          processRecording();
+        }, CONFIG.recordingDuration);
+      } else {
+        log(`No trigger word in: "${transcript}"`);
+        updateStatus('Listening for "about"...', 'listening');
+      }
+    }
+
+    // Process the recording and perform search
+    function processRecording() {
+      log(`Processing recorded text: ${state.recordedText.join(' ')}`);
+      
+      if (state.recordedText.length === 0) {
+        log('No recording to process');
+        state.isRecording = false;
+        updateStatus('Listening for "about"...', 'listening');
+        return;
+      }
+
+      // Join all recorded phrases and clean up
+      let searchQuery = state.recordedText.join(' ');
+      
+      // Clean up the query
+      searchQuery = searchQuery.replace(new RegExp(CONFIG.triggerWord, 'gi'), '').trim();
+      searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
+      searchQuery = searchQuery.replace(/\s+/g, ' ');
+      
+      log(`Cleaned search query: "${searchQuery}"`);
+
+      if (searchQuery) {
+        log(`Executing search for: "${searchQuery}"`);
+        executeSearch(searchQuery);
+      }
+
+      // Reset state
+      state.isRecording = false;
+      state.recordedText = [];
+      updateStatus('Listening for "about"...', 'listening');
+    }
+
+    // Execute the search
+    function executeSearch(query) {
+      try {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        log(`Search URL: ${searchUrl}`);
+        updateStatus('Searching...', 'processing');
+
+        if (state.isMobile) {
+          log('Using mobile search method');
+          window.location.href = searchUrl;
+        } else {
+          log('Using desktop search method');
+          window.open(searchUrl, '_blank');
+        }
+      } catch (error) {
+        log(`Search failed: ${error.message}`, 'error');
+        updateStatus('Search failed - Please try again', 'error');
+      }
+    }
+
+    // Mobile-specific initialization
+    async function initializeMobileRecognition() {
+      if (state.isInitializing) {
+        log('Already initializing, skipping duplicate call');
+        return false;
+      }
+
+      state.isInitializing = true;
+      log('Starting mobile recognition initialization');
+      
+      try {
+        // Clean up any existing streams
+        if (window.audioStream) {
+          window.audioStream.getTracks().forEach(track => {
+            track.stop();
+            log('Stopped existing audio track');
+          });
+          window.audioStream = null;
+        }
+
+        // Request audio permission with timeout
+        const streamPromise = navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Audio permission timeout')), CONFIG.initTimeout);
+        });
+
+        const stream = await Promise.race([streamPromise, timeoutPromise]);
+        window.audioStream = stream;
+        log('Mobile audio stream successfully initialized');
+        state.isInitializing = false;
+        return true;
+      } catch (error) {
+        log(`Mobile audio initialization failed: ${error.message}`, 'error');
+        state.isInitializing = false;
+        return false;
+      }
+    }
+
+    // Enhanced error recovery
+    async function recoverFromError() {
+      if (state.isInitializing) {
+        log('Already initializing, skipping recovery');
+        return false;
+      }
+
+      log('Attempting to recover from error');
+      if (state.retryCount >= state.maxRetries) {
+        log('Max retries reached, reload required', 'error');
+        updateStatus('Please reload the page', 'error');
+        return false;
+      }
+
+      state.retryCount++;
+      log(`Retry attempt ${state.retryCount}/${state.maxRetries}`);
+      
+      try {
+        // Stop any existing recognition
+        try {
+          await EchoMind.Speech.stop();
+          log('Stopped existing speech recognition');
+        } catch (stopError) {
+          log(`Warning: Could not stop speech recognition: ${stopError.message}`, 'warn');
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
+        
+        // Reinitialize
+        if (state.isMobile) {
+          const mobileInit = await initializeMobileRecognition();
+          if (!mobileInit) {
+            throw new Error('Mobile reinitialization failed');
+          }
+        }
+
+        await EchoMind.Speech.start();
+        log('Recovery successful');
+        updateStatus('Listening for trigger word...', 'listening');
+        return true;
+      } catch (error) {
+        log(`Recovery failed: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Check for trigger word with fuzzy matching
+    function checkForTriggerWord(transcript) {
+      const words = transcript.toLowerCase().split(/\s+/);
+      log(`Checking words for trigger: ${words.join(', ')}`);
+      
+      // Check each word against the trigger
+      for (const word of words) {
+        if (word === CONFIG.triggerWord || 
+            word.includes(CONFIG.triggerWord) || 
+            CONFIG.triggerWord.includes(word)) {
+          log(`Trigger word match found: "${word}"`);
+          return true;
+        }
+      }
+      
+      // Check the whole transcript for the trigger word
+      if (transcript.toLowerCase().includes(CONFIG.triggerWord)) {
+        log(`Trigger word found in full transcript`);
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Handle search on Enter key
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
+
+    // Initialize speech recognition with mobile optimizations
+    async function initializeSpeechRecognition() {
+      if (state.isInitializing || state.isInitialized) {
+        log('Already initialized or initializing, skipping');
+        return;
+      }
+
+      try {
+        state.isInitializing = true;
+        log(`Starting initialization for ${state.isMobile ? 'mobile' : 'desktop'}`);
+        updateStatus('Initializing...', 'processing');
+
+        // Simple permission check first
+        try {
+          const permissionResult = await navigator.mediaDevices.getUserMedia({ audio: true });
+          permissionResult.getTracks().forEach(track => track.stop());
+          log('Microphone permission granted');
+        } catch (error) {
+          throw new Error(`Microphone permission denied: ${error.message}`);
+        }
+
+        // Initialize EchoMind Speech directly
+        const speechInitialized = await EchoMind.Speech.init({
+          continuous: true,
+          interimResults: true,
+          maxAlternatives: 1,
+          lang: 'en-US'
+        });
+
+        if (!speechInitialized) {
+          throw new Error('Speech initialization failed');
+        }
+
+        // Set up basic event handlers
+        EchoMind.Speech.on('result', handleSpeechResult);
+        EchoMind.Speech.on('error', (error) => {
+          log(`Speech error: ${error.message}`, 'error');
+          updateStatus('Error occurred', 'error');
+        });
+
+        // Start listening
+        await EchoMind.Speech.start();
+        
+        // Mark as initialized
+        state.isInitialized = true;
+        state.isInitializing = false;
+        updateStatus('Listening for "about"...', 'listening');
+        log('Successfully initialized');
+
+      } catch (error) {
+        log(`Initialization failed: ${error.message}`, 'error');
+        state.isInitialized = false;
+        state.isInitializing = false;
+        updateStatus('Failed to initialize - Please reload', 'error');
+      }
+    }
+
+    // Start initialization when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded, starting initialization');
+      setTimeout(() => {
+        initializeSpeechRecognition().catch(error => {
+          log(`Initial setup failed: ${error.message}`, 'error');
+          updateStatus('Setup failed - Please reload', 'error');
+        });
+      }, 1000); // Short delay before starting
+    });
+  </script>
+</body>
+</html> 
