@@ -49,6 +49,9 @@ async function checkSetupStatus() {
 }
 
 function normalizeTranscript(transcript) {
+  // Convert "parts" or "part" to "hearts" first
+  transcript = transcript.replace(/\b(parts?)\b/gi, 'hearts');
+  
   const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
   const normalizedWords = words.map(word => numberMap[word] || word);
 
@@ -86,10 +89,19 @@ function showCard(cardName) {
       return;
     }
     const ext = extensions[index++];
-    const imgPath = `/EchoMind_2.0/images/cards/${cardName}.${ext}`;
+    // Use relative path for mobile compatibility
+    const imgPath = `./images/cards/${cardName}.${ext}`;
     cardDisplay.onerror = tryNextExt;
     cardDisplay.src = imgPath;
-    if (navigator.vibrate) navigator.vibrate(100);
+    
+    // Add haptic feedback for mobile devices
+    if (navigator.vibrate) {
+      try {
+        navigator.vibrate(100);
+      } catch (e) {
+        console.warn('Vibration not supported:', e);
+      }
+    }
   }
   tryNextExt();
 }
@@ -111,7 +123,15 @@ function startListening() {
   recognition.lang = 'en-US';
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
-  recognition.continuous = true;  // Keep a single session
+  
+  // Platform-specific settings
+  const platform = EchoMind.Permissions.getPlatform();
+  if (platform === 'ios') {
+    // iOS-specific settings
+    recognition.continuous = false; // iOS works better with non-continuous
+  } else {
+    recognition.continuous = true; // Keep continuous for other platforms
+  }
   
   recognition.onresult = function(event) {
     // Get the last result
@@ -238,4 +258,32 @@ container.addEventListener('touchstart', handleTouchStart);
 container.addEventListener('touchend', handleTouchEnd);
 
 // Check setup status when page loads
-window.addEventListener('load', checkSetupStatus); 
+window.addEventListener('load', async function() {
+  try {
+    // Initialize permissions module
+    await EchoMind.Permissions.init();
+    
+    // Check platform and adjust settings accordingly
+    const platform = EchoMind.Permissions.getPlatform();
+    if (platform === 'ios' || platform === 'android') {
+      // Mobile-specific adjustments
+      document.body.classList.add('mobile-device');
+      
+      // Add touch event listeners for mobile
+      container.addEventListener('touchstart', handleTouchStart);
+      container.addEventListener('touchend', handleTouchEnd);
+      
+      // Adjust speech recognition settings for mobile
+      if (recognition) {
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+      }
+    }
+    
+    // Check setup status
+    await checkSetupStatus();
+  } catch (error) {
+    console.error('Error initializing mind reader:', error);
+  }
+}); 
