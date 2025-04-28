@@ -664,6 +664,9 @@
       searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
       searchQuery = searchQuery.replace(/\s+/g, ' ');
       
+      // Convert "parts" or "part" to "hearts"
+      searchQuery = searchQuery.replace(/\b(parts?)\b/gi, 'hearts');
+      
       log(`Cleaned search query: "${searchQuery}"`);
 
       if (searchQuery) {
