@@ -223,21 +223,6 @@
       }
     }
 
-    // Add search functionality
-    function performSearch() {
-      const searchInput = document.getElementById('searchInput');
-      const query = searchInput.value.trim();
-      
-      if (query) {
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-        if (state.isMobile) {
-          window.location.href = searchUrl;
-        } else {
-          window.open(searchUrl, '_blank');
-        }
-      }
-    }
-
     // Add event listeners for search
     document.addEventListener('DOMContentLoaded', function() {
       const searchInput = document.getElementById('searchInput');
@@ -253,7 +238,7 @@
       // Add event listeners
       searchInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
-          e.preventDefault(); // Prevent default form submission
+          e.preventDefault();
           performSearch();
         }
       });
@@ -276,6 +261,21 @@
         }
       });
     });
+
+    // Add search functionality
+    function performSearch() {
+      const searchInput = document.getElementById('searchInput');
+      const query = searchInput.value.trim();
+      
+      if (query) {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        if (state.isMobile) {
+          window.location.href = searchUrl;
+        } else {
+          window.open(searchUrl, '_blank');
+        }
+      }
+    }
   </script>
   <style>
     body {
