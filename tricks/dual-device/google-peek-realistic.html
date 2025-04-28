@@ -251,11 +251,15 @@
       searchInput.tabIndex = 0;
 
       // Add event listeners
-      searchInput.addEventListener('keypress', function(e) {
+      searchInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
+          e.preventDefault(); // Prevent default form submission
           performSearch();
         }
       });
+
+      // Focus the search input when the page loads
+      searchInput.focus();
 
       searchIcon.addEventListener('click', performSearch);
       searchButton.addEventListener('click', performSearch);
