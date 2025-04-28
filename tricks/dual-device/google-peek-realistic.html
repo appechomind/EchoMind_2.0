@@ -14,45 +14,30 @@
   <script>
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('DOM Content Loaded - Starting initialization');
       try {
-        // Wait for EchoMind core to be ready
         if (!window.EchoMind) {
           throw new Error('EchoMind core module not loaded');
         }
         
-        // Initialize permissions first
         if (window.EchoMind?.Permissions) {
-          console.log('EchoMind Permissions module found');
           await EchoMind.Permissions.init();
-          console.log('Permissions initialized, requesting microphone access');
-          
-          // Request microphone permission explicitly
           const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
-          console.log('Permission request result:', permissionResult);
           
           if (permissionResult === 'granted') {
-            console.log('Microphone permission granted, initializing speech');
             await initializeSpeechRecognition();
           } else {
-            console.error('Microphone permission denied');
             tryFallbackSpeechRecognition();
           }
         } else {
-          console.warn('EchoMind Permissions module not found, trying browser API');
-          // Try fallback permission request
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log('Browser microphone permission granted');
-            stream.getTracks().forEach(track => track.stop()); // Clean up
+            stream.getTracks().forEach(track => track.stop());
             await initializeSpeechRecognition();
           } catch (error) {
-            console.error('Browser microphone permission denied:', error);
             tryFallbackSpeechRecognition();
           }
         }
       } catch (error) {
-        console.error('Initialization error:', error);
         tryFallbackSpeechRecognition();
       }
     });
