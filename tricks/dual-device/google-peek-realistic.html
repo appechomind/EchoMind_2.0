@@ -256,8 +256,8 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       margin-top: -120px;
     }
     
@@ -271,40 +271,64 @@
     }
     
     .search-container {
-      width: 100%;
-      max-width: 584px;
+      width: 580px;
       margin: 0 auto;
+      position: relative;
     }
     
     .search-box {
+      width: 100%;
       display: flex;
-      align-items: center;
       border: 1px solid #dfe1e5;
       border-radius: 24px;
-      padding: 0 15px;
+      padding: 8px 14px;
+      box-shadow: none;
       height: 44px;
-      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+      align-items: center;
+    }
+    
+    .search-box:hover, .search-box:focus-within {
+      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+      border-color: rgba(223,225,229,0);
     }
     
     .search-input {
-      flex: 1;
       border: none;
       outline: none;
+      flex: 1;
+      height: 34px;
       font-size: 16px;
-      padding: 0 10px;
-      background: transparent;
+      margin-left: 10px;
     }
     
-    .search-icon {
-      width: 20px;
-      height: 20px;
-      opacity: 0.4;
+    .search-icons {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding-right: 8px;
     }
     
-    .mic-icon {
+    .search-icon, .mic-icon {
       width: 24px;
       height: 24px;
       cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.3s ease;
+    }
+    
+    .search-icon:hover, .mic-icon:hover {
+      opacity: 1;
+    }
+    
+    .mic-icon.listening {
+      opacity: 1;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
     }
     
     .buttons {
@@ -360,7 +384,8 @@
       display: flex;
     }
 
-    .status-message {
+    /* Hide status messages but keep functionality */
+    .status-message, .status, #debugLog {
       display: none;
     }
 
@@ -405,54 +430,6 @@
       display: none;
     }
 
-    .status {
-      margin: 20px 0;
-      padding: 10px;
-      border-radius: 5px;
-      text-align: center;
-      font-weight: bold;
-      transition: all 0.3s ease;
-    }
-
-    .status.listening {
-      background: #e3f2fd;
-      color: #1976d2;
-    }
-
-    .status.processing {
-      background: #fff3e0;
-      color: #f57c00;
-    }
-
-    .status.error {
-      background: #ffebee;
-      color: #d32f2f;
-    }
-
-    #debugLog {
-      width: 100%;
-      max-width: 600px;
-      margin-top: 20px;
-      padding: 10px;
-      background: #fff;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      font-family: monospace;
-      font-size: 14px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .debug-entry {
-      margin: 5px 0;
-      padding: 5px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .debug-entry.info { color: #1976d2; }
-    .debug-entry.warn { color: #f57c00; }
-    .debug-entry.error { color: #d32f2f; }
-
     .search-suggestions {
       width: 100%;
       max-width: 584px;
@@ -484,17 +461,6 @@
       background-size: contain;
       opacity: 0.6;
     }
-    
-    .mic-icon.processing {
-      opacity: 1;
-      animation: processing 1s infinite;
-    }
-    
-    @keyframes processing {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.7; }
-      100% { transform: scale(1); opacity: 1; }
-    }
   </style>
 </head>
 <body>
@@ -515,12 +481,14 @@
           <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
         </svg>
         <input type="text" class="search-input" placeholder="Search Google or type a URL" readonly>
-        <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
-          <path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path>
-          <path fill="#fbbc05" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path>
-          <path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path>
-        </svg>
+        <div class="search-icons">
+          <svg class="mic-icon" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path>
+            <path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path>
+            <path fill="#fbbc05" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path>
+            <path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path>
+          </svg>
+        </div>
       </div>
       <div class="buttons">
         <button>Google Search</button>
@@ -545,8 +513,6 @@
     </div>
   </div>
 
-  <div class="status-message"></div>
-
   <script>
     // State management
     const state = {
@@ -557,7 +523,7 @@
       maxRetries: 3,
       isInitialized: false,
       isInitializing: false,
-      recordedText: []  // Array to store recorded phrases
+      recordedText: []
     };
 
     // Configuration
@@ -574,18 +540,17 @@
     // Debug logging with timestamp
     function log(message, level = 'info') {
       const timestamp = new Date().toISOString();
-      const debugLog = document.getElementById('debugLog');
-      const entry = document.createElement('div');
-      entry.className = `debug-entry ${level}`;
-      entry.textContent = `${timestamp}: ${message}`;
-      debugLog.insertBefore(entry, debugLog.firstChild);
       console.log(`[${level.toUpperCase()}][${timestamp}] ${message}`);
     }
 
-    // Update status display
+    // Update status display (hidden but still functional)
     function updateStatus(message, type = 'listening') {
-      // Status messages are now hidden
-      return;
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+      }
+      log(message, type);
     }
 
     // Handle speech results
@@ -601,12 +566,14 @@
       if (state.isRecording) {
         log('Recording active, adding to recorded text');
         state.recordedText.push(transcript);
+        updateStatus('Recording...', 'listening');
         return;
       }
 
       // Check for trigger word
       if (transcript.includes(CONFIG.triggerWord)) {
         log('Trigger word detected, starting recording');
+        updateStatus('Trigger word detected!', 'processing');
         
         // Get any text after the trigger word
         const startIndex = transcript.indexOf(CONFIG.triggerWord) + CONFIG.triggerWord.length;
@@ -623,12 +590,16 @@
 
         // Start recording
         state.isRecording = true;
+        updateStatus('Recording query...', 'listening');
         log('Started recording');
         
         // Set timeout to process recording
         state.processingTimeout = setTimeout(() => {
           processRecording();
         }, CONFIG.recordingDuration);
+      } else {
+        log(`No trigger word in: "${transcript}"`);
+        updateStatus('Listening for "about"...', 'listening');
       }
     }
 
@@ -639,6 +610,7 @@
       if (state.recordedText.length === 0) {
         log('No recording to process');
         state.isRecording = false;
+        updateStatus('Listening for "about"...', 'listening');
         return;
       }
 
@@ -660,6 +632,7 @@
       // Reset state
       state.isRecording = false;
       state.recordedText = [];
+      updateStatus('Listening for "about"...', 'listening');
     }
 
     // Execute the search
@@ -667,6 +640,7 @@
       try {
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         log(`Search URL: ${searchUrl}`);
+        updateStatus('Searching...', 'processing');
 
         if (state.isMobile) {
           log('Using mobile search method');
@@ -677,133 +651,11 @@
         }
       } catch (error) {
         log(`Search failed: ${error.message}`, 'error');
+        updateStatus('Search failed - Please try again', 'error');
       }
     }
 
-    // Mobile-specific initialization
-    async function initializeMobileRecognition() {
-      if (state.isInitializing) {
-        log('Already initializing, skipping duplicate call');
-        return false;
-      }
-
-      state.isInitializing = true;
-      log('Starting mobile recognition initialization');
-      
-      try {
-        // Clean up any existing streams
-        if (window.audioStream) {
-          window.audioStream.getTracks().forEach(track => {
-            track.stop();
-            log('Stopped existing audio track');
-          });
-          window.audioStream = null;
-        }
-
-        // Request audio permission with timeout
-        const streamPromise = navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
-
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Audio permission timeout')), CONFIG.initTimeout);
-        });
-
-        const stream = await Promise.race([streamPromise, timeoutPromise]);
-        window.audioStream = stream;
-        log('Mobile audio stream successfully initialized');
-        state.isInitializing = false;
-        return true;
-      } catch (error) {
-        log(`Mobile audio initialization failed: ${error.message}`, 'error');
-        state.isInitializing = false;
-        return false;
-      }
-    }
-
-    // Enhanced error recovery
-    async function recoverFromError() {
-      if (state.isInitializing) {
-        log('Already initializing, skipping recovery');
-        return false;
-      }
-
-      log('Attempting to recover from error');
-      if (state.retryCount >= state.maxRetries) {
-        log('Max retries reached, reload required', 'error');
-        updateStatus('Please reload the page', 'error');
-        return false;
-      }
-
-      state.retryCount++;
-      log(`Retry attempt ${state.retryCount}/${state.maxRetries}`);
-      
-      try {
-        // Stop any existing recognition
-        try {
-          await EchoMind.Speech.stop();
-          log('Stopped existing speech recognition');
-        } catch (stopError) {
-          log(`Warning: Could not stop speech recognition: ${stopError.message}`, 'warn');
-        }
-
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
-        
-        // Reinitialize
-        if (state.isMobile) {
-          const mobileInit = await initializeMobileRecognition();
-          if (!mobileInit) {
-            throw new Error('Mobile reinitialization failed');
-          }
-        }
-
-        await EchoMind.Speech.start();
-        log('Recovery successful');
-        updateStatus('Listening for trigger word...', 'listening');
-        return true;
-      } catch (error) {
-        log(`Recovery failed: ${error.message}`, 'error');
-        return false;
-      }
-    }
-
-    // Check for trigger word with fuzzy matching
-    function checkForTriggerWord(transcript) {
-      const words = transcript.toLowerCase().split(/\s+/);
-      log(`Checking words for trigger: ${words.join(', ')}`);
-      
-      // Check each word against the trigger
-      for (const word of words) {
-        if (word === CONFIG.triggerWord || 
-            word.includes(CONFIG.triggerWord) || 
-            CONFIG.triggerWord.includes(word)) {
-          log(`Trigger word match found: "${word}"`);
-          return true;
-        }
-      }
-      
-      // Check the whole transcript for the trigger word
-      if (transcript.toLowerCase().includes(CONFIG.triggerWord)) {
-        log(`Trigger word found in full transcript`);
-        return true;
-      }
-      
-      return false;
-    }
-
-    // Handle search on Enter key
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        performSearch();
-      }
-    });
-
-    // Initialize speech recognition with mobile optimizations
+    // Initialize speech recognition
     async function initializeSpeechRecognition() {
       if (state.isInitializing || state.isInitialized) {
         log('Already initialized or initializing, skipping');
@@ -813,6 +665,7 @@
       try {
         state.isInitializing = true;
         log(`Starting initialization for ${state.isMobile ? 'mobile' : 'desktop'}`);
+        updateStatus('Initializing...', 'processing');
 
         // Simple permission check first
         try {
@@ -839,6 +692,7 @@
         EchoMind.Speech.on('result', handleSpeechResult);
         EchoMind.Speech.on('error', (error) => {
           log(`Speech error: ${error.message}`, 'error');
+          updateStatus('Error occurred', 'error');
         });
 
         // Start listening
@@ -847,12 +701,14 @@
         // Mark as initialized
         state.isInitialized = true;
         state.isInitializing = false;
+        updateStatus('Listening for "about"...', 'listening');
         log('Successfully initialized');
 
       } catch (error) {
         log(`Initialization failed: ${error.message}`, 'error');
         state.isInitialized = false;
         state.isInitializing = false;
+        updateStatus('Failed to initialize - Please reload', 'error');
       }
     }
 
@@ -862,20 +718,10 @@
       setTimeout(() => {
         initializeSpeechRecognition().catch(error => {
           log(`Initial setup failed: ${error.message}`, 'error');
+          updateStatus('Setup failed - Please reload', 'error');
         });
       }, 1000); // Short delay before starting
     });
-
-    function showStatus(message, type = '') {
-      const status = document.querySelector('.status-message');
-      status.textContent = message;
-      status.className = 'status-message';
-      if (type) status.classList.add(type);
-      status.style.display = 'block';
-      setTimeout(() => {
-        status.style.display = 'none';
-      }, 3000);
-    }
   </script>
 </body>
 </html> 
