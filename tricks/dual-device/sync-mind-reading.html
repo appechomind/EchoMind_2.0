@@ -23,51 +23,21 @@
       height: 450px;
       margin: 0 auto;
       position: relative;
-      perspective: 1000px;
     }
 
     .card {
       width: 100%;
       height: 100%;
       position: absolute;
-      transform-style: preserve-3d;
-      transition: transform 0.6s;
-    }
-
-    .card.flipped {
-      transform: rotateY(180deg);
-    }
-
-    .card-face {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
       border-radius: 15px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    .card-front {
-      background: #ffffff;
-      transform: rotateY(180deg);
-    }
-
-    .card-front img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      border-radius: 15px;
-    }
-
-    .card-back {
-      transform: rotateY(0deg);
       background: #ffffff;
     }
 
-    .card-back img {
+    .card img {
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -82,21 +52,14 @@
 <body>
   <div class="card-display">
     <div class="card" id="card">
-      <div class="card-face card-front">
-        <img id="front-image" src="" alt="Card Front">
-      </div>
-      <div class="card-face card-back">
-        <img id="card-image" src="./images/cards/back.png" alt="Playing Card">
-      </div>
+      <img id="card-image" src="./images/cards/back.png" alt="Playing Card">
     </div>
   </div>
 
   <div id="status"></div>
 
   <script>
-    const cardDisplay = document.getElementById('card');
     const cardImage = document.getElementById('card-image');
-    const frontImage = document.getElementById('front-image');
     const status = document.getElementById('status');
 
     function initializeSpeechRecognition() {
@@ -222,19 +185,12 @@
       const img = new Image();
       img.onload = () => {
         console.log('Image loaded successfully');
-        if (cardName === 'back') {
-          cardImage.src = imagePath;
-          cardDisplay.classList.remove('flipped');
-        } else {
-          frontImage.src = imagePath;
-          cardDisplay.classList.add('flipped');
-        }
+        cardImage.src = imagePath;
       };
       img.onerror = (e) => {
         console.error('Error loading image:', e);
         // If image fails to load, show the back
         cardImage.src = './images/cards/back.png';
-        cardDisplay.classList.remove('flipped');
       };
       img.src = imagePath;
     }
