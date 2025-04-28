@@ -651,9 +651,6 @@
         state.processingTimeout = setTimeout(() => {
           processRecording();
         }, CONFIG.recordingDuration);
-      } else {
-        log(`No trigger word in: "${transcript}"`);
-        updateStatus('Listening for "about"...', 'listening');
       }
     }
 
