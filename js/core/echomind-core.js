@@ -43,61 +43,49 @@ class EchoMindCore {
         this.config = { ...this.config, ...config };
         
         try {
-            // Initialize core AI components first
-            if (window.EchoMindNLP) {
-                this.modules.nlp = new EchoMindNLP(this.config);
-                await this.modules.nlp.init();
+            // Verify required modules are available
+            if (!window.EchoMindNLP || !window.EchoMindML || !window.EchoMindKnowledge) {
+                throw new Error('Required AI modules not loaded');
             }
 
-            if (window.EchoMindML) {
-                this.modules.ml = new EchoMindML(this.config);
-                await this.modules.ml.init();
-            }
+            // Initialize core AI components
+            this.modules.nlp = new EchoMindNLP(this.config);
+            this.modules.ml = new EchoMindML(this.config);
+            this.modules.knowledge = new EchoMindKnowledge(this.config);
 
-            if (window.EchoMindKnowledge) {
-                this.modules.knowledge = new EchoMindKnowledge(this.config);
-                await this.modules.knowledge.init();
-            }
+            // Initialize modules in correct order
+            await this.modules.nlp.init();
+            await this.modules.ml.init();
+            await this.modules.knowledge.init();
 
-            // Initialize standard modules
+            // Initialize other modules
             if (window.EchoMindPermissions) {
-                this.modules.permissions = new EchoMindPermissions();
+                this.modules.permissions = EchoMindPermissions;
                 await this.modules.permissions.init();
             }
 
             if (window.EchoMindSpeech) {
-                this.modules.speech = new EchoMindSpeech({
-                    nlp: this.modules.nlp,
-                    ml: this.modules.ml
-                });
+                this.modules.speech = EchoMindSpeech;
                 await this.modules.speech.init();
             }
 
-            if (window.LanguageModel) {
-                this.modules.language = new LanguageModel({
-                    nlp: this.modules.nlp,
-                    knowledge: this.modules.knowledge
-                });
+            if (window.EchoMindLanguage) {
+                this.modules.language = EchoMindLanguage;
                 await this.modules.language.init();
             }
 
             if (window.EchoMindCommands) {
-                this.modules.commands = new EchoMindCommands({
-                    nlp: this.modules.nlp,
-                    ml: this.modules.ml
-                });
+                this.modules.commands = EchoMindCommands;
                 await this.modules.commands.init();
             }
 
-            this.initialized = true;
-            if (this.debug) {
-                console.log('EchoMind core initialized successfully');
-            }
+            // Initialize context
+            await this._initializeContext();
 
-            // Start context tracking
-            this._initializeContext();
+            this.initialized = true;
+            console.log('EchoMind core initialized successfully');
         } catch (error) {
-            console.error('Error initializing EchoMind core:', error);
+            console.error('EchoMind initialization failed:', error);
             throw error;
         }
     }
