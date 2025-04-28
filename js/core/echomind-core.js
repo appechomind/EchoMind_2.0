@@ -218,4 +218,7 @@ class EchoMindCore {
 }
 
 // Create global instance
-window.EchoMind = new EchoMindCore(); 
+window.EchoMind = new EchoMindCore();
+
+// Export to global scope
+window.EchoMindCore = EchoMindCore; 
