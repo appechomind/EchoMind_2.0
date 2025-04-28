@@ -221,17 +221,42 @@
 
     async function processSpeechInput(transcript) {
       // Process the speech input to determine the card
-      // This is a simplified version - you can enhance this with more sophisticated processing
-      const cardNames = ["ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king"];
+      const cardNames = {
+        "ace": "ace",
+        "two": "2",
+        "three": "3",
+        "four": "4",
+        "five": "5",
+        "six": "6",
+        "seven": "7",
+        "eight": "8",
+        "nine": "9",
+        "ten": "10",
+        "jack": "jack",
+        "queen": "queen",
+        "king": "king"
+      };
       const suits = ["hearts", "spades", "diamonds", "clubs"];
       
       let detectedCard = null;
       let detectedSuit = null;
 
+      // Convert numbers to words in transcript
+      transcript = transcript.toLowerCase()
+        .replace(/\b2\b/g, "two")
+        .replace(/\b3\b/g, "three")
+        .replace(/\b4\b/g, "four")
+        .replace(/\b5\b/g, "five")
+        .replace(/\b6\b/g, "six")
+        .replace(/\b7\b/g, "seven")
+        .replace(/\b8\b/g, "eight")
+        .replace(/\b9\b/g, "nine")
+        .replace(/\b10\b/g, "ten");
+
       // Check for card names
-      for (const card of cardNames) {
-        if (transcript.includes(card)) {
-          detectedCard = card;
+      for (const [word, value] of Object.entries(cardNames)) {
+        if (transcript.includes(word)) {
+          detectedCard = value;
           break;
         }
       }
@@ -248,6 +273,11 @@
         return `${detectedCard}_of_${detectedSuit}`;
       }
 
+      // Log for debugging
+      console.log("Transcript:", transcript);
+      console.log("Detected card:", detectedCard);
+      console.log("Detected suit:", detectedSuit);
+
       return null;
     }
 
@@ -255,7 +285,7 @@
       currentCard = cardName;
       cardImage.src = `../../images/cards/${cardName}.png`;
       cardDisplay.classList.add('flipped');
-      status.textContent = `Card revealed: ${cardName.replace('_', ' of ')}`;
+      status.textContent = `Card revealed: ${cardName.replace(/_/g, ' ')}`;
     }
 
     // Initialize the effect
