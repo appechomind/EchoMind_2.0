@@ -218,4 +218,4 @@ class EchoMindCore {
 }
 
 // Create global instance
-window.echomind = new EchoMindCore(); 
+window.EchoMind = new EchoMindCore(); 

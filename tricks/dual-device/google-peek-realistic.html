@@ -14,7 +14,7 @@
   <script src="../../../js/core/echomind-core.js"></script>
   <script src="../../../js/core/echomind-permissions.js"></script>
   <script src="../../../js/core/echomind-speech.js"></script>
-  <script src="../../../js/mind-reader.js"></script>
+  <script src="../../../js/core/mind-reader.js"></script>
   
   <script>
     // Initialize when the page loads
@@ -37,6 +37,9 @@
         if (!EchoMind.Speech || !EchoMind.Permissions) {
           throw new Error('Speech or Permissions module not initialized');
         }
+
+        // Initialize mind reader
+        await checkSetupStatus();
 
         // Set up speech recognition handlers
         const speech = EchoMind.Speech;
@@ -86,6 +89,62 @@
         log(error.message, 'error');
       }
     });
+
+    // Add mind reader card display
+    const cardDisplay = document.createElement('div');
+    cardDisplay.id = 'card-display';
+    cardDisplay.style.position = 'fixed';
+    cardDisplay.style.top = '50%';
+    cardDisplay.style.left = '50%';
+    cardDisplay.style.transform = 'translate(-50%, -50%)';
+    cardDisplay.style.zIndex = '1000';
+    cardDisplay.style.display = 'none';
+    document.body.appendChild(cardDisplay);
+
+    // Add mind reader container
+    const container = document.createElement('div');
+    container.id = 'container';
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.zIndex = '999';
+    container.style.display = 'none';
+    document.body.appendChild(container);
+
+    // Add setup screen
+    const setupScreen = document.createElement('div');
+    setupScreen.id = 'setup';
+    setupScreen.style.position = 'fixed';
+    setupScreen.style.top = '0';
+    setupScreen.style.left = '0';
+    setupScreen.style.width = '100%';
+    setupScreen.style.height = '100%';
+    setupScreen.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    setupScreen.style.zIndex = '1001';
+    setupScreen.style.display = 'flex';
+    setupScreen.style.flexDirection = 'column';
+    setupScreen.style.justifyContent = 'center';
+    setupScreen.style.alignItems = 'center';
+    setupScreen.style.color = 'white';
+    document.body.appendChild(setupScreen);
+
+    // Add setup button
+    const setupBtn = document.createElement('button');
+    setupBtn.id = 'setupBtn';
+    setupBtn.textContent = 'Start Setup';
+    setupBtn.style.padding = '10px 20px';
+    setupBtn.style.fontSize = '16px';
+    setupBtn.style.marginTop = '20px';
+    setupScreen.appendChild(setupBtn);
+
+    // Add setup instructions
+    const setupInstructions = document.createElement('div');
+    setupInstructions.textContent = 'Click the button below to start the setup process.';
+    setupInstructions.style.marginBottom = '20px';
+    setupInstructions.style.textAlign = 'center';
+    setupScreen.appendChild(setupInstructions);
 
     async function handleQuestion(result) {
       try {
