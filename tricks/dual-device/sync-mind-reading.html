@@ -19,25 +19,6 @@
       overflow: hidden;
     }
 
-    .setup-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #0f0f1a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .setup-content {
-      text-align: center;
-      padding: 20px;
-    }
-
     .card-display {
       width: 200px;
       height: 300px;
@@ -87,27 +68,6 @@
       border-radius: 10px;
     }
 
-    button {
-      background-color: #442379;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 25px;
-      cursor: pointer;
-      font-size: 1em;
-      margin: 10px;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #5e31a8;
-    }
-
-    button:disabled {
-      background-color: #2a1a4a;
-      cursor: not-allowed;
-    }
-
     #status {
       position: fixed;
       bottom: 10px;
@@ -122,23 +82,13 @@
   </style>
 </head>
 <body>
-  <div id="setup" class="setup-screen">
-    <div class="setup-content">
-      <h1>Dual Device Mind Reader</h1>
-      <p id="setupMessage">Click Start to begin the effect</p>
-      <button id="startBtn" onclick="startEffect()">Start Effect</button>
-    </div>
-  </div>
-
-  <div id="cardContainer" style="display: none;">
-    <div class="card-display">
-      <div class="card" id="card">
-        <div class="card-face card-front">
-          <span>?</span>
-        </div>
-        <div class="card-face card-back">
-          <img id="card-image" src="images/cards/back.png" alt="Playing Card">
-        </div>
+  <div class="card-display">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <span>?</span>
+      </div>
+      <div class="card-face card-back">
+        <img id="card-image" src="images/cards/back.png" alt="Playing Card">
       </div>
     </div>
   </div>
@@ -146,45 +96,9 @@
   <div id="status"></div>
 
   <script>
-    let isPerformer = false;
-    let isConnected = false;
-    let currentCard = null;
     const cardDisplay = document.getElementById('card');
     const cardImage = document.getElementById('card-image');
     const status = document.getElementById('status');
-    const startBtn = document.getElementById('startBtn');
-    const setupScreen = document.getElementById('setup');
-    const cardContainer = document.getElementById('cardContainer');
-    const setupMessage = document.getElementById('setupMessage');
-
-    // Check if this is the performer's device
-    function checkDeviceRole() {
-      const urlParams = new URLSearchParams(window.location.search);
-      isPerformer = urlParams.get('role') === 'performer';
-      updateUI();
-    }
-
-    function updateUI() {
-      if (isPerformer) {
-        setupMessage.textContent = 'You are the performer. Click Start to begin.';
-        startBtn.textContent = 'Start Performance';
-      } else {
-        setupMessage.textContent = 'You are the spectator. Click Start to connect.';
-        startBtn.textContent = 'Connect to Performer';
-      }
-    }
-
-    function startEffect() {
-      setupScreen.style.display = 'none';
-      cardContainer.style.display = 'block';
-      
-      if (isPerformer) {
-        status.textContent = 'Effect started. Wait for spectator to think of a card.';
-        initializeSpeechRecognition();
-      } else {
-        status.textContent = 'Connected to performer. Think of a card...';
-      }
-    }
 
     function initializeSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -272,14 +186,13 @@
     }
 
     function revealCard(cardName) {
-      currentCard = cardName;
       cardImage.src = `images/cards/${cardName}.png`;
       cardDisplay.classList.add('flipped');
       status.textContent = `Card revealed: ${cardName.replace(/_/g, ' ')}`;
     }
 
-    // Initialize the effect
-    checkDeviceRole();
+    // Start listening immediately when the page loads
+    window.addEventListener('load', initializeSpeechRecognition);
   </script>
 </body>
 </html> 
