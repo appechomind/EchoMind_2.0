@@ -8,12 +8,9 @@
   
   <!-- Load EchoMind modules in correct order -->
   <script src="../../../js/core/echomind-core.js"></script>
-  <script>
-    // Ensure EchoMind namespace exists
-    if (typeof window.EchoMind === 'undefined') {
-      window.EchoMind = {};
-    }
-  </script>
+  <script src="../../../js/core/echomind-nlp.js"></script>
+  <script src="../../../js/core/echomind-ml.js"></script>
+  <script src="../../../js/core/echomind-knowledge.js"></script>
   <script src="../../../js/core/echomind-permissions.js"></script>
   <script src="../../../js/core/echomind-speech.js"></script>
   <script src="../../../js/core/language-model.js"></script>
@@ -22,48 +19,108 @@
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // First check if EchoMind core exists
-        if (typeof window.echomind === 'undefined') {
-          throw new Error('EchoMind core module not loaded');
-        }
-        
-        // Initialize permissions first
-        if (!window.EchoMind.Permissions) {
-          throw new Error('EchoMind permissions module not loaded');
-        }
-        await EchoMind.Permissions.init();
-        
-        // Then initialize speech recognition
-        if (!window.EchoMind.Speech) {
-          throw new Error('EchoMind speech module not loaded');
-        }
-        
-        const speechInitialized = await EchoMind.Speech.init({
-          continuous: true,
-          interimResults: true,
-          maxAlternatives: 1,
-          debugMode: true // Enable debug mode to see what's happening
+        // Initialize EchoMind core with advanced features
+        await window.echomind.init({
+          debug: true,
+          aiModel: 'advanced',
+          useGPU: true,
+          contextWindow: 1000
         });
-        
-        if (!speechInitialized) {
-          throw new Error('Speech initialization failed');
-        }
-        
-        // Request microphone permission
-        const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
-        if (permissionResult === 'granted') {
-          await EchoMind.Speech.start();
-          updateStatus('Listening for "about"...', 'listening');
+
+        // Set up speech recognition handlers
+        const speech = window.echomind.getModule('speech');
+        if (speech) {
+          speech.on('result', async (data) => {
+            try {
+              // Process through NLP and ML pipeline
+              const result = await window.echomind.process(data.finalTranscript);
+              
+              if (result.predictions && result.predictions.intent) {
+                // Handle predicted intent
+                switch (result.predictions.intent.type) {
+                  case 'QUESTION':
+                    await handleQuestion(result);
+                    break;
+                  case 'COMMAND':
+                    await handleCommand(result);
+                    break;
+                  default:
+                    await processVoiceInput(data.finalTranscript);
+                }
+              } else {
+                // Fallback to basic processing
+                await processVoiceInput(data.finalTranscript);
+              }
+            } catch (error) {
+              console.error('Error processing speech result:', error);
+              updateStatus('Error processing speech', 'error');
+            }
+          });
+
+          speech.on('error', (error) => {
+            console.error('Speech error:', error);
+            updateStatus('Speech error: ' + error.message, 'error');
+          });
+
+          // Start speech recognition
+          const permissionResult = await window.echomind.getModule('permissions').requestPermission('microphone');
+          if (permissionResult === 'granted') {
+            await speech.start();
+            updateStatus('Listening for "about"...', 'listening');
+          } else {
+            updateStatus('Microphone access denied', 'error');
+          }
         } else {
-          throw new Error('Microphone permission denied');
+          throw new Error('Speech module not available');
         }
-        
       } catch (error) {
         console.error('Initialization error:', error);
         updateStatus('Error: ' + error.message, 'error');
         log(error.message, 'error');
       }
     });
+
+    async function handleQuestion(result) {
+      try {
+        // Query knowledge base
+        const knowledge = await window.echomind.getModule('knowledge').query(result.input);
+        
+        if (knowledge.matches.length > 0) {
+          // Use knowledge base response
+          const response = knowledge.matches[0];
+          document.querySelector('.search-input').value = response.description;
+          showSuggestions(knowledge.relatedTopics.map(topic => topic.description));
+        } else {
+          // Fallback to direct search
+          document.querySelector('.search-input').value = result.input;
+        }
+        
+        simulateSearch(document.querySelector('.search-input').value);
+      } catch (error) {
+        console.error('Error handling question:', error);
+        processVoiceInput(result.input);
+      }
+    }
+
+    async function handleCommand(result) {
+      try {
+        // Check if it's a known command
+        const knowledge = await window.echomind.getModule('knowledge').query(result.input);
+        
+        if (knowledge.matches.length > 0 && knowledge.matches[0].category === 'commands') {
+          // Execute command
+          const command = knowledge.matches[0];
+          log(`Executing command: ${command.description}`);
+          // Command execution logic here
+        } else {
+          // Treat as search
+          processVoiceInput(result.input);
+        }
+      } catch (error) {
+        console.error('Error handling command:', error);
+        processVoiceInput(result.input);
+      }
+    }
 
     async function processVoiceInput(transcript) {
       try {

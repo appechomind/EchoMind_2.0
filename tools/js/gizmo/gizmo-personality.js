@@ -20,6 +20,8 @@ class GizmoPersonality {
                 return this.generateImageResponse(input);
             case 'code':
                 return this.generateCodeResponse(input);
+            case 'github':
+                return this.generateGitHubResponse(input);
             default:
                 return this.generateGeneralResponse(input);
         }
@@ -55,6 +57,35 @@ class GizmoPersonality {
         return `I've analyzed the code. ${
             analysis.suggestions.length ? `Here are some suggestions: ${analysis.suggestions.join('; ')}. ` : ''
         }Would you like me to explain any part in detail?`;
+    }
+
+    generateGitHubResponse(input) {
+        switch(input.type) {
+            case 'repository':
+                return `I've analyzed the repository at ${input.url}.\n\n` +
+                    `${input.analysis.summary}\n` +
+                    `${input.analysis.activity}\n` +
+                    `${input.analysis.languages}\n` +
+                    `${input.analysis.contributors}\n\n` +
+                    (input.analysis.suggestions.length ? 
+                        `Suggestions:\n${input.analysis.suggestions.map(s => `- ${s}`).join('\n')}` : 
+                        'The repository follows good practices!');
+
+            case 'search':
+                return `I found ${input.results.length} results for "${input.query}":\n\n` +
+                    input.results.map((result, i) => 
+                        `${i + 1}. ${result.path} - ${result.description || 'No description'}`
+                    ).join('\n');
+
+            case 'issue':
+                return `I've created a new issue:\nTitle: ${input.issue.title}\nURL: ${input.issue.html_url}`;
+
+            case 'unknown':
+                return input.message;
+
+            default:
+                return "I can help you analyze repositories, search code, create issues, and suggest improvements. What would you like to do?";
+        }
     }
 
     generateGeneralResponse(input) {

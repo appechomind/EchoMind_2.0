@@ -22,6 +22,7 @@ debugElement.style.color = 'rgba(255, 255, 255, 0.7)';
 debugElement.style.fontSize = '12px';
 debugElement.style.fontFamily = 'monospace';
 debugElement.style.zIndex = '1000';
+container.appendChild(debugElement);
 
 function logDebug(message) {
   console.log(message);
@@ -33,18 +34,32 @@ function logDebug(message) {
   }
 }
 
-function normalizeTranscript(transcript) {
+async function normalizeTranscript(transcript) {
+  // Process input through language model
+  const response = await languageModel.processInput(transcript);
   const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
   const normalizedWords = words.map(word => numberMap[word] || word);
   let bestScore = 0;
   let bestMatch = fallbackCard;
 
   logDebug(`Words heard: ${normalizedWords.join(', ')}`);
+  logDebug(`Language model confidence: ${response.confidence.toFixed(2)}`);
+
+  // Extract entities from language model response
+  const entities = response.entities || [];
+  const numbers = entities.filter(e => e.type === 'number').map(e => e.value.toString());
+  const properNouns = entities.filter(e => e.type === 'proper_noun').map(e => e.value.toLowerCase());
+
+  // Combine all potential matches
+  const potentialMatches = [...normalizedWords, ...numbers, ...properNouns];
 
   for (let value of cardNames) {
     for (let suit of suits) {
       const combo = `${value}_of_${suit}`;
-      const score = (normalizedWords.includes(value) ? 1 : 0) + (normalizedWords.includes(suit) ? 1 : 0);
+      const score = (potentialMatches.includes(value) ? 1 : 0) + 
+                   (potentialMatches.includes(suit) ? 1 : 0) +
+                   (response.confidence * 0.5); // Add language model confidence
+      
       if (score > bestScore) {
         bestScore = score;
         bestMatch = combo;
@@ -81,29 +96,33 @@ function showCard(cardName) {
   tryNextExt();
 }
 
-// Load script for permissions handler
-function loadPermissionsHandler() {
-  return new Promise((resolve) => {
-    // Check if permissionsHandler is already loaded
-    if (window.permissionsHandler) {
-      logDebug("Permissions handler already loaded");
-      resolve(true);
-      return;
-    }
-    
-    logDebug("Loading permissions handler script");
-    const script = document.createElement('script');
-    script.src = '../js/permissions-handler.js';
-    script.onload = () => {
-      logDebug("Permissions handler script loaded");
-      resolve(true);
-    };
-    script.onerror = () => {
-      logDebug("Failed to load permissions handler");
-      resolve(false);
-    };
-    document.head.appendChild(script);
-  });
+// Load required scripts
+async function loadDependencies() {
+  const scripts = [
+    '../js/permissions-handler.js',
+    '../js/core/language-model.js'
+  ];
+
+  for (const src of scripts) {
+    await new Promise((resolve, reject) => {
+      if (src.includes('language-model.js') && window.languageModel) {
+        resolve();
+        return;
+      }
+      if (src.includes('permissions-handler.js') && window.permissionsHandler) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    }).catch(err => {
+      logDebug(`Failed to load ${src}: ${err}`);
+    });
+  }
 }
 
 // Request microphone access using the global handler if available
@@ -133,8 +152,16 @@ async function startListening() {
     return;
   }
 
-  // Try to load the permissions handler first
-  await loadPermissionsHandler();
+  // Load dependencies first
+  await loadDependencies();
+  
+  // Initialize language model
+  if (window.languageModel) {
+    await languageModel.initialize();
+    logDebug("Language model initialized");
+  } else {
+    logDebug("Language model not available");
+  }
   
   // Request microphone permission
   const permissionGranted = await requestMicrophoneAccess();
@@ -157,11 +184,11 @@ async function startListening() {
     logDebug("Speech recognition started");
   };
 
-  recognition.onresult = function(event) {
+  recognition.onresult = async function(event) {
     const transcript = event.results[event.results.length - 1][0].transcript;
     logDebug(`Heard: "${transcript}"`);
     
-    const match = normalizeTranscript(transcript);
+    const match = await normalizeTranscript(transcript);
     showCard(match);
   };
 
@@ -199,25 +226,28 @@ function handleTouchStart(e) {
   startY = e.touches[0].clientY;
 }
 
-function handleTouchEnd(e) {
-  const endY = e.changedTouches[0].clientY;
-  if (startY && startY - endY > 50) {
-    document.body.innerHTML = '<div style="color:white;text-align:center;margin-top:50vh;font-size:2em;">Trick Ended</div>';
+function handleTouchMove(e) {
+  if (startY === null) return;
+  
+  const currentY = e.touches[0].clientY;
+  const diff = startY - currentY;
+  
+  if (Math.abs(diff) > 50) {
+    if (diff > 0) {
+      startListening();
+    }
+    startY = null;
   }
+}
+
+function handleTouchEnd() {
   startY = null;
 }
 
-window.onload = () => {
-  document.body.appendChild(debugElement);
-  logDebug("Mind Reader initializing...");
-  
-  if (cardDisplay) {
-    logDebug("Card display element found");
-  } else {
-    logDebug("ERROR: Card display element not found!");
-  }
-  
-  startListening();
-  container.addEventListener('touchstart', handleTouchStart);
-  container.addEventListener('touchend', handleTouchEnd);
-};
+// Add touch event listeners
+container.addEventListener('touchstart', handleTouchStart);
+container.addEventListener('touchmove', handleTouchMove);
+container.addEventListener('touchend', handleTouchEnd);
+
+// Start listening on page load
+document.addEventListener('DOMContentLoaded', startListening);
