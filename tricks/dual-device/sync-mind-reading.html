@@ -141,6 +141,13 @@
 
     async function processSpeechInput(transcript) {
       console.log('Processing speech input:', transcript);
+      
+      // Check for "back" command first
+      if (transcript.includes('back')) {
+        console.log('Back command detected');
+        return 'back';
+      }
+
       const cardNames = {
         "ace": "ace",
         "two": "2",
@@ -207,13 +214,19 @@
       cardImage.src = imagePath;
       cardImage.onload = () => console.log('Image loaded successfully');
       cardImage.onerror = (e) => console.error('Error loading image:', e);
-      cardDisplay.classList.add('flipped');
-      // Show the front face when revealing a card
-      document.querySelector('.card-front').style.display = 'flex';
+      
+      if (cardName === 'back') {
+        cardDisplay.classList.remove('flipped');
+      } else {
+        cardDisplay.classList.add('flipped');
+      }
     }
 
-    // Start listening immediately when the page loads
-    window.addEventListener('load', initializeSpeechRecognition);
+    // Initialize with back image
+    window.addEventListener('load', () => {
+      cardImage.src = './images/cards/back.png';
+      initializeSpeechRecognition();
+    });
   </script>
 </body>
 </html> 
