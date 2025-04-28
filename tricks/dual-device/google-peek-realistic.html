@@ -8,19 +8,24 @@
   
   <!-- Load EchoMind modules in correct order -->
   <script src="../../../js/core/echomind-core.js"></script>
+  <script src="../../../js/core/echomind-permissions.js"></script>
+  <script src="../../../js/core/echomind-speech.js"></script>
   <script src="../../../js/core/echomind-nlp.js"></script>
   <script src="../../../js/core/echomind-ml.js"></script>
   <script src="../../../js/core/echomind-knowledge.js"></script>
-  <script src="../../../js/core/echomind-permissions.js"></script>
-  <script src="../../../js/core/echomind-speech.js"></script>
   <script src="../../../js/core/language-model.js"></script>
+  <script src="../../../js/mind-reader.js"></script>
   
   <script>
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         // Initialize EchoMind core with advanced features
-        await window.echomind.init({
+        if (!window.EchoMind) {
+          throw new Error('EchoMind core module not loaded');
+        }
+
+        await EchoMind.init({
           debug: true,
           aiModel: 'advanced',
           useGPU: true,
@@ -28,50 +33,50 @@
         });
 
         // Set up speech recognition handlers
-        const speech = window.echomind.getModule('speech');
-        if (speech) {
-          speech.on('result', async (data) => {
-            try {
-              // Process through NLP and ML pipeline
-              const result = await window.echomind.process(data.finalTranscript);
-              
-              if (result.predictions && result.predictions.intent) {
-                // Handle predicted intent
-                switch (result.predictions.intent.type) {
-                  case 'QUESTION':
-                    await handleQuestion(result);
-                    break;
-                  case 'COMMAND':
-                    await handleCommand(result);
-                    break;
-                  default:
-                    await processVoiceInput(data.finalTranscript);
-                }
-              } else {
-                // Fallback to basic processing
-                await processVoiceInput(data.finalTranscript);
-              }
-            } catch (error) {
-              console.error('Error processing speech result:', error);
-              updateStatus('Error processing speech', 'error');
-            }
-          });
-
-          speech.on('error', (error) => {
-            console.error('Speech error:', error);
-            updateStatus('Speech error: ' + error.message, 'error');
-          });
-
-          // Start speech recognition
-          const permissionResult = await window.echomind.getModule('permissions').requestPermission('microphone');
-          if (permissionResult === 'granted') {
-            await speech.start();
-            updateStatus('Listening for "about"...', 'listening');
-          } else {
-            updateStatus('Microphone access denied', 'error');
-          }
-        } else {
+        const speech = EchoMind.Speech;
+        if (!speech) {
           throw new Error('Speech module not available');
+        }
+
+        speech.on('result', async (data) => {
+          try {
+            // Process through NLP and ML pipeline
+            const result = await EchoMind.process(data.finalTranscript);
+            
+            if (result.predictions && result.predictions.intent) {
+              // Handle predicted intent
+              switch (result.predictions.intent.type) {
+                case 'QUESTION':
+                  await handleQuestion(result);
+                  break;
+                case 'COMMAND':
+                  await handleCommand(result);
+                  break;
+                default:
+                  await processVoiceInput(data.finalTranscript);
+              }
+            } else {
+              // Fallback to basic processing
+              await processVoiceInput(data.finalTranscript);
+            }
+          } catch (error) {
+            console.error('Error processing speech result:', error);
+            updateStatus('Error processing speech', 'error');
+          }
+        });
+
+        speech.on('error', (error) => {
+          console.error('Speech error:', error);
+          updateStatus('Speech error: ' + error.message, 'error');
+        });
+
+        // Start speech recognition
+        const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
+        if (permissionResult === 'granted') {
+          await speech.start();
+          updateStatus('Listening for "about"...', 'listening');
+        } else {
+          updateStatus('Microphone access denied', 'error');
         }
       } catch (error) {
         console.error('Initialization error:', error);
@@ -83,7 +88,7 @@
     async function handleQuestion(result) {
       try {
         // Query knowledge base
-        const knowledge = await window.echomind.getModule('knowledge').query(result.input);
+        const knowledge = await EchoMind.Knowledge.query(result.input);
         
         if (knowledge.matches.length > 0) {
           // Use knowledge base response
@@ -105,7 +110,7 @@
     async function handleCommand(result) {
       try {
         // Check if it's a known command
-        const knowledge = await window.echomind.getModule('knowledge').query(result.input);
+        const knowledge = await EchoMind.Knowledge.query(result.input);
         
         if (knowledge.matches.length > 0 && knowledge.matches[0].category === 'commands') {
           // Execute command
