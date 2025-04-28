@@ -297,4 +297,7 @@ EchoMind.Speech = (function() {
             return _initialized;
         }
     };
-})(); 
+})();
+
+// Export to global scope
+window.EchoMindSpeech = EchoMind.Speech; 
