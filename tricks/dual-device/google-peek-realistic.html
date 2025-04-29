@@ -184,17 +184,24 @@
 
     function initialize() {
       console.log('Initializing voice search...');
-      if (VoiceSearchModule.init('status')) {
-        console.log('Voice search initialized, starting recognition...');
-        VoiceSearchModule.start();
-      } else {
-        console.error('Failed to initialize voice search');
+      try {
+        const success = VoiceSearchModule.init('status');
+        if (success) {
+          console.log('Voice search initialized successfully');
+        } else {
+          console.error('Voice search initialization failed');
+        }
+      } catch (error) {
+        console.error('Error during initialization:', error);
+        document.getElementById('status').textContent = 'Error: ' + error.message;
       }
     }
 
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-      VoiceSearchModule.stop();
+      if (VoiceSearchModule.stop) {
+        VoiceSearchModule.stop();
+      }
     });
   </script>
 </body>

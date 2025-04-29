@@ -27,28 +27,44 @@ const VoiceSearchModule = (function() {
     }
 
     function _handleSpeechError(event) {
+        console.log('Speech recognition error:', event.error);
+        _updateStatus('Error: ' + event.error);
         recognition.start();
     }
 
     function _handleSpeechEnd() {
+        console.log('Speech recognition ended, restarting...');
         recognition.start();
     }
 
     return {
         init: function(elementId) {
-            statusElement = document.getElementById(elementId);
-            searchInput = document.querySelector('.search-input');
-            recognition = new webkitSpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
+            try {
+                statusElement = document.getElementById(elementId);
+                searchInput = document.querySelector('.search-input');
+                
+                if (!('webkitSpeechRecognition' in window)) {
+                    _updateStatus('Error: Please use Chrome or Edge');
+                    return false;
+                }
 
-            recognition.onresult = _handleSpeechResult;
-            recognition.onerror = _handleSpeechError;
-            recognition.onend = _handleSpeechEnd;
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
 
-            _updateStatus('Say "about" followed by your search');
-            recognition.start();
+                recognition.onresult = _handleSpeechResult;
+                recognition.onerror = _handleSpeechError;
+                recognition.onend = _handleSpeechEnd;
+
+                _updateStatus('Say "about" followed by your search');
+                recognition.start();
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize voice search:', error);
+                _updateStatus('Error: Failed to initialize voice search');
+                return false;
+            }
         }
     };
 })(); 
