@@ -1,7 +1,5 @@
 const VoiceSearchModule = (function() {
-    let recognition = null;
     let statusElement = null;
-    let searchInput = null;
 
     function _updateStatus(message) {
         if (statusElement) {
@@ -10,57 +8,45 @@ const VoiceSearchModule = (function() {
     }
 
     function _performSearch(query) {
-        if (searchInput) {
-            searchInput.value = query;
-            setTimeout(() => {
-                searchInput.form.submit();
-            }, 3000);
-        }
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        window.location.href = searchUrl;
     }
 
-    function _handleSpeechResult(event) {
-        const transcript = event.results[0][0].transcript.toLowerCase();
+    function _handleSpeechResult(data) {
+        const transcript = data.transcript.toLowerCase();
+        console.log('Heard:', transcript);
+        
         if (transcript.includes('about')) {
             const searchQuery = transcript.replace('about', '').trim();
+            console.log('Searching for:', searchQuery);
             _performSearch(searchQuery);
         }
-    }
-
-    function _handleSpeechError(event) {
-        console.log('Speech recognition error:', event.error);
-        _updateStatus('Error: ' + event.error);
-        recognition.start();
-    }
-
-    function _handleSpeechEnd() {
-        console.log('Speech recognition ended, restarting...');
-        recognition.start();
     }
 
     return {
         init: function(elementId) {
             try {
                 statusElement = document.getElementById(elementId);
-                searchInput = document.querySelector('.search-input');
                 
-                // First initialize the speech recognition module
-                if (!SpeechRecognitionModule.init()) {
+                // Initialize speech recognition
+                if (!SpeechRecognitionModule.init({
+                    continuous: true,
+                    interimResults: false,
+                    maxAlternatives: 1
+                })) {
                     _updateStatus('Error: Speech recognition not supported');
                     return false;
                 }
 
-                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                recognition.continuous = true;
-                recognition.interimResults = false;
-                recognition.lang = 'en-US';
-                recognition.maxAlternatives = 1;
-
-                recognition.onresult = _handleSpeechResult;
-                recognition.onerror = _handleSpeechError;
-                recognition.onend = _handleSpeechEnd;
+                // Set up event handlers
+                SpeechRecognitionModule.on('result', _handleSpeechResult);
+                SpeechRecognitionModule.on('error', (data) => {
+                    console.log('Error:', data.error);
+                    _updateStatus('Error: ' + data.error);
+                });
 
                 _updateStatus('Say "about" followed by your search');
-                recognition.start();
+                SpeechRecognitionModule.start();
                 return true;
             } catch (error) {
                 console.error('Failed to initialize voice search:', error);
