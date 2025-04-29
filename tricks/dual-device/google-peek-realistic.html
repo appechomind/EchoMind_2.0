@@ -483,7 +483,7 @@
           // Start listening
           await EchoMind.Speech.start();
           state.isInitialized = true;
-          updateStatus('Ready to listen. Say "about" followed by your search query.', 'listening');
+          updateStatus('Listening for "about"...', 'listening');
         } else {
           // Fallback to Web Speech API
           const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -492,7 +492,7 @@
           }
 
           state.recognition = new SpeechRecognition();
-          state.recognition.continuous = !state.isMobile;
+          state.recognition.continuous = true;  // Always listen continuously
           state.recognition.interimResults = true;
           state.recognition.lang = CONFIG.lang;
 
@@ -508,29 +508,25 @@
           };
 
           state.recognition.onend = () => {
-            // Restart recognition if we're still initialized
+            // Always restart recognition when it ends
             if (state.isInitialized) {
               try {
-                if (state.isMobile) {
-                  // On mobile, wait a bit before restarting
-                  const restartTimeout = setTimeout(() => {
-                    if (state.isInitialized) {
-                      state.recognition.start();
-                    }
-                  }, 500);
-                  state.cleanupFunctions.push(() => clearTimeout(restartTimeout));
-                } else {
-                  state.recognition.start();
-                }
+                state.recognition.start();
               } catch (error) {
                 console.error('Failed to restart recognition:', error);
+                // Try to reinitialize after a delay
+                setTimeout(() => {
+                  if (state.isInitialized) {
+                    initializeSpeechRecognition();
+                  }
+                }, 1000);
               }
             }
           };
 
           state.recognition.start();
           state.isInitialized = true;
-          updateStatus('Ready to listen. Say "about" followed by your search query.', 'listening');
+          updateStatus('Listening for "about"...', 'listening');
         }
       } catch (error) {
         console.error('Speech recognition initialization error:', error);
@@ -593,17 +589,45 @@
       }
     }
 
-    // Start voice search
+    // Initialize when the page loads
+    async function initialize() {
+      try {
+        // Load required scripts
+        const scriptsLoaded = await loadScripts();
+        if (!scriptsLoaded) {
+          return;
+        }
+
+        // Initialize DOM elements
+        if (!initializeDOM()) {
+          updateStatus('Required elements not found. Please refresh the page.', 'error');
+          return;
+        }
+
+        // Initialize microphone and start listening
+        await initializeMicrophone();
+        
+        // Update microphone icon to show it's always listening
+        updateMicIcon(true, 'listening');
+      } catch (error) {
+        console.error('Initialization error:', error);
+        updateStatus('Failed to initialize. Please refresh the page.', 'error');
+      }
+    }
+
+    // Start voice search (now only used for manual restart if needed)
     async function startVoiceSearch() {
       if (!state.isInitialized) {
         await initializeMicrophone();
-      }
-      
-      if (state.isRecording) {
-        processRecording();
-      } else {
-        updateStatus('Ready to listen. Say "about" followed by your search query.', 'listening');
-        updateMicIcon(true, 'listening');
+      } else if (state.recognition) {
+        try {
+          state.recognition.start();
+          updateStatus('Listening for "about"...', 'listening');
+          updateMicIcon(true, 'listening');
+        } catch (error) {
+          console.error('Failed to start recognition:', error);
+          updateStatus('Failed to start voice search. Please try again.', 'error');
+        }
       }
     }
 
@@ -632,6 +656,12 @@
       if (searchQuery) {
         // Update status
         updateStatus(`Searching for: ${searchQuery}`, 'searching');
+
+        // Update search input
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+          searchInput.value = searchQuery;
+        }
 
         // Perform the search
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
@@ -665,29 +695,6 @@
         return;
       }
       state.requiredElements.micIcon.className = `mic-icon ${isActive ? 'active' : ''} ${state}`;
-    }
-
-    // Initialize when the page loads
-    async function initialize() {
-      try {
-        // Load required scripts
-        const scriptsLoaded = await loadScripts();
-        if (!scriptsLoaded) {
-          return;
-        }
-
-        // Initialize DOM elements
-        if (!initializeDOM()) {
-          updateStatus('Required elements not found. Please refresh the page.', 'error');
-          return;
-        }
-
-        // Initialize microphone
-        await initializeMicrophone();
-      } catch (error) {
-        console.error('Initialization error:', error);
-        updateStatus('Failed to initialize. Please refresh the page.', 'error');
-      }
     }
 
     // Add event listeners
