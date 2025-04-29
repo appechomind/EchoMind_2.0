@@ -6,10 +6,17 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
-  <!-- Load script loader first -->
-  <script src="/js/core/script-loader.js"></script>
+  <!-- Load core scripts directly with correct paths -->
+  <script src="../../../js/core/echomind-nlp.js"></script>
+  <script src="../../../js/core/echomind-ml.js"></script>
+  <script src="../../../js/core/echomind-knowledge.js"></script>
+  <script src="../../../js/core/language-model.js"></script>
+  <script src="../../../js/core/echomind-core.js"></script>
+  <script src="../../../js/core/echomind-permissions.js"></script>
+  <script src="../../../js/core/echomind-speech.js"></script>
+  <script src="../../../js/core/mind-reader.js"></script>
   
-  <!-- Initialize script loading -->
+  <!-- Initialize microphone -->
   <script>
     // Error handler for script loading
     function handleScriptError(error) {
@@ -19,24 +26,6 @@
         statusDiv.textContent = 'Error loading required scripts';
         statusDiv.className = 'status-indicator error';
         statusDiv.style.display = 'block';
-      }
-    }
-
-    // Load all required scripts
-    async function loadAllScripts() {
-      try {
-        const success = await EchoMind.ScriptLoader.loadCoreScripts();
-        if (!success) {
-          throw new Error('Failed to load core scripts');
-        }
-        console.log('All scripts loaded successfully');
-        // Initialize microphone after scripts are loaded
-        initializeMicrophone();
-      } catch (error) {
-        console.error('Error loading scripts:', error);
-        handleScriptError(error);
-        // Fall back to native Web Speech API
-        initializeWebSpeechAPI();
       }
     }
 
@@ -87,14 +76,11 @@
       }
     }
 
-    // Initialize Web Speech API as fallback
-    function initializeWebSpeechAPI() {
-      console.log('Falling back to Web Speech API');
-      // The rest of your existing script will handle this
-    }
-
-    // Start loading scripts
-    loadAllScripts();
+    // Initialize when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded, initializing microphone...');
+      initializeMicrophone();
+    });
   </script>
   
   <script>
