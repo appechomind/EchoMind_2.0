@@ -13,22 +13,25 @@
     body {
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
+      font-family: arial, sans-serif;
       background: #fff;
+      color: #202124;
     }
 
     .header {
       display: flex;
       justify-content: flex-end;
-      padding: 15px;
+      padding: 6px;
       align-items: center;
+      height: 60px;
     }
 
     .header a {
       margin-left: 15px;
-      color: #000;
+      color: rgba(0,0,0,.87);
       text-decoration: none;
       font-size: 13px;
+      line-height: 24px;
     }
 
     .header a:hover {
@@ -39,11 +42,16 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 100px;
+      margin-top: 89px;
     }
 
     .logo {
       margin-bottom: 20px;
+    }
+
+    .logo img {
+      width: 272px;
+      height: 92px;
     }
 
     .search-box {
@@ -55,10 +63,12 @@
       border-radius: 24px;
       padding: 0 15px;
       margin-bottom: 20px;
+      background: #fff;
     }
 
     .search-box:hover {
       box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+      border-color: rgba(223,225,229,0);
     }
 
     .search-input {
@@ -66,6 +76,9 @@
       border: none;
       outline: none;
       font-size: 16px;
+      color: #202124;
+      background: transparent;
+      padding: 0 10px;
     }
 
     .mic-icon {
@@ -73,11 +86,16 @@
       height: 24px;
       cursor: pointer;
       margin-left: 10px;
+      opacity: 0.5;
+    }
+
+    .mic-icon:hover {
+      opacity: 1;
     }
 
     .buttons {
       display: flex;
-      gap: 10px;
+      gap: 11px;
     }
 
     .search-button {
@@ -89,11 +107,13 @@
       padding: 0 16px;
       height: 36px;
       cursor: pointer;
+      font-family: arial, sans-serif;
     }
 
     .search-button:hover {
       box-shadow: 0 1px 1px rgba(0,0,0,0.1);
       border: 1px solid #dadce0;
+      color: #202124;
     }
 
     #status {
@@ -104,8 +124,21 @@
       background: rgba(0,0,0,0.8);
       color: white;
       border-radius: 20px;
-      font-family: Arial, sans-serif;
+      font-family: arial, sans-serif;
       z-index: 1000;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .search-box {
+        width: 90%;
+        max-width: 584px;
+      }
+      
+      .logo img {
+        width: 200px;
+        height: auto;
+      }
     }
   </style>
 </head>
@@ -113,8 +146,12 @@
   <div class="header">
     <a href="#">Gmail</a>
     <a href="#">Images</a>
-    <a href="#">Apps</a>
-    <a href="#">Sign in</a>
+    <a href="#">
+      <svg focusable="false" viewBox="0 0 24 24" width="24px" height="24px">
+        <path d="M6,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM16,6c0,1.1 0.9,2 2,2s2,-0.9 2,-2 -0.9,-2 -2,-2 -2,0.9 -2,2zM12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"></path>
+      </svg>
+    </a>
+    <a href="#" style="background: #1a73e8; color: white; padding: 8px 12px; border-radius: 4px;">Sign in</a>
   </div>
 
   <div class="main">
