@@ -17,55 +17,152 @@
   <script src="../../js/core/mind-reader.js"></script>
   
   <script>
+    // State management
+    const state = {
+      isRecording: false,
+      recordedText: [],
+      recognition: null
+    };
+
+    // Configuration
+    const CONFIG = {
+      triggerWord: 'about',
+      startDelay: 500,
+      recordingDuration: 3000
+    };
+
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('DOM Content Loaded - Starting initialization');
       try {
-        // Check if all required modules are loaded
-        if (!window.EchoMindNLP || !window.EchoMindML || !window.EchoMindKnowledge) {
-          throw new Error('Required AI modules not loaded');
-        }
-
-        // Wait for EchoMind core to be ready
-        if (!window.EchoMind) {
-          throw new Error('EchoMind core module not loaded');
-        }
-        
-        // Initialize permissions first
-        if (window.EchoMind?.Permissions) {
-          console.log('EchoMind Permissions module found');
-          await EchoMind.Permissions.init();
-          console.log('Permissions initialized, requesting microphone access');
-          
-          // Request microphone permission explicitly
-          const permissionResult = await EchoMind.Permissions.requestPermission('microphone');
-          console.log('Permission request result:', permissionResult);
-          
-          if (permissionResult === 'granted') {
-            console.log('Microphone permission granted, initializing speech');
-            await initializeSpeechRecognition();
-          } else {
-            console.error('Microphone permission denied');
-            tryFallbackSpeechRecognition();
-          }
-        } else {
-          console.warn('EchoMind Permissions module not found, trying browser API');
-          // Try fallback permission request
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log('Browser microphone permission granted');
-            stream.getTracks().forEach(track => track.stop()); // Clean up
-            await initializeSpeechRecognition();
-          } catch (error) {
-            console.error('Browser microphone permission denied:', error);
-            updateStatus('Microphone access denied', 'error');
-          }
-        }
+        // Initialize speech recognition
+        state.recognition = initializeSpeechRecognition();
+        updateStatus('Ready to listen...', 'listening');
       } catch (error) {
         console.error('Initialization error:', error);
         updateStatus('Error: ' + error.message, 'error');
       }
     });
+
+    // Initialize speech recognition
+    function initializeSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        throw new Error('Speech recognition not supported');
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+        updateStatus('Listening...', 'listening');
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        updateStatus('Error: ' + event.error, 'error');
+        // Try to restart on error
+        setTimeout(() => recognition.start(), 1000);
+      };
+
+      recognition.onresult = (event) => {
+        handleSpeechResult(event);
+      };
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+        if (state.isRecording) {
+          recognition.start();
+        }
+      };
+
+      // Start recognition immediately
+      recognition.start();
+      return recognition;
+    }
+
+    // Handle speech results
+    function handleSpeechResult(event) {
+      const result = event.results[event.results.length - 1];
+      const transcript = result[0].transcript.toLowerCase().trim();
+      
+      console.log('Heard:', transcript);
+
+      // If we're recording and it's a final result
+      if (state.isRecording && result.isFinal) {
+        state.recordedText = [transcript];
+        console.log('Recorded:', transcript);
+        updateStatus('Recording: ' + transcript, 'waiting');
+        return;
+      }
+
+      // Check for trigger word
+      if (!state.isRecording && transcript.includes(CONFIG.triggerWord)) {
+        console.log('Trigger detected, starting soon...');
+        updateStatus('Starting...', 'waiting');
+        
+        // Start recording after short delay
+        setTimeout(() => {
+          state.recordedText = [];
+          startRecording();
+        }, CONFIG.startDelay);
+      }
+    }
+
+    // Start recording
+    function startRecording() {
+      state.isRecording = true;
+      updateStatus('Recording...', 'recording');
+      
+      // Set timeout to process recording
+      setTimeout(() => {
+        processRecording();
+      }, CONFIG.recordingDuration);
+    }
+
+    // Process the recording and perform search
+    function processRecording() {
+      console.log('Processing recording, text array:', state.recordedText);
+      
+      if (!state.recordedText.length) {
+        console.log('No recording to process');
+        state.isRecording = false;
+        updateStatus('Listening...', 'listening');
+        return;
+      }
+
+      // Get the last recorded phrase
+      let searchQuery = state.recordedText[state.recordedText.length - 1];
+      console.log('Raw search query:', searchQuery);
+      
+      // Clean up the query
+      searchQuery = searchQuery.replace(new RegExp(CONFIG.triggerWord, 'gi'), '').trim();
+      searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
+      searchQuery = searchQuery.replace(/\s+/g, ' ');
+      
+      if (searchQuery) {
+        // Execute search
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+        window.location.href = searchUrl;
+      }
+
+      // Reset state
+      state.isRecording = false;
+      state.recordedText = [];
+      updateStatus('Listening...', 'listening');
+    }
+
+    // Update status display
+    function updateStatus(message, type = 'listening') {
+      const statusDiv = document.getElementById('status');
+      if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = `status-indicator ${type}`;
+        statusDiv.style.display = 'block';
+      }
+    }
 
     // Optimize DOM manipulation by using document fragments
     const fragment = document.createDocumentFragment();
@@ -171,176 +268,20 @@
       console.log(`[${level.toUpperCase()}][${timestamp}] ${message}`);
     }
 
-    // Update status display (hidden but still functional)
-    function updateStatus(message, type = 'listening') {
-      const statusDiv = document.getElementById('status');
-      if (statusDiv) {
-        statusDiv.textContent = message;
-        statusDiv.className = `status ${type}`;
-      }
-      log(message, type);
-    }
-
     // State management
-    let isRecording = false;
-    let processingTimeout = null;
     let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     let retryCount = 0;
     let maxRetries = 3;
     let isInitialized = false;
     let isInitializing = false;
-    let recordedText = [];
     let permissionRequested = false;
 
     // Configuration
-    const triggerWord = 'about';
     const recordingDelay = 0; // Start immediately
-    const recordingDuration = 3000; // 3 seconds
     const minWords = 1;
     const maxWords = 15;
     const retryDelay = 1000;
     const initTimeout = 10000;
-
-    // Handle speech results
-    function handleSpeechResult(data) {
-      if (!data.finalTranscript) {
-        return;
-      }
-      
-      const transcript = data.finalTranscript.toLowerCase().trim();
-      console.log('Received transcript:', transcript);
-
-      // If we're recording, process the search query
-      if (isRecording) {
-        recordedText.push(transcript);
-        console.log('Recording in progress:', recordedText);
-        
-        // For mobile, restart recognition after each result
-        if (isMobile) {
-          setTimeout(() => {
-            if (isRecording) {
-              EchoMind.Speech.start().catch(() => {});
-            }
-          }, 100);
-        }
-        return;
-      }
-
-      // Check for trigger word
-      if (transcript.includes(triggerWord)) {
-        console.log('Trigger word detected:', triggerWord);
-        // Get any text after the trigger word
-        const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
-        const initialText = transcript.slice(startIndex).trim();
-        if (initialText) {
-          recordedText.push(initialText);
-        }
-
-        // Clear any existing timeout
-        if (processingTimeout) {
-          clearTimeout(processingTimeout);
-          processingTimeout = null;
-        }
-
-        // Start recording immediately
-        isRecording = true;
-        console.log('Started recording');
-        
-        // Set timeout to process recording after 3 seconds
-        processingTimeout = setTimeout(() => {
-          console.log('Processing recording after timeout');
-          processRecording();
-        }, recordingDuration);
-      }
-    }
-
-    // Process the recording and perform search
-    function processRecording() {
-      if (recordedText.length === 0) {
-        isRecording = false;
-        return;
-      }
-
-      // Join all recorded phrases and clean up
-      let searchQuery = recordedText.join(' ');
-      
-      // Clean up the query
-      searchQuery = searchQuery.replace(new RegExp(triggerWord, 'gi'), '').trim();
-      searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
-      searchQuery = searchQuery.replace(/\s+/g, ' ');
-      
-      // Convert "parts" or "part" to "hearts"
-      searchQuery = searchQuery.replace(/\b(parts?)\b/gi, 'hearts');
-      
-      if (searchQuery) {
-        // Execute search immediately
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-        window.location.href = searchUrl;
-      }
-
-      // Reset state
-      isRecording = false;
-      recordedText = [];
-    }
-
-    // Initialize speech recognition
-    async function initializeSpeechRecognition() {
-      if (isInitializing || isInitialized) {
-        return;
-      }
-
-      try {
-        isInitializing = true;
-
-        // Single permission check
-        if (!permissionRequested) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            permissionRequested = true;
-          } catch (error) {
-            throw new Error(`Microphone permission denied: ${error.message}`);
-          }
-        }
-
-        // Initialize EchoMind Speech with minimal settings
-        const speechInitialized = await EchoMind.Speech.init({
-          continuous: isMobile ? false : true,
-          interimResults: false,
-          maxAlternatives: 1,
-          lang: 'en-US'
-        });
-
-        if (!speechInitialized) {
-          throw new Error('Speech initialization failed');
-        }
-
-        // Set up event handlers
-        EchoMind.Speech.on('result', handleSpeechResult);
-        EchoMind.Speech.on('error', (error) => {
-          if (isMobile && error.message.includes('not-allowed')) {
-            permissionRequested = false;
-          }
-        });
-
-        // Start listening
-        await EchoMind.Speech.start();
-        isInitialized = true;
-        isInitializing = false;
-
-      } catch (error) {
-        isInitialized = false;
-        isInitializing = false;
-        if (error.message.includes('not-allowed')) {
-          permissionRequested = false;
-        }
-      }
-    }
-
-    // Start initialization when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      initializeSpeechRecognition().catch(() => {});
-    });
 
     // Add event listeners for search
     document.addEventListener('DOMContentLoaded', function() {
@@ -692,15 +633,15 @@
       console.log('Received transcript:', transcript);
 
       // If we're recording, process the search query
-      if (isRecording) {
-        recordedText.push(transcript);
-        console.log('Recording in progress:', recordedText);
+      if (state.isRecording) {
+        state.recordedText.push(transcript);
+        console.log('Recording in progress:', state.recordedText);
         
         // For mobile, restart recognition after each result
         if (isMobile) {
           setTimeout(() => {
-            if (isRecording) {
-              EchoMind.Speech.start().catch(() => {});
+            if (state.isRecording) {
+              state.recognition.start().catch(() => {});
             }
           }, 100);
         }
@@ -708,13 +649,13 @@
       }
 
       // Check for trigger word
-      if (transcript.includes(triggerWord)) {
-        console.log('Trigger word detected:', triggerWord);
+      if (transcript.includes(CONFIG.triggerWord)) {
+        console.log('Trigger word detected:', CONFIG.triggerWord);
         // Get any text after the trigger word
-        const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
+        const startIndex = transcript.indexOf(CONFIG.triggerWord) + CONFIG.triggerWord.length;
         const initialText = transcript.slice(startIndex).trim();
         if (initialText) {
-          recordedText.push(initialText);
+          state.recordedText.push(initialText);
         }
 
         // Clear any existing timeout
@@ -724,29 +665,29 @@
         }
 
         // Start recording immediately
-        isRecording = true;
+        state.isRecording = true;
         console.log('Started recording');
         
         // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
           console.log('Processing recording after timeout');
           processRecording();
-        }, recordingDuration);
+        }, CONFIG.recordingDuration);
       }
     }
 
     // Process the recording and perform search
     function processRecording() {
-      if (recordedText.length === 0) {
-        isRecording = false;
+      if (state.recordedText.length === 0) {
+        state.isRecording = false;
         return;
       }
 
       // Join all recorded phrases and clean up
-      let searchQuery = recordedText.join(' ');
+      let searchQuery = state.recordedText.join(' ');
       
       // Clean up the query
-      searchQuery = searchQuery.replace(new RegExp(triggerWord, 'gi'), '').trim();
+      searchQuery = searchQuery.replace(new RegExp(CONFIG.triggerWord, 'gi'), '').trim();
       searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
       searchQuery = searchQuery.replace(/\s+/g, ' ');
       
@@ -760,8 +701,8 @@
       }
 
       // Reset state
-      isRecording = false;
-      recordedText = [];
+      state.isRecording = false;
+      state.recordedText = [];
     }
 
     // Initialize speech recognition
