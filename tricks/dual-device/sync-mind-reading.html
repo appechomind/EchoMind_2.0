@@ -35,8 +35,6 @@
       align-items: center;
       justify-content: center;
       background: #ffffff;
-      transform-style: preserve-3d;
-      transition: transform 0.6s;
     }
 
     .card img {
@@ -44,11 +42,6 @@
       height: 100%;
       object-fit: contain;
       border-radius: 15px;
-      transform: scaleX(1);
-    }
-
-    .card.flipped img {
-      transform: scaleX(-1);
     }
 
     #status {
@@ -201,18 +194,12 @@
     function resetEffect() {
       // Reset card display
       const cardImage = document.getElementById('card-image');
-      const card = document.getElementById('card');
       cardImage.src = '../../images/cards/back.png';
-      card.style.transform = 'rotateY(0deg)';
-      card.classList.remove('flipped');
     }
 
     function revealCard(cardName) {
       const cardImage = document.getElementById('card-image');
-      const card = document.getElementById('card');
       cardImage.src = `../../images/cards/${cardName}.png`;
-      card.style.transform = 'rotateY(180deg)';
-      card.classList.add('flipped');
     }
 
     // Initialize when the page loads
