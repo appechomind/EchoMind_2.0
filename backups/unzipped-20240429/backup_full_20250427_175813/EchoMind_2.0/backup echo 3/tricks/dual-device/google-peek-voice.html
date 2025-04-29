@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Peek - Voice Enhanced</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+        
+        #setup-screen, #thinking-screen, #reveal-screen, #google-screen {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            display: none;
+        }
+        
+        #setup-screen {
+            display: block;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .google-logo {
+            width: 272px;
+            height: 92px;
+            margin: 0 auto;
+            display: block;
+            margin-top: 10vh;
+        }
+        
+        .search-container {
+            width: 584px;
+            margin: 20px auto;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border-radius: 24px;
+            border: 1px solid #dfe1e5;
+            padding: 0 20px;
+            font-size: 16px;
+            outline: none;
+            box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+        }
+        
+        .search-input:hover, .search-input:focus {
+            box-shadow: 0 1px 10px rgba(32, 33, 36, 0.28);
+        }
+        
+        .search-buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .search-button, .lucky-button {
+            background-color: #f8f9fa;
+            border: 1px solid #f8f9fa;
+            border-radius: 4px;
+            color: #3c4043;
+            font-size: 14px;
+            margin: 11px 4px;
+            padding: 0 16px;
+            height: 36px;
+            cursor: pointer;
+        }
+        
+        .search-button:hover, .lucky-button:hover {
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #dadce0;
+        }
+        
+        .search-results {
+            margin-top: 30px;
+        }
+        
+        .search-result {
+            margin-bottom: 20px;
+        }
+        
+        .result-url {
+            color: #202124;
+            font-size: 14px;
+            padding-top: 1px;
+            line-height: 1.3;
+        }
+        
+        .result-title {
+            color: #1a0dab;
+            font-size: 18px;
+            line-height: 1.3;
+            margin: 0;
+            padding: 5px 0;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .result-title:hover {
+            text-decoration: underline;
+        }
+        
+        .result-description {
+            color: #4d5156;
+            font-size: 14px;
+            line-height: 1.58;
+        }
+        
+        .centered {
+            text-align: center;
+        }
+        
+        .button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        .button:hover {
+            background-color: #357ae8;
+        }
+        
+        #prediction {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        #countdown {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 40px 0;
+        }
+        
+        .speech-status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .speech-status.listening {
+            background-color: #e8f0fe;
+            border-left: 4px solid #4285f4;
+        }
+        
+        .speech-status.command-mode {
+            background-color: #fce8e6;
+            border-left: 4px solid #ea4335;
+        }
+        
+        .voice-commands {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #4285f4;
+        }
+        
+        .command-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .command-list li {
+            padding: 5px 0;
+        }
+        
+        .command-keyword {
+            font-weight: bold;
+            color: #4285f4;
+        }
+    </style>
+    <script src="../../js/permissions-handler.js"></script>
+    <script src="js/echomind-speech.js"></script>
+    <script src="js/echomind-commands.js"></script>
+</head>
+<body>
+    <div id="setup-screen">
+        <h1>Google Peek with Voice Commands</h1>
+        
+        <div class="voice-commands">
+            <h3>Voice Commands Available:</h3>
+            <ul class="command-list">
+                <li><span class="command-keyword">"Hey Echo, start presentation"</span> - Begin the effect</li>
+                <li><span class="command-keyword">"Hey Echo, reveal search"</span> - Skip to the reveal</li>
+                <li><span class="command-keyword">"Hey Echo, restart trick"</span> - Reset to beginning</li>
+            </ul>
+        </div>
+        
+        <div class="speech-status" id="speechStatus">
+            Speech recognition inactive
+        </div>
+        
+        <div class="centered">
+            <p>In this effect, you'll be able to reveal what someone is thinking about. Ask them to think of something they might search for on Google.</p>
+            <button class="button" id="startBtn">Start Voice Recognition</button>
+            <button class="button" id="stopBtn" disabled>Stop Voice Recognition</button>
+            <button class="button" id="startTrickBtn">Start Trick Manually</button>
+        </div>
+    </div>
+    
+    <div id="thinking-screen">
+        <div class="centered">
+            <h1>Think of your search...</h1>
+            <div id="countdown">10</div>
+            <p>Concentrate on what you want to search for on Google</p>
+            <button class="button" id="revealBtn">Reveal Now</button>
+        </div>
+    </div>
+    
+    <div id="reveal-screen">
+        <div class="centered">
+            <h1>I know what you're thinking!</h1>
+            <p>You're thinking of searching for:</p>
+            <div id="prediction">Loading your thought...</div>
+            <button class="button" id="showGoogleBtn">Show Google Results</button>
+        </div>
+    </div>
+    
+    <div id="google-screen">
+        <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="google-logo">
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" autocomplete="off" autofocus>
+        </div>
+        <div class="search-buttons">
+            <button class="search-button">Google Search</button>
+            <button class="lucky-button">I'm Feeling Lucky</button>
+        </div>
+        <div class="search-results" id="searchResults">
+            <!-- Search results will appear here -->
+        </div>
+    </div>
+    
+    <!-- Include EchoMind modules with proper references -->
+    <script>
+        // DOM Elements
+        const setupScreen = document.getElementById('setup-screen');
+        const thinkingScreen = document.getElementById('thinking-screen');
+        const revealScreen = document.getElementById('reveal-screen');
+        const googleScreen = document.getElementById('google-screen');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const startTrickBtn = document.getElementById('startTrickBtn');
+        const revealBtn = document.getElementById('revealBtn');
+        const showGoogleBtn = document.getElementById('showGoogleBtn');
+        const prediction = document.getElementById('prediction');
+        const countdownEl = document.getElementById('countdown');
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const speechStatus = document.getElementById('speechStatus');
+        
+        // Potential search terms
+        const searchTerms = [
+            "best travel destinations 2023",
+            "how to make chocolate chip cookies",
+            "funny cat videos",
+            "local weather forecast",
+            "movie showtimes near me",
+            "best restaurants in town",
+            "how to tie a tie",
+            "latest smartphone reviews",
+            "DIY home decoration ideas",
+            "summer vacation ideas",
+            "healthy dinner recipes",
+            "workout routines at home",
+            "electric car prices",
+            "new movies on Netflix",
+            "how to learn a new language"
+        ];
+        
+        // Search suggestions for fake Google results
+        const searchSuggestions = {
+            "best travel destinations 2023": [
+                { title: "Top 25 Best Travel Destinations in 2023 - Travel & Leisure", url: "www.travelandleisure.com/best-places-to-travel", description: "These are the best places to travel in 2023, from established classics to emerging destinations ready to welcome visitors." },
+                { title: "The 23 Best Places to Go in 2023 - Condé Nast Traveler", url: "www.cntraveler.com/story/best-places-to-go", description: "The 23 best places to travel in 2023, chosen by the editors of Condé Nast Traveler for where to go next." },
+                { title: "50 Best Places to Travel in 2023 - TripAdvisor", url: "www.tripadvisor.com/TravelersChoice-Destinations", description: "Discover the best destinations for 2023, from iconic cities to pristine beaches and everything in between." }
+            ],
+            "how to make chocolate chip cookies": [
+                { title: "The Best Chocolate Chip Cookies Recipe - Food Network", url: "www.foodnetwork.com/recipes/chocolate-chip-cookies", description: "This is the best chocolate chip cookie recipe ever! No funny ingredients, no chilling time, etc. Just a simple, straightforward, amazingly delicious, doughy yet still fully cooked, chocolate chip cookie." },
+                { title: "Award Winning Soft Chocolate Chip Cookies - AllRecipes", url: "www.allrecipes.com/recipe/best-chocolate-chip-cookies", description: "These chocolate chip cookies are amazing. No funny ingredients, no chilling time, just a simple, straightforward, amazingly delicious, doughy yet still fully cooked, chocolate chip cookie." },
+                { title: "Perfect Chocolate Chip Cookies Recipe - Bon Appétit", url: "www.bonappetit.com/recipe/perfect-chocolate-chip-cookies", description: "What makes these cookies truly perfect? A combination of standard ingredients produces a crisp exterior and chewy middle." }
+            ]
+        };
+        
+        let chosenSearchTerm = "";
+        let countdownInterval;
+        let detectedSearchTerm = "";
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeechAndCommands();
+            setupEventListeners();
+        });
+        
+        // Initialize speech and command modules
+        function initSpeechAndCommands() {
+            // First request microphone permission
+            EchoMind.PermissionsHandler.requestMicrophonePermission()
+                .then(function(granted) {
+                    if (!granted) {
+                        alert("Microphone permission is required for this trick to work.");
+                        return;
+                    }
+                    initSpeechRecognition();
+                })
+                .catch(function(error) {
+                    console.error("Error requesting microphone permission:", error);
+                    alert("Failed to get microphone permission. Please ensure your browser has microphone access.");
+                });
+        }
+        
+        // Initialize speech recognition after permissions are granted
+        function initSpeechRecognition() {
+            // Check browser support
+            if (!EchoMind.Speech.isSupported()) {
+                alert("Speech recognition is not supported in this browser. Please use Chrome for the best experience.");
+                return;
+            }
+            
+            // Initialize speech recognition
+            EchoMind.Speech.init({
+                continuous: true,
+                interimResults: true,
+                maxAlternatives: 1,
+                lang: 'en-US',
+                debugMode: true,
+                autoRestart: true
+            });
+            
+            // Set up speech event handlers
+            EchoMind.Speech.on('start', function() {
+                updateSpeechStatus("Listening...", "listening");
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            });
+            
+            EchoMind.Speech.on('end', function() {
+                updateSpeechStatus("Speech recognition inactive");
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            });
+            
+            EchoMind.Speech.on('onFinalResult', function(data) {
+                if (thinkingScreen.style.display === 'block') {
+                    detectedSearchTerm = data.transcript.trim();
+                    console.log("Final search term detected:", detectedSearchTerm);
+                }
+            });
+            
+            EchoMind.Speech.on('onInterimResult', function(data) {
+                if (thinkingScreen.style.display === 'block') {
+                    detectedSearchTerm = data.transcript.trim();
+                }
+                updateSpeechStatus("Listening: " + data.transcript, "listening");
+            });
+            
+            EchoMind.Speech.on('error', function(data) {
+                console.error("Speech recognition error:", data.error);
+                updateSpeechStatus("Error: " + data.message);
+                
+                // If the error is fatal, re-enable the start button
+                if (data.error === 'not-allowed' || data.error === 'service-not-allowed') {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            });
+            
+            // Initialize command module
+            EchoMind.Commands.init({
+                triggerPhrase: "hey echo",
+                commandTimeoutMs: 5000,
+                debugMode: true
+            });
+            
+            // Set up command event handlers
+            EchoMind.Commands.on('commandModeActivated', function() {
+                updateSpeechStatus("Command mode active - waiting for command", "command-mode");
+            });
+            
+            EchoMind.Commands.on('commandModeDeactivated', function() {
+                updateSpeechStatus("Listening...", "listening");
+            });
+            
+            EchoMind.Commands.on('commandDetected', function(data) {
+                updateSpeechStatus(`Command recognized: ${data.phrase}`, "command-mode");
+                console.log(`Command recognized: ${data.phrase}`);
+            });
+            
+            // Register voice commands for the trick
+            registerVoiceCommands();
+        }
+        
+        // Register trick-specific voice commands
+        function registerVoiceCommands() {
+            EchoMind.Commands.registerCommand({
+                phrase: "start presentation",
+                description: "Begin the Google Peek effect",
+                callback: startTrick
+            });
+            
+            EchoMind.Commands.registerCommand({
+                phrase: "reveal search",
+                description: "Skip to the reveal stage",
+                callback: skipToReveal
+            });
+            
+            EchoMind.Commands.registerCommand({
+                phrase: "restart trick",
+                description: "Reset to beginning",
+                callback: resetTrick
+            });
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            startBtn.addEventListener('click', function() {
+                EchoMind.Speech.start();
+            });
+            
+            stopBtn.addEventListener('click', function() {
+                EchoMind.Speech.stop();
+            });
+            
+            startTrickBtn.addEventListener('click', startTrick);
+            revealBtn.addEventListener('click', skipToReveal);
+            showGoogleBtn.addEventListener('click', showGoogleResults);
+        }
+        
+        // Start the trick
+        function startTrick() {
+            setupScreen.style.display = 'none';
+            thinkingScreen.style.display = 'block';
+            
+            // Start countdown
+            let countdown = 10;
+            countdownEl.textContent = countdown;
+            
+            countdownInterval = setInterval(function() {
+                countdown--;
+                countdownEl.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    skipToReveal();
+                }
+            }, 1000);
+        }
+        
+        // Skip to reveal screen
+        function skipToReveal() {
+            // Clear any existing countdown
+            clearInterval(countdownInterval);
+            
+            // Hide other screens, show reveal screen
+            setupScreen.style.display = 'none';
+            thinkingScreen.style.display = 'none';
+            revealScreen.style.display = 'block';
+            
+            // Set the prediction text - use detected term if available, otherwise pick a random one
+            if (detectedSearchTerm) {
+                chosenSearchTerm = detectedSearchTerm;
+            } else {
+                // Choose a random search term
+                chosenSearchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+            }
+            
+            // Simulate "reading their mind" with a short delay
+            setTimeout(function() {
+                prediction.textContent = chosenSearchTerm;
+            }, 1500);
+        }
+        
+        // Show Google results screen
+        function showGoogleResults() {
+            // Hide other screens, show Google screen
+            setupScreen.style.display = 'none';
+            thinkingScreen.style.display = 'none';
+            revealScreen.style.display = 'none';
+            googleScreen.style.display = 'block';
+            
+            // Set the search input value
+            searchInput.value = chosenSearchTerm;
+            
+            // Generate fake search results
+            generateSearchResults(chosenSearchTerm);
+        }
+        
+        // Generate fake search results
+        function generateSearchResults(term) {
+            searchResults.innerHTML = '';
+            
+            // Check if we have predefined results for this term
+            let results = searchSuggestions[term];
+            
+            // If not, generate generic results
+            if (!results) {
+                results = [
+                    { title: `${term} - Latest Information and Guides`, url: `www.example.com/${term.replace(/\s+/g, '-')}`, description: `Find the best information about ${term}. Our comprehensive guide covers everything you need to know.` },
+                    { title: `Top 10 Resources for ${term}`, url: `www.resources.com/top-${term.replace(/\s+/g, '-')}`, description: `Looking for quality information on ${term}? Here are the top 10 resources you should check out.` },
+                    { title: `${term} - Wikipedia`, url: `en.wikipedia.org/wiki/${term.replace(/\s+/g, '_')}`, description: `${term} has many meanings and applications. Learn about the history, development, and modern usage.` }
+                ];
+            }
+            
+            // Create result elements
+            results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result';
+                
+                resultDiv.innerHTML = `
+                    <div class="result-url">${result.url}</div>
+                    <a href="#" class="result-title">${result.title}</a>
+                    <div class="result-description">${result.description}</div>
+                `;
+                
+                searchResults.appendChild(resultDiv);
+            });
+        }
+        
+        // Reset the trick to the beginning
+        function resetTrick() {
+            // Clear any existing countdown
+            clearInterval(countdownInterval);
+            
+            // Reset variables
+            detectedSearchTerm = "";
+            chosenSearchTerm = "";
+            
+            // Clear search results
+            searchResults.innerHTML = '';
+            
+            // Show setup screen, hide others
+            setupScreen.style.display = 'block';
+            thinkingScreen.style.display = 'none';
+            revealScreen.style.display = 'none';
+            googleScreen.style.display = 'none';
+        }
+        
+        // Update speech status display
+        function updateSpeechStatus(message, statusClass = "") {
+            speechStatus.textContent = message;
+            speechStatus.className = "speech-status";
+            
+            if (statusClass) {
+                speechStatus.classList.add(statusClass);
+            }
+        }
+    </script>
+</body>
+</html> 

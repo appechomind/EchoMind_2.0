@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dual Device Mind Reader</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000000;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .card-display {
+      width: 300px;
+      height: 450px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 15px;
+    }
+
+    #status {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card-display">
+    <div class="card" id="card">
+      <img id="card-image" src="../../images/cards/back.png" alt="Playing Card">
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    const cardImage = document.getElementById('card-image');
+    const status = document.getElementById('status');
+
+    function initializeSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error('Speech recognition not supported');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = async function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        const card = await processSpeechInput(transcript);
+        
+        if (card) {
+          revealCard(card);
+        }
+      };
+
+      recognition.onerror = function(event) {
+        console.log('Speech recognition error:', event.error);
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+          if (recognition.state !== 'running') {
+            recognition.start();
+          }
+        }
+      };
+
+      recognition.onend = function() {
+        console.log('Speech recognition ended');
+        if (recognition.state !== 'running') {
+          recognition.start();
+        }
+      };
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          recognition.start();
+        })
+        .catch((error) => {
+          console.error('Microphone access denied:', error);
+        });
+    }
+
+    async function processSpeechInput(transcript) {
+      console.log('Processing speech input:', transcript);
+      
+      // Check for "back" command first
+      if (transcript.includes('back')) {
+        console.log('Back command detected');
+        return 'back';
+      }
+
+      // Check for jokers
+      if (transcript.includes('joker')) {
+        if (transcript.includes('red')) {
+          console.log('Red joker detected');
+          return 'red_joker';
+        } else if (transcript.includes('black')) {
+          console.log('Black joker detected');
+          return 'black_joker';
+        } else {
+          // Default to red joker if no color specified
+          console.log('Joker detected (defaulting to red)');
+          return 'red_joker';
+        }
+      }
+
+      const cardNames = {
+        "ace": "ace",
+        "two": "2",
+        "three": "3",
+        "four": "4",
+        "five": "5",
+        "six": "6",
+        "seven": "7",
+        "eight": "8",
+        "nine": "9",
+        "ten": "10",
+        "jack": "jack",
+        "queen": "queen",
+        "king": "king"
+      };
+      const suits = ["hearts", "spades", "diamonds", "clubs"];
+      
+      let detectedCard = null;
+      let detectedSuit = null;
+
+      transcript = transcript.toLowerCase()
+        .replace(/\b2\b/g, "two")
+        .replace(/\b3\b/g, "three")
+        .replace(/\b4\b/g, "four")
+        .replace(/\b5\b/g, "five")
+        .replace(/\b6\b/g, "six")
+        .replace(/\b7\b/g, "seven")
+        .replace(/\b8\b/g, "eight")
+        .replace(/\b9\b/g, "nine")
+        .replace(/\b10\b/g, "ten");
+
+      console.log('Processed transcript:', transcript);
+
+      for (const [word, value] of Object.entries(cardNames)) {
+        if (transcript.includes(word)) {
+          detectedCard = value;
+          console.log('Detected card:', detectedCard);
+          break;
+        }
+      }
+
+      for (const suit of suits) {
+        if (transcript.includes(suit)) {
+          detectedSuit = suit;
+          console.log('Detected suit:', detectedSuit);
+          break;
+        }
+      }
+
+      if (detectedCard && detectedSuit) {
+        const cardName = `${detectedCard}_of_${detectedSuit}`;
+        console.log('Generated card name:', cardName);
+        return cardName;
+      }
+
+      console.log('No card detected');
+      return null;
+    }
+
+    function resetEffect() {
+      // Reset card display
+      const cardImage = document.getElementById('card-image');
+      cardImage.src = '../../images/cards/back.png';
+    }
+
+    function revealCard(cardName) {
+      const cardImage = document.getElementById('card-image');
+      cardImage.src = `../../images/cards/${cardName}.png`;
+    }
+
+    // Initialize when the page loads
+    window.addEventListener('load', () => {
+      // Ensure back image is loaded
+      const img = new Image();
+      img.onload = () => {
+        console.log('Back image loaded successfully');
+        cardImage.src = '../../images/cards/back.png';
+        // Initialize speech recognition
+        initializeSpeechRecognition();
+      };
+      img.onerror = (e) => {
+        console.error('Error loading back image:', e);
+      };
+      img.src = '../../images/cards/back.png';
+    });
+  </script>
+</body>
+</html> 

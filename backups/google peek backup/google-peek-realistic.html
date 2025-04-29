@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google</title>
+  <link rel="icon" href="https://www.google.com/favicon.ico">
+  
+  <script src="../../js/core/speech-recognition.js"></script>
+  <script src="../../js/core/voice-search.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: arial, sans-serif;
+      background: #fff;
+      color: #202124;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      padding: 6px;
+      align-items: center;
+      height: 60px;
+    }
+
+    .header a {
+      margin-left: 15px;
+      color: rgba(0,0,0,.87);
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 24px;
+    }
+
+    .header a:hover {
+      text-decoration: underline;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 89px;
+    }
+
+    .logo {
+      margin-bottom: 20px;
+    }
+
+    .logo img {
+      width: 272px;
+      height: 92px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      width: 584px;
+      height: 44px;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 0 15px;
+      margin-bottom: 20px;
+      background: #fff;
+    }
+
+    .search-box:hover {
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+      border-color: rgba(223,225,229,0);
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      color: #202124;
+      background: transparent;
+      padding: 0 10px;
+    }
+
+    .mic-icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      margin-left: 10px;
+      opacity: 0.5;
+    }
+
+    .mic-icon:hover {
+      opacity: 1;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 11px;
+    }
+
+    .search-button {
+      background-color: #f8f9fa;
+      border: 1px solid #f8f9fa;
+      border-radius: 4px;
+      color: #3c4043;
+      font-size: 14px;
+      padding: 0 16px;
+      height: 36px;
+      cursor: pointer;
+      font-family: arial, sans-serif;
+    }
+
+    .search-button:hover {
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      border: 1px solid #dadce0;
+      color: #202124;
+    }
+
+    #status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      border-radius: 20px;
+      font-family: arial, sans-serif;
+      z-index: 1000;
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .search-box {
+        width: 90%;
+        max-width: 584px;
+      }
+      
+      .logo img {
+        width: 200px;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="#">Gmail</a>
+    <a href="#">Images</a>
+    <a href="#">
+      <svg focusable="false" viewBox="0 0 24 24" width="24px" height="24px">
+        <path d="M6,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM16,6c0,1.1 0.9,2 2,2s2,-0.9 2,-2 -0.9,-2 -2,-2 -2,0.9 -2,2zM12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"></path>
+      </svg>
+    </a>
+    <a href="#" style="background: #1a73e8; color: white; padding: 8px 12px; border-radius: 4px;">Sign in</a>
+  </div>
+
+  <div class="main">
+    <div class="logo">
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+    </div>
+    
+    <form action="https://www.google.com/search" method="get" class="search-form">
+      <div class="search-box">
+        <input type="text" name="q" class="search-input" placeholder="Search Google or type a URL">
+        <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" class="mic-icon" alt="Voice search">
+      </div>
+
+      <div class="buttons">
+        <button type="submit" class="search-button">Google Search</button>
+        <button type="button" class="search-button">I'm Feeling Lucky</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="status">Initializing...</div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Initializing voice search...');
+      if (VoiceSearchModule.init('status')) {
+        console.log('Voice search initialized successfully');
+      } else {
+        console.error('Voice search initialization failed');
+      }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (VoiceSearchModule.stop) {
+        VoiceSearchModule.stop();
+      }
+    });
+  </script>
+</body>
+</html> 
