@@ -4,6 +4,7 @@ const VoiceSearchModule = (function() {
     let statusElement = null;
     let searchInput = null;
     let recordingTimeout = null;
+    let recordedText = [];
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -28,13 +29,15 @@ const VoiceSearchModule = (function() {
         _updateStatus('Searching: ' + query);
         _updateSearchInput(query);
         
+        // Construct and open Google search URL
         const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-        window.open(searchUrl, '_blank');
+        window.location.href = searchUrl; // Navigate directly to the search results
     }
 
     function _startRecording() {
         _updateStatus('Recording...');
         isListening = true;
+        recordedText = [];
         
         // Clear any existing timeout
         if (recordingTimeout) {
@@ -53,6 +56,13 @@ const VoiceSearchModule = (function() {
             recordingTimeout = null;
         }
         isListening = false;
+        
+        // Perform search with recorded text
+        const searchText = recordedText.join(' ').replace('about', '').trim();
+        if (searchText) {
+            _performSearch(searchText);
+        }
+        
         _updateStatus('Listening for "about"...');
     }
 
@@ -63,11 +73,8 @@ const VoiceSearchModule = (function() {
         if (!isListening && transcript.includes('about')) {
             _startRecording();
         } else if (isListening) {
-            const searchText = transcript.replace('about', '').trim();
-            if (searchText) {
-                _performSearch(searchText);
-                _stopRecording();
-            }
+            recordedText.push(transcript);
+            _updateSearchInput(recordedText.join(' '));
         }
     }
 
