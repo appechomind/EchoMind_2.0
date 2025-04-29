@@ -43,15 +43,17 @@ const VoiceSearchModule = (function() {
                 statusElement = document.getElementById(elementId);
                 searchInput = document.querySelector('.search-input');
                 
-                if (!('webkitSpeechRecognition' in window)) {
-                    _updateStatus('Error: Please use Chrome or Edge');
+                // First initialize the speech recognition module
+                if (!SpeechRecognitionModule.init()) {
+                    _updateStatus('Error: Speech recognition not supported');
                     return false;
                 }
 
-                recognition = new webkitSpeechRecognition();
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
                 recognition.continuous = true;
                 recognition.interimResults = false;
                 recognition.lang = 'en-US';
+                recognition.maxAlternatives = 1;
 
                 recognition.onresult = _handleSpeechResult;
                 recognition.onerror = _handleSpeechError;
