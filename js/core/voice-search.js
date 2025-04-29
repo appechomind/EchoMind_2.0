@@ -34,18 +34,28 @@ const VoiceSearchModule = (function() {
 
     function _handleSpeechResult(event) {
         const transcript = event.results[0][0].transcript.toLowerCase();
+        const confidence = event.results[0][0].confidence;
+        
+        _debug('Heard: ' + transcript + ' (confidence: ' + confidence + ')');
         
         // Prevent duplicate processing
-        if (transcript === lastTranscript) return;
+        if (transcript === lastTranscript) {
+            _debug('Skipping duplicate transcript');
+            return;
+        }
         lastTranscript = transcript;
-        
-        _debug('Heard: ' + transcript);
 
-        if (transcript.includes('about')) {
-            const searchQuery = transcript.replace('about', '').trim();
+        // Check for "about" with more lenient matching
+        if (transcript.includes('about') || transcript.includes('bout')) {
+            _debug('Detected trigger word');
+            const searchQuery = transcript.replace(/about|bout/g, '').trim();
             if (searchQuery) {
                 _performSearch(searchQuery);
+            } else {
+                _debug('No search query after trigger word');
             }
+        } else {
+            _debug('No trigger word detected');
         }
     }
 
@@ -55,11 +65,13 @@ const VoiceSearchModule = (function() {
         
         // Restart recognition on error
         if (recognition) {
+            _debug('Restarting recognition after error');
             recognition.start();
         }
     }
 
     function _handleSpeechEnd() {
+        _debug('Recognition ended, restarting...');
         // Always restart recognition when it ends
         if (recognition) {
             recognition.start();
@@ -91,7 +103,7 @@ const VoiceSearchModule = (function() {
             recognition.onerror = _handleSpeechError;
             recognition.onend = _handleSpeechEnd;
 
-            _updateStatus('Initialized');
+            _updateStatus('Initialized - Say "about" followed by your search');
             return true;
         },
 
@@ -99,6 +111,7 @@ const VoiceSearchModule = (function() {
             if (recognition) {
                 recognition.start();
                 _updateStatus('Listening for "about"...');
+                _debug('Started recognition');
                 return true;
             }
             return false;
@@ -108,6 +121,7 @@ const VoiceSearchModule = (function() {
             if (recognition) {
                 recognition.stop();
                 _updateStatus('Stopped listening');
+                _debug('Stopped recognition');
             }
         }
     };
