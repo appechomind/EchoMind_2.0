@@ -1,8 +1,8 @@
 const VoiceSearchModule = (function() {
     let recognition = null;
-    let isListening = false;
     let statusElement = null;
     let searchInput = null;
+    let lastTranscript = '';
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -31,11 +31,22 @@ const VoiceSearchModule = (function() {
         const searchButton = document.querySelector('input[value="Google Search"]');
         if (searchButton) {
             searchButton.click();
+        } else {
+            // Fallback to form submission if button not found
+            const searchForm = document.querySelector('form[action="/search"]');
+            if (searchForm) {
+                searchForm.submit();
+            }
         }
     }
 
     function _handleSpeechResult(event) {
         const transcript = event.results[0][0].transcript.toLowerCase();
+        
+        // Prevent duplicate processing
+        if (transcript === lastTranscript) return;
+        lastTranscript = transcript;
+        
         _debug('Heard: ' + transcript);
 
         if (transcript.includes('about')) {
@@ -49,10 +60,18 @@ const VoiceSearchModule = (function() {
     function _handleSpeechError(event) {
         _debug('Error: ' + event.error);
         _updateStatus('Error: ' + event.error);
+        
+        // Restart recognition on error
+        if (recognition) {
+            recognition.start();
+        }
     }
 
     function _handleSpeechEnd() {
-        recognition.start();
+        // Always restart recognition when it ends
+        if (recognition) {
+            recognition.start();
+        }
     }
 
     return {
@@ -74,6 +93,7 @@ const VoiceSearchModule = (function() {
             recognition.continuous = true;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
+            recognition.maxAlternatives = 1;
 
             recognition.onresult = _handleSpeechResult;
             recognition.onerror = _handleSpeechError;
