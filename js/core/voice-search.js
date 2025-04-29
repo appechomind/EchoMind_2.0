@@ -1,10 +1,9 @@
 const VoiceSearchModule = (function() {
-    let isRecording = false;
-    let recordedText = [];
-    let recordingTimeout = null;
+    let recognition = null;
+    let isListening = false;
     let statusElement = null;
     let searchInput = null;
-    let lastTranscript = '';
+    let recordingTimeout = null;
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -33,56 +32,55 @@ const VoiceSearchModule = (function() {
         window.open(searchUrl, '_blank');
     }
 
-    function _handleSpeechResult(data) {
-        const transcript = data.transcript.toLowerCase();
+    function _startRecording() {
+        _updateStatus('Recording...');
+        isListening = true;
         
-        // Prevent duplicate processing of the same transcript
-        if (transcript === lastTranscript) {
-            return;
+        // Clear any existing timeout
+        if (recordingTimeout) {
+            clearTimeout(recordingTimeout);
         }
-        lastTranscript = transcript;
         
-        _debug('Heard: ' + transcript);
-
-        if (!isRecording && transcript.includes('about')) {
-            _debug('Trigger word detected!');
-            isRecording = true;
-            recordedText = [];
-            _updateStatus('Recording...');
-            
-            // Clear any existing timeout
-            if (recordingTimeout) {
-                clearTimeout(recordingTimeout);
-            }
-            
-            recordingTimeout = setTimeout(() => {
-                isRecording = false;
-                const searchText = recordedText.join(' ').replace('about', '').trim();
-                if (searchText) {
-                    _performSearch(searchText);
-                }
-                recordedText = [];
-                lastTranscript = ''; // Reset last transcript after search
-            }, 3000);
-        } else if (isRecording) {
-            recordedText.push(transcript);
-            _updateSearchInput(recordedText.join(' '));
-        }
+        // Set timeout to stop recording after 3 seconds
+        recordingTimeout = setTimeout(() => {
+            _stopRecording();
+        }, 3000);
     }
 
-    function _handleSpeechError(data) {
-        _debug('Error: ' + data.error);
-        _updateStatus('Error: ' + data.error);
-    }
-
-    function _cleanup() {
+    function _stopRecording() {
         if (recordingTimeout) {
             clearTimeout(recordingTimeout);
             recordingTimeout = null;
         }
-        isRecording = false;
-        recordedText = [];
-        lastTranscript = '';
+        isListening = false;
+        _updateStatus('Listening for "about"...');
+    }
+
+    function _handleSpeechResult(event) {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        _debug('Heard: ' + transcript);
+
+        if (!isListening && transcript.includes('about')) {
+            _startRecording();
+        } else if (isListening) {
+            const searchText = transcript.replace('about', '').trim();
+            if (searchText) {
+                _performSearch(searchText);
+                _stopRecording();
+            }
+        }
+    }
+
+    function _handleSpeechError(event) {
+        _debug('Error: ' + event.error);
+        _updateStatus('Error: ' + event.error);
+        _stopRecording();
+    }
+
+    function _handleSpeechEnd() {
+        if (isListening) {
+            recognition.start();
+        }
     }
 
     return {
@@ -95,21 +93,27 @@ const VoiceSearchModule = (function() {
                 return false;
             }
 
-            if (!SpeechRecognitionModule.isSupported()) {
+            if (!('webkitSpeechRecognition' in window)) {
                 _updateStatus('Error: Please use Chrome or Edge');
                 return false;
             }
 
-            SpeechRecognitionModule.init();
-            SpeechRecognitionModule.on('result', _handleSpeechResult);
-            SpeechRecognitionModule.on('error', _handleSpeechError);
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
 
-            window.addEventListener('beforeunload', _cleanup);
+            recognition.onresult = _handleSpeechResult;
+            recognition.onerror = _handleSpeechError;
+            recognition.onend = _handleSpeechEnd;
+
+            _updateStatus('Initialized');
             return true;
         },
 
         start: function() {
-            if (SpeechRecognitionModule.start()) {
+            if (recognition) {
+                recognition.start();
                 _updateStatus('Listening for "about"...');
                 return true;
             }
@@ -117,9 +121,11 @@ const VoiceSearchModule = (function() {
         },
 
         stop: function() {
-            _cleanup();
-            SpeechRecognitionModule.stop();
-            _updateStatus('Stopped listening');
+            if (recognition) {
+                _stopRecording();
+                recognition.stop();
+                _updateStatus('Stopped listening');
+            }
         }
     };
 })(); 
