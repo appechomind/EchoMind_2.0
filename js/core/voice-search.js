@@ -4,6 +4,7 @@ const VoiceSearchModule = (function() {
     let recordingTimeout = null;
     let statusElement = null;
     let searchInput = null;
+    let lastTranscript = '';
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -34,6 +35,13 @@ const VoiceSearchModule = (function() {
 
     function _handleSpeechResult(data) {
         const transcript = data.transcript.toLowerCase();
+        
+        // Prevent duplicate processing of the same transcript
+        if (transcript === lastTranscript) {
+            return;
+        }
+        lastTranscript = transcript;
+        
         _debug('Heard: ' + transcript);
 
         if (!isRecording && transcript.includes('about')) {
@@ -42,6 +50,11 @@ const VoiceSearchModule = (function() {
             recordedText = [];
             _updateStatus('Recording...');
             
+            // Clear any existing timeout
+            if (recordingTimeout) {
+                clearTimeout(recordingTimeout);
+            }
+            
             recordingTimeout = setTimeout(() => {
                 isRecording = false;
                 const searchText = recordedText.join(' ').replace('about', '').trim();
@@ -49,6 +62,7 @@ const VoiceSearchModule = (function() {
                     _performSearch(searchText);
                 }
                 recordedText = [];
+                lastTranscript = ''; // Reset last transcript after search
             }, 3000);
         } else if (isRecording) {
             recordedText.push(transcript);
@@ -68,6 +82,7 @@ const VoiceSearchModule = (function() {
         }
         isRecording = false;
         recordedText = [];
+        lastTranscript = '';
     }
 
     return {
