@@ -1,6 +1,7 @@
 const VoiceSearchModule = (function() {
     let recognition = null;
     let statusElement = null;
+    let searchInput = null;
 
     function _updateStatus(message) {
         if (statusElement) {
@@ -9,7 +10,12 @@ const VoiceSearchModule = (function() {
     }
 
     function _performSearch(query) {
-        window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+        if (searchInput) {
+            searchInput.value = query;
+            setTimeout(() => {
+                searchInput.form.submit();
+            }, 3000);
+        }
     }
 
     function _handleSpeechResult(event) {
@@ -31,6 +37,7 @@ const VoiceSearchModule = (function() {
     return {
         init: function(elementId) {
             statusElement = document.getElementById(elementId);
+            searchInput = document.querySelector('.search-input');
             recognition = new webkitSpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = false;
