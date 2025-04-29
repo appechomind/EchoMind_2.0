@@ -208,10 +208,12 @@
       }
       
       const transcript = data.finalTranscript.toLowerCase().trim();
+      console.log('Received transcript:', transcript);
 
       // If we're recording, process the search query
       if (isRecording) {
         recordedText.push(transcript);
+        console.log('Recording in progress:', recordedText);
         
         // For mobile, restart recognition after each result
         if (isMobile) {
@@ -226,6 +228,7 @@
 
       // Check for trigger word
       if (transcript.includes(triggerWord)) {
+        console.log('Trigger word detected:', triggerWord);
         // Get any text after the trigger word
         const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
         const initialText = transcript.slice(startIndex).trim();
@@ -241,9 +244,11 @@
 
         // Start recording immediately
         isRecording = true;
+        console.log('Started recording');
         
         // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
+          console.log('Processing recording after timeout');
           processRecording();
         }, recordingDuration);
       }
@@ -270,13 +275,7 @@
       if (searchQuery) {
         // Execute search immediately
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-        if (isMobile) {
-          // On mobile, open in same tab
-          window.location.href = searchUrl;
-        } else {
-          // On desktop, open in new tab
-          window.open(searchUrl, '_blank');
-        }
+        window.location.href = searchUrl;
       }
 
       // Reset state
@@ -690,10 +689,12 @@
       }
       
       const transcript = data.finalTranscript.toLowerCase().trim();
+      console.log('Received transcript:', transcript);
 
       // If we're recording, process the search query
       if (isRecording) {
         recordedText.push(transcript);
+        console.log('Recording in progress:', recordedText);
         
         // For mobile, restart recognition after each result
         if (isMobile) {
@@ -708,6 +709,7 @@
 
       // Check for trigger word
       if (transcript.includes(triggerWord)) {
+        console.log('Trigger word detected:', triggerWord);
         // Get any text after the trigger word
         const startIndex = transcript.indexOf(triggerWord) + triggerWord.length;
         const initialText = transcript.slice(startIndex).trim();
@@ -723,9 +725,11 @@
 
         // Start recording immediately
         isRecording = true;
+        console.log('Started recording');
         
         // Set timeout to process recording after 3 seconds
         processingTimeout = setTimeout(() => {
+          console.log('Processing recording after timeout');
           processRecording();
         }, recordingDuration);
       }
@@ -752,13 +756,7 @@
       if (searchQuery) {
         // Execute search immediately
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-        if (isMobile) {
-          // On mobile, open in same tab
-          window.location.href = searchUrl;
-        } else {
-          // On desktop, open in new tab
-          window.open(searchUrl, '_blank');
-        }
+        window.location.href = searchUrl;
       }
 
       // Reset state
