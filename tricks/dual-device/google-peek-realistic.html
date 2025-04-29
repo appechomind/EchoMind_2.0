@@ -30,11 +30,60 @@
           throw new Error('Failed to load core scripts');
         }
         console.log('All scripts loaded successfully');
+        // Initialize microphone after scripts are loaded
+        initializeMicrophone();
       } catch (error) {
         console.error('Error loading scripts:', error);
         handleScriptError(error);
         // Fall back to native Web Speech API
         initializeWebSpeechAPI();
+      }
+    }
+
+    // Initialize microphone
+    async function initializeMicrophone() {
+      try {
+        const micButton = document.querySelector('.mic-icon');
+        if (!micButton) return;
+
+        // Request microphone permission immediately
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Update UI to show microphone is ready
+        micButton.style.opacity = '1';
+        micButton.title = 'Click to start voice search';
+        updateStatus('Microphone ready', 'listening');
+        
+        // Add click handler for voice search
+        micButton.addEventListener('click', startVoiceSearch);
+        
+      } catch (error) {
+        console.error('Microphone permission error:', error);
+        updateStatus('Please allow microphone access', 'error');
+        const micButton = document.querySelector('.mic-icon');
+        if (micButton) {
+          micButton.style.opacity = '0.6';
+          micButton.title = 'Click to enable microphone';
+        }
+      }
+    }
+
+    // Start voice search
+    async function startVoiceSearch() {
+      try {
+        // Request microphone permission again to ensure it's still granted
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Initialize speech recognition
+        initializeSpeechRecognition();
+        updateStatus('Listening...', 'listening');
+        updateMicIcon(true);
+      } catch (error) {
+        console.error('Voice search error:', error);
+        updateStatus('Please allow microphone access', 'error');
+        updateMicIcon(false);
       }
     }
 
@@ -66,44 +115,6 @@
       recordingDuration: 3000,
       lang: 'en-US'
     };
-
-    // Initialize when the page loads
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const micButton = document.querySelector('.mic-icon');
-        if (micButton) {
-          micButton.addEventListener('click', async () => {
-            try {
-              // First try to get microphone permission
-              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              stream.getTracks().forEach(track => track.stop());
-              
-              // Then initialize speech recognition
-              initializeSpeechRecognition();
-              updateStatus('Microphone permission granted', 'listening');
-              updateMicIcon(true);
-            } catch (error) {
-              console.error('Permission error:', error);
-              updateStatus('Please allow microphone access to use voice search', 'error');
-              updateMicIcon(false);
-              
-              // Show a more detailed error message for mobile
-              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                alert('Please enable microphone access in your browser settings to use voice search.');
-              }
-            }
-          });
-          
-          // Add visual indicator that mic needs permission
-          micButton.style.opacity = '0.6';
-          micButton.title = 'Click to enable microphone';
-        }
-      } catch (error) {
-        console.error('Initialization error:', error);
-        updateStatus('Error: ' + error.message, 'error');
-        updateMicIcon(false);
-      }
-    });
 
     // Initialize speech recognition
     function initializeSpeechRecognition() {
@@ -140,9 +151,6 @@
         if (event.error === 'not-allowed') {
           state.permissionRequested = false;
           updateStatus('Microphone access denied. Please allow access to use voice search.', 'error');
-          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            alert('Please enable microphone access in your browser settings to use voice search.');
-          }
         }
       };
 
