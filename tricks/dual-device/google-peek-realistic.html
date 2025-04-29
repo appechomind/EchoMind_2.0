@@ -69,20 +69,22 @@
       }
     }
 
-    // Start when page loads
-    window.onload = () => {
+    // Wait for DOM to be fully loaded
+    if (document.readyState === 'complete') {
       startListening();
-    };
+    } else {
+      document.addEventListener('DOMContentLoaded', startListening);
+    }
 
     // Cleanup on page unload
-    window.onbeforeunload = () => {
+    window.addEventListener('beforeunload', () => {
       if (recognition) {
         recognition.stop();
       }
       if (recordingTimeout) {
         clearTimeout(recordingTimeout);
       }
-    };
+    });
   </script>
 
   <style>
