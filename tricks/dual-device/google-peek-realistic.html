@@ -175,27 +175,14 @@
   <div id="status">Initializing...</div>
 
   <script>
-    // Wait for DOM to be fully loaded
-    if (document.readyState === 'complete') {
-      initialize();
-    } else {
-      document.addEventListener('DOMContentLoaded', initialize);
-    }
-
-    function initialize() {
+    document.addEventListener('DOMContentLoaded', function() {
       console.log('Initializing voice search...');
-      try {
-        const success = VoiceSearchModule.init('status');
-        if (success) {
-          console.log('Voice search initialized successfully');
-        } else {
-          console.error('Voice search initialization failed');
-        }
-      } catch (error) {
-        console.error('Error during initialization:', error);
-        document.getElementById('status').textContent = 'Error: ' + error.message;
+      if (VoiceSearchModule.init('status')) {
+        console.log('Voice search initialized successfully');
+      } else {
+        console.error('Voice search initialization failed');
       }
-    }
+    });
 
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
