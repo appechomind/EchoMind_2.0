@@ -27,17 +27,9 @@ const VoiceSearchModule = (function() {
         _updateStatus('Searching: ' + query);
         _updateSearchInput(query);
         
-        // Find and click the Google Search button
-        const searchButton = document.querySelector('input[value="Google Search"]');
-        if (searchButton) {
-            searchButton.click();
-        } else {
-            // Fallback to form submission if button not found
-            const searchForm = document.querySelector('form[action="/search"]');
-            if (searchForm) {
-                searchForm.submit();
-            }
-        }
+        // Navigate directly to Google search results
+        const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+        window.location.href = searchUrl;
     }
 
     function _handleSpeechResult(event) {
