@@ -43,4 +43,7 @@ node_modules/
 .env.production.local
 
 # Transcripts and temporary files
-*_transcript_*.txt 
+*_transcript_*.txt
+
+# Backup files
+backups/*.zip 
