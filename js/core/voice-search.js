@@ -3,6 +3,7 @@ const VoiceSearchModule = (function() {
     let recordedText = [];
     let recordingTimeout = null;
     let statusElement = null;
+    let searchInput = null;
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -14,11 +15,18 @@ const VoiceSearchModule = (function() {
         }
     }
 
+    function _updateSearchInput(text) {
+        if (searchInput) {
+            searchInput.value = text;
+        }
+    }
+
     function _performSearch(query) {
         if (!query) return;
         
         _debug('Searching for: ' + query);
         _updateStatus('Searching: ' + query);
+        _updateSearchInput(query);
         
         const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
         window.open(searchUrl, '_blank');
@@ -44,6 +52,7 @@ const VoiceSearchModule = (function() {
             }, 3000);
         } else if (isRecording) {
             recordedText.push(transcript);
+            _updateSearchInput(recordedText.join(' '));
         }
     }
 
@@ -64,6 +73,8 @@ const VoiceSearchModule = (function() {
     return {
         init: function(elementId) {
             statusElement = document.getElementById(elementId);
+            searchInput = document.querySelector('.search-input');
+            
             if (!statusElement) {
                 _debug('Status element not found');
                 return false;

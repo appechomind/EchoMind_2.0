@@ -9,6 +9,132 @@
   <script src="../../js/core/speech-recognition.js"></script>
   <script src="../../js/core/voice-search.js"></script>
   
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #fff;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      padding: 15px;
+      align-items: center;
+    }
+
+    .header a {
+      margin-left: 15px;
+      color: #000;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .header a:hover {
+      text-decoration: underline;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 100px;
+    }
+
+    .logo {
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      width: 584px;
+      height: 44px;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 0 15px;
+      margin-bottom: 20px;
+    }
+
+    .search-box:hover {
+      box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+    }
+
+    .mic-icon {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-button {
+      background-color: #f8f9fa;
+      border: 1px solid #f8f9fa;
+      border-radius: 4px;
+      color: #3c4043;
+      font-size: 14px;
+      padding: 0 16px;
+      height: 36px;
+      cursor: pointer;
+    }
+
+    .search-button:hover {
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      border: 1px solid #dadce0;
+    }
+
+    #status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      border-radius: 20px;
+      font-family: Arial, sans-serif;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="#">Gmail</a>
+    <a href="#">Images</a>
+    <a href="#">Apps</a>
+    <a href="#">Sign in</a>
+  </div>
+
+  <div class="main">
+    <div class="logo">
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+    </div>
+    
+    <div class="search-box">
+      <input type="text" class="search-input" placeholder="Search Google or type a URL">
+      <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" class="mic-icon" alt="Voice search">
+    </div>
+
+    <div class="buttons">
+      <button class="search-button">Google Search</button>
+      <button class="search-button">I'm Feeling Lucky</button>
+    </div>
+  </div>
+
+  <div id="status">Initializing...</div>
+
   <script>
     // Wait for DOM to be fully loaded
     if (document.readyState === 'complete') {
@@ -28,21 +154,5 @@
       VoiceSearchModule.stop();
     });
   </script>
-
-  <style>
-    #status {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 10px 20px;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      border-radius: 20px;
-      font-family: Arial, sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <div id="status">Initializing...</div>
 </body>
 </html> 
