@@ -1,9 +1,13 @@
+import { VoiceCommandTrick } from '../tricks/dual-device/VoiceCommandTrick.js';
+
 class App {
     constructor() {
         this.tricks = new Map();
         this.currentTrick = null;
+        this.voiceEnabled = false;
         this.setupBaseUI();
         this.loadTricks();
+        this.initializeVoice();
     }
 
     setupBaseUI() {
@@ -11,6 +15,9 @@ class App {
         this.userInput = document.getElementById('user-input');
         this.sendButton = document.getElementById('send-button');
         this.trickSelector = document.getElementById('trick-selector');
+        this.voiceToggle = document.getElementById('voice-toggle');
+        this.voiceStatus = document.getElementById('voice-status');
+        this.connectionStatus = document.getElementById('connection-status');
         
         this.setupEventListeners();
     }
@@ -23,13 +30,21 @@ class App {
         this.trickSelector.addEventListener('change', (e) => {
             this.switchTrick(e.target.value);
         });
+        this.voiceToggle.addEventListener('click', () => this.toggleVoice());
     }
 
     async loadTricks() {
-        // Load tricks dynamically
-        const trickModules = await import('./tricks/index.js');
-        for (const [name, module] of Object.entries(trickModules)) {
-            this.registerTrick(name, module);
+        try {
+            // Load tricks dynamically
+            const trickModules = await import('./tricks/index.js');
+            for (const [name, module] of Object.entries(trickModules)) {
+                this.registerTrick(name, module);
+            }
+            
+            // Add VoiceCommandTrick by default
+            this.registerTrick('voice', VoiceCommandTrick);
+        } catch (error) {
+            this.addMessage('error', 'Failed to load tricks: ' + error.message);
         }
     }
 
@@ -46,51 +61,72 @@ class App {
             this.currentTrick.deactivate();
         }
         
-        const trick = this.tricks.get(trickName);
-        if (trick) {
-            this.currentTrick = trick;
-            trick.activate();
-            this.updateUIForTrick(trick);
+        const TrickClass = this.tricks.get(trickName);
+        if (TrickClass) {
+            this.currentTrick = new TrickClass(this);
+            this.currentTrick.activate();
+            this.updateUIForTrick(this.currentTrick);
         }
     }
 
     updateUIForTrick(trick) {
-        // Update UI elements based on trick requirements
         this.userInput.placeholder = trick.inputPlaceholder || 'Type your message...';
-        this.chatBox.innerHTML = '';
+        this.userInput.disabled = false;
     }
 
     async handleMessage() {
-        if (!this.currentTrick) return;
-        
         const message = this.userInput.value.trim();
         if (!message) return;
 
         this.addMessage('user', message);
         this.userInput.value = '';
-        this.userInput.disabled = true;
-        this.sendButton.disabled = true;
 
-        try {
-            const response = await this.currentTrick.processMessage(message);
-            this.addMessage('ai', response);
-        } catch (error) {
-            this.addMessage('error', 'Sorry, there was an error processing your request.');
-            console.error('Error:', error);
-        } finally {
-            this.userInput.disabled = false;
-            this.sendButton.disabled = false;
-            this.userInput.focus();
+        if (this.currentTrick) {
+            try {
+                await this.currentTrick.processMessage(message);
+            } catch (error) {
+                this.addMessage('error', 'Error processing message: ' + error.message);
+            }
         }
     }
 
     addMessage(type, content) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}-message`;
-        messageDiv.innerHTML = `<b>${type === 'user' ? 'You' : 'EchoMind'}:</b> ${content}`;
+        messageDiv.textContent = content;
         this.chatBox.appendChild(messageDiv);
         this.chatBox.scrollTop = this.chatBox.scrollHeight;
     }
+
+    initializeVoice() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            this.voiceStatus.innerHTML = '<i class="fas fa-microphone-slash"></i> Voice Available';
+        } else {
+            this.voiceStatus.innerHTML = '<i class="fas fa-microphone-slash"></i> Voice Not Supported';
+            this.voiceToggle.disabled = true;
+        }
+    }
+
+    toggleVoice() {
+        this.voiceEnabled = !this.voiceEnabled;
+        this.voiceToggle.classList.toggle('active', this.voiceEnabled);
+        
+        if (this.voiceEnabled) {
+            this.voiceStatus.innerHTML = '<i class="fas fa-microphone"></i> Voice Active';
+            this.switchTrick('voice');
+        } else {
+            this.voiceStatus.innerHTML = '<i class="fas fa-microphone-slash"></i> Voice Disabled';
+            if (this.currentTrick instanceof VoiceCommandTrick) {
+                this.trickSelector.value = '';
+                this.switchTrick('');
+            }
+        }
+    }
 }
+
+// Initialize the app when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new App();
+});
 
 export default App; 

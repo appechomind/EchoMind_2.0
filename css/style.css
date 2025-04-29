@@ -1,8 +1,11 @@
 :root {
-    --primary-color: #4a90e2;
-    --secondary-color: #f5f5f5;
-    --text-color: #333;
-    --border-color: #ddd;
+    --primary-color: #6c5ce7;
+    --secondary-color: #a29bfe;
+    --background-color: #f5f6fa;
+    --text-color: #2d3436;
+    --border-color: #dfe6e9;
+    --success-color: #00b894;
+    --error-color: #d63031;
     --header-height: 80px;
 }
 
@@ -13,53 +16,78 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    line-height: 1.6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
     color: var(--text-color);
-    background-color: var(--secondary-color);
+    line-height: 1.6;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.chat-container {
-    width: 90%;
+.app-container {
     max-width: 800px;
-    height: 90vh;
+    margin: 2rem auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    height: 80vh;
 }
 
-header {
+.app-header {
     padding: 1rem;
-    background-color: var(--primary-color);
+    background: var(--primary-color);
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-h1 {
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo-container i {
     font-size: 1.5rem;
-    margin: 0;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 .trick-selector {
     padding: 0.5rem;
+    border-radius: 6px;
     border: none;
-    border-radius: 4px;
-    background-color: white;
-    color: var(--text-color);
-    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
     cursor: pointer;
 }
 
-main {
+.voice-toggle {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.voice-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -71,84 +99,97 @@ main {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    background-color: var(--secondary-color);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .message {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
+    padding: 0.8rem;
     border-radius: 8px;
     max-width: 80%;
-    word-wrap: break-word;
 }
 
 .user-message {
-    background-color: var(--primary-color);
+    background: var(--primary-color);
     color: white;
-    margin-left: auto;
+    align-self: flex-end;
 }
 
-.ai-message {
-    background-color: white;
-    border: 1px solid var(--border-color);
-    margin-right: auto;
-}
-
-.error-message {
-    background-color: #ffebee;
-    color: #c62828;
-    text-align: center;
-    margin: 0 auto;
+.assistant-message {
+    background: var(--background-color);
+    color: var(--text-color);
+    align-self: flex-start;
 }
 
 .input-container {
-    display: flex;
-    gap: 0.5rem;
     padding: 1rem;
-    background-color: white;
     border-top: 1px solid var(--border-color);
 }
 
-input[type="text"] {
+.input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#user-input {
     flex: 1;
-    padding: 0.75rem;
+    padding: 0.8rem;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 1rem;
-    transition: border-color 0.2s;
 }
 
-input[type="text"]:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-button {
-    padding: 0.75rem 1.5rem;
-    background-color: var(--primary-color);
+.send-button {
+    background: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 4px;
+    padding: 0.8rem 1.2rem;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s;
+    transition: background-color 0.3s;
 }
 
-button:hover {
-    background-color: #357abd;
+.send-button:hover {
+    background: var(--secondary-color);
 }
 
-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+.status-bar {
+    padding: 0.5rem;
+    background: var(--background-color);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
 }
 
-input:disabled {
-    background-color: var(--secondary-color);
-    cursor: not-allowed;
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.status-indicator i {
+    font-size: 0.6rem;
+}
+
+.status-indicator.connected i {
+    color: var(--success-color);
+}
+
+.status-indicator.disconnected i {
+    color: var(--error-color);
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.voice-toggle.active {
+    animation: pulse 1.5s infinite;
+    background: var(--success-color);
 }
 
 /* Card-based Mind Reading Styles */
@@ -197,12 +238,6 @@ input:disabled {
 .voice-status.listening {
     color: var(--primary-color);
     animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
 }
 
 /* Google Peek Styles */
