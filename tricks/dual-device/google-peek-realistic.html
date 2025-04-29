@@ -6,16 +6,6 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
   
-  <!-- Load EchoMind modules in correct order -->
-  <script src="../../js/core/echomind-nlp.js"></script>
-  <script src="../../js/core/echomind-ml.js"></script>
-  <script src="../../js/core/echomind-knowledge.js"></script>
-  <script src="../../js/core/language-model.js"></script>
-  <script src="../../js/core/echomind-core.js"></script>
-  <script src="../../js/core/echomind-permissions.js"></script>
-  <script src="../../js/core/echomind-speech.js"></script>
-  <script src="../../js/core/mind-reader.js"></script>
-  
   <script>
     // State management
     const state = {
@@ -38,41 +28,33 @@
     // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // Check if we already have permission
-        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-        
-        if (permissionStatus.state === 'granted') {
-          initializeSpeechRecognition();
-        } else {
-          // Request permission with a user-friendly message
-          const micButton = document.querySelector('.mic-icon');
-          if (micButton) {
-            micButton.addEventListener('click', async () => {
-              try {
-                // First try to get microphone permission
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(track => track.stop());
-                
-                // Then initialize speech recognition
-                initializeSpeechRecognition();
-                updateStatus('Microphone permission granted', 'listening');
-                updateMicIcon(true);
-              } catch (error) {
-                console.error('Permission error:', error);
-                updateStatus('Please allow microphone access to use voice search', 'error');
-                updateMicIcon(false);
-                
-                // Show a more detailed error message for mobile
-                if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                  alert('Please enable microphone access in your browser settings to use voice search.');
-                }
+        const micButton = document.querySelector('.mic-icon');
+        if (micButton) {
+          micButton.addEventListener('click', async () => {
+            try {
+              // First try to get microphone permission
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              stream.getTracks().forEach(track => track.stop());
+              
+              // Then initialize speech recognition
+              initializeSpeechRecognition();
+              updateStatus('Microphone permission granted', 'listening');
+              updateMicIcon(true);
+            } catch (error) {
+              console.error('Permission error:', error);
+              updateStatus('Please allow microphone access to use voice search', 'error');
+              updateMicIcon(false);
+              
+              // Show a more detailed error message for mobile
+              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                alert('Please enable microphone access in your browser settings to use voice search.');
               }
-            });
-            
-            // Add visual indicator that mic needs permission
-            micButton.style.opacity = '0.6';
-            micButton.title = 'Click to enable microphone';
-          }
+            }
+          });
+          
+          // Add visual indicator that mic needs permission
+          micButton.style.opacity = '0.6';
+          micButton.title = 'Click to enable microphone';
         }
       } catch (error) {
         console.error('Initialization error:', error);
@@ -83,9 +65,17 @@
 
     // Initialize speech recognition
     function initializeSpeechRecognition() {
+      if (!state.permissionRequested) {
+        return;
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         throw new Error('Speech recognition not supported');
+      }
+
+      if (state.recognition) {
+        state.recognition.stop();
       }
 
       const recognition = new SpeechRecognition();
@@ -97,6 +87,7 @@
         console.log('Speech recognition started');
         updateStatus('Listening...', 'listening');
         updateMicIcon(true);
+        state.isInitialized = true;
       };
 
       recognition.onerror = (event) => {
@@ -104,21 +95,12 @@
         updateStatus('Error: ' + event.error, 'error');
         updateMicIcon(false);
         
-        // Handle specific errors
         if (event.error === 'not-allowed') {
+          state.permissionRequested = false;
           updateStatus('Microphone access denied. Please allow access to use voice search.', 'error');
           if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
             alert('Please enable microphone access in your browser settings to use voice search.');
           }
-        }
-        
-        // Try to restart on error
-        if (event.error !== 'no-speech' && event.error !== 'aborted') {
-          setTimeout(() => {
-            if (state.isInitialized) {
-              recognition.start();
-            }
-          }, 1000);
         }
       };
 
@@ -160,15 +142,26 @@
       recognition.onend = () => {
         console.log('Speech recognition ended');
         updateMicIcon(false);
-        if (state.isRecording) {
-          recognition.start();
+        
+        // Restart recognition if we're still recording
+        if (state.isRecording || state.isInitialized) {
+          try {
+            recognition.start();
+          } catch (error) {
+            console.error('Failed to restart recognition:', error);
+          }
         }
       };
 
       // Start recognition
-      recognition.start();
-      state.recognition = recognition;
-      state.isInitialized = true;
+      try {
+        recognition.start();
+        state.recognition = recognition;
+        state.permissionRequested = true;
+      } catch (error) {
+        console.error('Failed to start recognition:', error);
+        updateStatus('Error starting recognition. Please try again.', 'error');
+      }
     }
 
     // Start recording
