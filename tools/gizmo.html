@@ -6,28 +6,40 @@
     <title>Gizmo - AI Assistant</title>
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="css/gizmo.css">
+    <link rel="stylesheet" href="css/image-gallery.css">
+    <script src="js/gizmo/gizmo-local-ai.js"></script>
+    <script src="js/gizmo/gizmo-image-gallery.js"></script>
+    <script src="js/gizmo/gizmo-chat.js"></script>
 </head>
 <body>
     <div class="gizmo-container">
         <div class="chat-container">
-            <div class="chat-messages" id="chatMessages"></div>
+            <div class="local-ai-header">
+                <img src="images/gizmo-icon.png" alt="Gizmo" class="local-ai-icon">
+                <h3 class="local-ai-title">Chat with Gizmo</h3>
+            </div>
+            <div class="chat-messages" id="local-ai-messages"></div>
             <div class="chat-input-container">
-                <textarea id="userInput" placeholder="Ask me anything..." rows="3"></textarea>
+                <textarea id="local-ai-input" placeholder="Ask Gizmo anything..." rows="3"></textarea>
                 <div class="input-buttons">
                     <button id="uploadImage" class="action-button">
                         <span class="icon">📷</span>
                         Upload Image
                     </button>
-                    <button id="sendMessage" class="action-button primary">
+                    <button id="local-ai-send" class="action-button primary">
                         <span class="icon">➤</span>
                         Send
                     </button>
                 </div>
             </div>
         </div>
-        <div class="image-gallery" id="imageGallery">
-            <h3>Image Gallery</h3>
-            <div class="gallery-grid" id="galleryGrid"></div>
+        
+        <div class="image-gallery">
+            <div class="gallery-header">
+                <h3>Generated Images</h3>
+                <button id="refresh-gallery">Refresh</button>
+            </div>
+            <div id="gallery-container" class="gallery-grid"></div>
         </div>
     </div>
 
@@ -38,12 +50,30 @@
     <script src="js/gizmo/gizmo-nlp.js"></script>
     <script src="js/gizmo/gizmo-knowledge.js"></script>
     <script src="js/gizmo/gizmo-ui.js"></script>
-    <script src="js/gizmo/gizmo-local-ai.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Gizmo
             GizmoUI.init();
             GizmoLocalAI.init();
+
+            // Initialize Gizmo's local AI chat
+            const gizmoAI = new GizmoLocalAI({
+                messageContainer: document.getElementById('local-ai-messages'),
+                inputField: document.getElementById('local-ai-input'),
+                sendButton: document.getElementById('local-ai-send')
+            });
+
+            // Initialize image gallery
+            const gallery = new GizmoImageGallery({
+                container: document.getElementById('gallery-container'),
+                refreshButton: document.getElementById('refresh-gallery')
+            });
+
+            // Initialize chat functionality
+            const chat = new GizmoChat({
+                aiComponent: gizmoAI,
+                galleryComponent: gallery
+            });
         });
     </script>
 </body>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech Recognition Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 20px 0;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .active {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .inactive {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .result {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      min-height: 100px;
+    }
+    .interim {
+      color: #999;
+    }
+    .final {
+      color: #333;
+      font-weight: bold;
+    }
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .note {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 10px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    #browser-support {
+      margin-top: 20px;
+      padding: 10px;
+      text-align: center;
+    }
+    .supported {
+      color: #155724;
+    }
+    .unsupported {
+      color: #721c24;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Speech Recognition Test</h1>
+  
+  <div id="browser-support"></div>
+  
+  <div class="status inactive" id="status">Speech recognition inactive</div>
+  
+  <button id="toggleButton">Start Listening</button>
+  
+  <div class="result">
+    <div>Interim result: <span id="interimResult" class="interim">None yet</span></div>
+    <div>Final result: <span id="finalResult" class="final">None yet</span></div>
+  </div>
+  
+  <div class="note">
+    <strong>Note:</strong> This is a test page for the Speech Recognition API. Speak into your microphone and your speech will be converted to text. The browser will ask for microphone permission when you start listening.
+  </div>
+  
+  <script>
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const browserSupportDiv = document.getElementById('browser-support');
+    
+    if (!SpeechRecognition) {
+      browserSupportDiv.innerHTML = '<span class="unsupported">Your browser does not support Speech Recognition.</span>';
+      document.getElementById('toggleButton').disabled = true;
+    } else {
+      browserSupportDiv.innerHTML = '<span class="supported">Your browser supports Speech Recognition!</span>';
+    }
+    
+    // Set up speech recognition
+    let recognition = null;
+    let isListening = false;
+    
+    const toggleButton = document.getElementById('toggleButton');
+    const statusDiv = document.getElementById('status');
+    const interimResultSpan = document.getElementById('interimResult');
+    const finalResultSpan = document.getElementById('finalResult');
+    
+    function startRecognition() {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onstart = function() {
+        isListening = true;
+        statusDiv.textContent = 'Listening...';
+        statusDiv.className = 'status active';
+        toggleButton.textContent = 'Stop Listening';
+      };
+      
+      recognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        
+        interimResultSpan.textContent = interimTranscript;
+        if (finalTranscript !== '') {
+          finalResultSpan.textContent = finalTranscript;
+        }
+      };
+      
+      recognition.onerror = function(event) {
+        console.error('Speech recognition error', event.error);
+        statusDiv.textContent = 'Error: ' + event.error;
+        statusDiv.className = 'status inactive';
+      };
+      
+      recognition.onend = function() {
+        if (isListening) {
+          // If we still want to be listening, restart
+          recognition.start();
+        } else {
+          statusDiv.textContent = 'Speech recognition stopped';
+          statusDiv.className = 'status inactive';
+          toggleButton.textContent = 'Start Listening';
+        }
+      };
+      
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        statusDiv.textContent = 'Error starting recognition: ' + error.message;
+        statusDiv.className = 'status inactive';
+      }
+    }
+    
+    function stopRecognition() {
+      if (recognition) {
+        isListening = false;
+        recognition.stop();
+      }
+    }
+    
+    toggleButton.addEventListener('click', function() {
+      if (isListening) {
+        stopRecognition();
+      } else {
+        startRecognition();
+      }
+    });
+  </script>
+</body>
+</html> 

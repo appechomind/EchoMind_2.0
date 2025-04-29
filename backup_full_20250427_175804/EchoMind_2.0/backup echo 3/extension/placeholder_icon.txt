@@ -1,0 +1,19 @@
+ICON PLACEHOLDERS
+
+For a complete extension, you'll need to create icon files in the following sizes:
+- 16x16 pixels (icon16.png)
+- 48x48 pixels (icon48.png)
+- 128x128 pixels (icon128.png)
+
+These should be placed in the 'images' directory.
+
+You can create these icons using any image editor. For best results:
+1. Use a simple, recognizable design that works at small sizes
+2. Make sure the icon is clear against both light and dark backgrounds
+3. Use the PNG format for transparency support
+4. Consider using Google's Material Design guidelines for a cohesive look
+
+Example icon idea for Google Peek:
+- A magnifying glass with a small preview/window element
+- Blue and white color scheme to match Google's branding
+- Simple shapes that are recognizable at small sizes 

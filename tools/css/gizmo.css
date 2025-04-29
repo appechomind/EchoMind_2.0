@@ -167,12 +167,38 @@
 
 /* Local AI Chat Styles */
 .local-ai-container {
-    width: 400px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 0 10px black;
-    margin: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.local-ai-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.local-ai-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.local-ai-icon {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.local-ai-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
 }
 
 .local-ai-container h3 {

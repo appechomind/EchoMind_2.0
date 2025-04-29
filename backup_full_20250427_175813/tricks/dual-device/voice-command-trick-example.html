@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoMind Voice Command Trick Example</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .card-container {
+            perspective: 1000px;
+            width: 200px;
+            height: 300px;
+            margin: 40px auto;
+            position: relative;
+        }
+        
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .card-front {
+            background: #2c3e50;
+            color: white;
+        }
+        
+        .card-back {
+            background: #e74c3c;
+            color: white;
+            transform: rotateY(180deg);
+        }
+        
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #ecf0f1;
+        }
+        
+        .status.active {
+            background: #e67e22;
+            color: white;
+        }
+        
+        .command-list {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .transcription {
+            margin-top: 20px;
+            min-height: 60px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        
+        .interim {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>EchoMind Voice Command Trick</h1>
+        <p>Say "Hey Echo, reveal the card" to flip the card</p>
+    </div>
+    
+    <div class="content">
+        <div class="card-container">
+            <div class="card" id="card">
+                <div class="card-face card-front">?</div>
+                <div class="card-face card-back">A♠</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Listening</button>
+            <button id="stopBtn" disabled>Stop Listening</button>
+            <button id="resetBtn">Reset Trick</button>
+        </div>
+        
+        <div class="status" id="status">
+            Status: Not listening
+        </div>
+        
+        <div class="transcription" id="transcription">
+            <div id="final"></div>
+            <div id="interim" class="interim"></div>
+        </div>
+        
+        <div class="command-list">
+            <h3>Available Voice Commands:</h3>
+            <ul>
+                <li><strong>"Hey Echo, reveal the card"</strong> - Flips the card to reveal the Ace of Spades</li>
+                <li><strong>"Hey Echo, reset trick"</strong> - Resets the card to its initial position</li>
+                <li><strong>"Hey Echo, change card"</strong> - Changes the revealed card to a random value</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="js/echo-speech.js"></script>
+    <script src="js/echo-commands.js"></script>
+    
+    <script>
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const status = document.getElementById('status');
+        const card = document.getElementById('card');
+        const cardBack = document.querySelector('.card-back');
+        const final = document.getElementById('final');
+        const interim = document.getElementById('interim');
+        
+        // Card values array (suits: ♠, ♥, ♦, ♣)
+        const cardValues = [
+            'A♠', '2♠', '3♠', '4♠', '5♠', '6♠', '7♠', '8♠', '9♠', '10♠', 'J♠', 'Q♠', 'K♠',
+            'A♥', '2♥', '3♥', '4♥', '5♥', '6♥', '7♥', '8♥', '9♥', '10♥', 'J♥', 'Q♥', 'K♥',
+            'A♦', '2♦', '3♦', '4♦', '5♦', '6♦', '7♦', '8♦', '9♦', '10♦', 'J♦', 'Q♦', 'K♦',
+            'A♣', '2♣', '3♣', '4♣', '5♣', '6♣', '7♣', '8♣', '9♣', '10♣', 'J♣', 'Q♣', 'K♣'
+        ];
+        
+        // Initialize the speech recognition
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSpeech();
+            initializeCommands();
+            updateButtonState(false);
+        });
+        
+        // Initialize EchoMind Speech module
+        function initializeSpeech() {
+            if (!EchoMind.Speech.isSupported()) {
+                alert('Speech recognition is not supported in this browser. Please try using Google Chrome.');
+                startBtn.disabled = true;
+                return;
+            }
+            
+            EchoMind.Speech.init({
+                continuous: true,
+                interimResults: true,
+                lang: 'en-US',
+                debug: true,
+                
+                onStart: () => {
+                    updateStatus('Listening...');
+                    updateButtonState(true);
+                },
+                
+                onEnd: () => {
+                    updateStatus('Not listening');
+                    updateButtonState(false);
+                },
+                
+                onResult: (event, results) => {
+                    handleSpeechResults(event, results);
+                },
+                
+                onError: (event) => {
+                    updateStatus(`Error: ${event.error}`);
+                    console.error('Speech recognition error:', event.error);
+                    updateButtonState(false);
+                }
+            });
+        }
+        
+        // Initialize EchoMind Commands module
+        function initializeCommands() {
+            EchoMind.Commands.init({
+                triggerPhrase: 'hey echo',
+                commandTimeout: 5000,
+                debug: true,
+                
+                onCommandModeStart: () => {
+                    updateStatus('Command mode active', true);
+                },
+                
+                onCommandModeEnd: () => {
+                    updateStatus('Listening...', false);
+                },
+                
+                onCommandRecognized: (command, match) => {
+                    updateStatus(`Command recognized: ${command}`, true);
+                    final.textContent = `Command: ${command} (${Math.round(match.score * 100)}% match)`;
+                }
+            });
+            
+            // Register commands
+            EchoMind.Commands.registerCommand('reveal the card', revealCard);
+            EchoMind.Commands.registerCommand('reset trick', resetCard);
+            EchoMind.Commands.registerCommand('change card', changeCard);
+        }
+        
+        // Handle speech recognition results
+        function handleSpeechResults(event, results) {
+            let finalTranscript = '';
+            let interimTranscript = '';
+            
+            for (let i = event.resultIndex; i < results.length; i++) {
+                const transcript = results[i][0].transcript;
+                
+                if (results[i].isFinal) {
+                    finalTranscript += transcript;
+                    // Process command with the EchoMind Commands module
+                    EchoMind.Commands.processText(transcript);
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+            
+            if (finalTranscript) {
+                final.textContent = finalTranscript;
+            }
+            
+            interim.textContent = interimTranscript;
+        }
+        
+        // Command functions
+        function revealCard() {
+            card.classList.add('flipped');
+        }
+        
+        function resetCard() {
+            card.classList.remove('flipped');
+        }
+        
+        function changeCard() {
+            const randomCard = cardValues[Math.floor(Math.random() * cardValues.length)];
+            cardBack.textContent = randomCard;
+            
+            if (!card.classList.contains('flipped')) {
+                card.classList.add('flipped');
+            }
+        }
+        
+        // UI Helper Functions
+        function updateStatus(message, isCommandMode = false) {
+            status.textContent = `Status: ${message}`;
+            status.classList.toggle('active', isCommandMode);
+        }
+        
+        function updateButtonState(isListening) {
+            startBtn.disabled = isListening;
+            stopBtn.disabled = !isListening;
+        }
+        
+        // Button Event Listeners
+        startBtn.addEventListener('click', () => {
+            EchoMind.Speech.start();
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            EchoMind.Speech.stop();
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            resetCard();
+            final.textContent = '';
+            interim.textContent = '';
+        });
+    </script>
+</body>
+</html> 
