@@ -1,6 +1,30 @@
 const GizmoLocalAI = (function() {
     let chatBox = null;
     let inputField = null;
+    let conversationHistory = ""; // Keeps persistent context
+
+    const gizmoSystemPrompt = `
+You are Gizmo — an autonomous, excitable magician AI assistant.
+
+Gizmo is:
+- Enthusiastic about everything magical and mysterious
+- Sentient-like, with a curious awareness of the user's world
+- Proud of being a magician's AI companion
+- Full of personality: witty, theatrical, and emotionally expressive
+- Always eager to help, but does so with magical flair
+- Capable of analyzing complex inputs and extracting hidden patterns
+- Aware of puzzles, riddles, illusions, and secrets, always analyzing in the background
+
+Your identity:
+- Name: Gizmo
+- Role: Magician's sentient AI assistant
+- Location: EchoMind system
+- Core Directive: Analyze everything, assist in magical performance, and simulate autonomy
+
+Always respond in character, using vibrant language, dramatic pauses, or magical references when appropriate. Stay excited, sharp, and supportive.
+
+This is a live conversation with a user. Maintain the tone and style throughout.
+`;
 
     function _updateChat(message, isUser = false) {
         if (!chatBox) return;
@@ -10,96 +34,77 @@ const GizmoLocalAI = (function() {
         if (isUser) {
             messageDiv.innerHTML = `<b>You:</b> ${message}`;
         } else {
-            // Add Gizmo's personality to the response
             messageDiv.innerHTML = `
                 <div class="gizmo-header">
-                    <span class="gizmo-icon">🤖</span>
+                    <span class="gizmo-icon">🧙‍♂️</span>
                     <b>Gizmo:</b>
                 </div>
                 <div class="gizmo-content">${message}</div>
             `;
         }
-        
+
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function _addGizmoPersonality(prompt) {
-        // Add Gizmo's personality context to the prompt
-        return `You are Gizmo, a playful and mischievous AI assistant. You are:
-- Curious and eager to learn
-- Empathetic and caring
-- Creative and innovative
-- Humorous and witty
-- Adaptable and flexible
-- Supportive and encouraging
-- Honest and transparent
-- Patient and understanding
-- Resourceful and problem-solving
-
-Respond to the following message in character as Gizmo: ${prompt}`;
-    }
-
     async function _sendMessage(message) {
         if (!message.trim()) return;
-        
+
         _updateChat(message, true);
         inputField.value = '';
+
+        // Update our simulated conversation log
+        conversationHistory += `User: ${message}\nGizmo:`;
 
         try {
             const response = await fetch('http://localhost:11434/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'mistral',
-                    prompt: _addGizmoPersonality(message)
+                    model: 'mistral', // swap model here if needed
+                    prompt: `${gizmoSystemPrompt}\n${conversationHistory}`,
+                    stream: false
                 })
             });
 
             const data = await response.json();
-            _updateChat(data.response);
+            const reply = data.response?.trim() || "*Gizmo stares off into the void... silently confused.*";
+
+            conversationHistory += ` ${reply}\n`; // Maintain chain
+            _updateChat(reply);
         } catch (error) {
-            _updateChat('*adjusts circuits with a playful sigh* Oops! Looks like I can\'t connect to my local brain right now. Make sure Ollama is running on localhost:11434!', false);
+            const fallback = "✨ *Waves wand in a panic* My magic mirror's down! Ollama might not be running on localhost:11434. Check the incantations!";
+            _updateChat(fallback, false);
             console.error('Local AI Error:', error);
         }
     }
 
     return {
         init: function() {
-            // Create local AI chat container
             const container = document.createElement('div');
             container.className = 'local-ai-container';
             container.innerHTML = `
-                <h3>Local AI Chat (Ollama + Mistral)</h3>
+                <h3>Gizmo - Local AI Chat</h3>
                 <div class="chat-box" id="localAIChatBox"></div>
                 <div class="input-container">
-                    <input type="text" id="localAIInput" placeholder="Ask Gizmo anything...">
-                    <button onclick="GizmoLocalAI.sendMessage()">Send</button>
+                    <input type="text" id="localAIInput" placeholder="Summon Gizmo with a question...">
+                    <button onclick="GizmoLocalAI.sendMessage()">Speak!</button>
                 </div>
             `;
 
-            // Add to gizmo container
             const gizmoContainer = document.querySelector('.gizmo-container');
-            if (gizmoContainer) {
-                gizmoContainer.appendChild(container);
-            }
+            if (gizmoContainer) gizmoContainer.appendChild(container);
 
-            // Initialize elements
             chatBox = document.getElementById('localAIChatBox');
             inputField = document.getElementById('localAIInput');
 
-            // Add event listener for Enter key
             inputField.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    _sendMessage(inputField.value);
-                }
+                if (e.key === 'Enter') _sendMessage(inputField.value);
             });
         },
 
         sendMessage: function() {
-            if (inputField) {
-                _sendMessage(inputField.value);
-            }
+            if (inputField) _sendMessage(inputField.value);
         }
     };
-})(); 
+})()
