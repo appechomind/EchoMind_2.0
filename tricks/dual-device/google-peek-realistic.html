@@ -159,15 +159,17 @@
       <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
     </div>
     
-    <div class="search-box">
-      <input type="text" class="search-input" placeholder="Search Google or type a URL">
-      <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" class="mic-icon" alt="Voice search">
-    </div>
+    <form action="https://www.google.com/search" method="get" class="search-form">
+      <div class="search-box">
+        <input type="text" name="q" class="search-input" placeholder="Search Google or type a URL">
+        <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" class="mic-icon" alt="Voice search">
+      </div>
 
-    <div class="buttons">
-      <button class="search-button">Google Search</button>
-      <button class="search-button">I'm Feeling Lucky</button>
-    </div>
+      <div class="buttons">
+        <button type="submit" class="search-button">Google Search</button>
+        <button type="button" class="search-button">I'm Feeling Lucky</button>
+      </div>
+    </form>
   </div>
 
   <div id="status">Initializing...</div>
@@ -181,8 +183,12 @@
     }
 
     function initialize() {
+      console.log('Initializing voice search...');
       if (VoiceSearchModule.init('status')) {
+        console.log('Voice search initialized, starting recognition...');
         VoiceSearchModule.start();
+      } else {
+        console.error('Failed to initialize voice search');
       }
     }
 
