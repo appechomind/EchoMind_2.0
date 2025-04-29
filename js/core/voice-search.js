@@ -29,9 +29,15 @@ const VoiceSearchModule = (function() {
         _updateStatus('Searching: ' + query);
         _updateSearchInput(query);
         
-        // Construct and open Google search URL
-        const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-        window.location.href = searchUrl; // Navigate directly to the search results
+        // Submit the search form
+        const searchForm = document.querySelector('form[action="/search"]');
+        if (searchForm) {
+            searchForm.submit();
+        } else {
+            // Fallback to direct navigation
+            const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+            window.location.href = searchUrl;
+        }
     }
 
     function _startRecording() {
