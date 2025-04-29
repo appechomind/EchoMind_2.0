@@ -44,7 +44,11 @@
       height: 100%;
       object-fit: contain;
       border-radius: 15px;
-      backface-visibility: hidden;
+      transform: scaleX(1);
+    }
+
+    .card.flipped img {
+      transform: scaleX(-1);
     }
 
     #status {
@@ -197,14 +201,18 @@
     function resetEffect() {
       // Reset card display
       const cardImage = document.getElementById('card-image');
+      const card = document.getElementById('card');
       cardImage.src = '../../images/cards/back.png';
-      document.getElementById('card').style.transform = 'rotateY(0deg)';
+      card.style.transform = 'rotateY(0deg)';
+      card.classList.remove('flipped');
     }
 
     function revealCard(cardName) {
       const cardImage = document.getElementById('card-image');
+      const card = document.getElementById('card');
       cardImage.src = `../../images/cards/${cardName}.png`;
-      document.getElementById('card').style.transform = 'rotateY(180deg)';
+      card.style.transform = 'rotateY(180deg)';
+      card.classList.add('flipped');
     }
 
     // Initialize when the page loads
