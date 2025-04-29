@@ -49,8 +49,11 @@
           if (micButton) {
             micButton.addEventListener('click', async () => {
               try {
+                // First try to get microphone permission
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 stream.getTracks().forEach(track => track.stop());
+                
+                // Then initialize speech recognition
                 initializeSpeechRecognition();
                 updateStatus('Microphone permission granted', 'listening');
                 updateMicIcon(true);
@@ -58,8 +61,17 @@
                 console.error('Permission error:', error);
                 updateStatus('Please allow microphone access to use voice search', 'error');
                 updateMicIcon(false);
+                
+                // Show a more detailed error message for mobile
+                if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                  alert('Please enable microphone access in your browser settings to use voice search.');
+                }
               }
             });
+            
+            // Add visual indicator that mic needs permission
+            micButton.style.opacity = '0.6';
+            micButton.title = 'Click to enable microphone';
           }
         }
       } catch (error) {
@@ -91,6 +103,14 @@
         console.error('Speech recognition error:', event.error);
         updateStatus('Error: ' + event.error, 'error');
         updateMicIcon(false);
+        
+        // Handle specific errors
+        if (event.error === 'not-allowed') {
+          updateStatus('Microphone access denied. Please allow access to use voice search.', 'error');
+          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            alert('Please enable microphone access in your browser settings to use voice search.');
+          }
+        }
         
         // Try to restart on error
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
