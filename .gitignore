@@ -46,4 +46,17 @@ node_modules/
 *_transcript_*.txt
 
 # Backup files
-backups/*.zip 
+backups/*.zip
+backups/*.tar
+backups/*.gz
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/ 
