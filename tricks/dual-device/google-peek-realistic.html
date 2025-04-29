@@ -6,84 +6,26 @@
   <title>Google</title>
   <link rel="icon" href="https://www.google.com/favicon.ico">
   
+  <script src="../../js/core/speech-recognition.js"></script>
+  <script src="../../js/core/voice-search.js"></script>
+  
   <script>
-    let recognition = null;
-    let isRecording = false;
-    let recordedText = [];
-    let recordingTimeout = null;
-
-    // Initialize speech recognition
-    function startListening() {
-      try {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onresult = (event) => {
-          const transcript = Array.from(event.results)
-            .map(result => result[0].transcript)
-            .join('')
-            .toLowerCase();
-
-          console.log('Heard:', transcript);
-
-          if (!isRecording && transcript.includes('about')) {
-            console.log('Trigger word detected!');
-            isRecording = true;
-            recordedText = [];
-            document.getElementById('status').textContent = 'Recording...';
-            
-            // Record for 3 seconds then search
-            recordingTimeout = setTimeout(() => {
-              isRecording = false;
-              const searchText = recordedText.join(' ').replace('about', '').trim();
-              if (searchText) {
-                console.log('Searching for:', searchText);
-                document.getElementById('status').textContent = 'Searching: ' + searchText;
-                window.open('https://www.google.com/search?q=' + encodeURIComponent(searchText), '_blank');
-              }
-              recordedText = [];
-            }, 3000);
-          } else if (isRecording) {
-            recordedText.push(transcript);
-          }
-        };
-
-        recognition.onerror = (event) => {
-          console.error('Error:', event.error);
-          document.getElementById('status').textContent = 'Error: ' + event.error;
-        };
-
-        recognition.onend = () => {
-          console.log('Recognition ended, restarting...');
-          recognition.start();
-        };
-
-        recognition.start();
-        document.getElementById('status').textContent = 'Listening for "about"...';
-      } catch (error) {
-        console.error('Failed to start:', error);
-        document.getElementById('status').textContent = 'Error: Please use Chrome or Edge';
-      }
-    }
-
     // Wait for DOM to be fully loaded
     if (document.readyState === 'complete') {
-      startListening();
+      initialize();
     } else {
-      document.addEventListener('DOMContentLoaded', startListening);
+      document.addEventListener('DOMContentLoaded', initialize);
+    }
+
+    function initialize() {
+      if (VoiceSearchModule.init('status')) {
+        VoiceSearchModule.start();
+      }
     }
 
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-      if (recognition) {
-        recognition.stop();
-      }
-      if (recordingTimeout) {
-        clearTimeout(recordingTimeout);
-      }
+      VoiceSearchModule.stop();
     });
   </script>
 
