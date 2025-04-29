@@ -21,7 +21,8 @@
     const state = {
       isRecording: false,
       recordedText: [],
-      recognition: null
+      recognition: null,
+      processingTimeout: null
     };
 
     // Configuration
@@ -92,7 +93,7 @@
 
       // If we're recording and it's a final result
       if (state.isRecording && result.isFinal) {
-        state.recordedText = [transcript];
+        state.recordedText.push(transcript);
         console.log('Recorded:', transcript);
         updateStatus('Recording: ' + transcript, 'waiting');
         return;
@@ -102,6 +103,12 @@
       if (!state.isRecording && transcript.includes(CONFIG.triggerWord)) {
         console.log('Trigger detected, starting soon...');
         updateStatus('Starting...', 'waiting');
+        
+        // Clear any existing timeout
+        if (state.processingTimeout) {
+          clearTimeout(state.processingTimeout);
+          state.processingTimeout = null;
+        }
         
         // Start recording after short delay
         setTimeout(() => {
@@ -117,7 +124,7 @@
       updateStatus('Recording...', 'recording');
       
       // Set timeout to process recording
-      setTimeout(() => {
+      state.processingTimeout = setTimeout(() => {
         processRecording();
       }, CONFIG.recordingDuration);
     }
@@ -133,8 +140,8 @@
         return;
       }
 
-      // Get the last recorded phrase
-      let searchQuery = state.recordedText[state.recordedText.length - 1];
+      // Join all recorded phrases and clean up
+      let searchQuery = state.recordedText.join(' ');
       console.log('Raw search query:', searchQuery);
       
       // Clean up the query
@@ -142,8 +149,11 @@
       searchQuery = searchQuery.replace(/[^\w\s]/g, ' ').trim();
       searchQuery = searchQuery.replace(/\s+/g, ' ');
       
+      // Convert "parts" or "part" to "hearts"
+      searchQuery = searchQuery.replace(/\b(parts?)\b/gi, 'hearts');
+      
       if (searchQuery) {
-        // Execute search
+        // Execute search immediately
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
         window.location.href = searchUrl;
       }
@@ -151,6 +161,7 @@
       // Reset state
       state.isRecording = false;
       state.recordedText = [];
+      state.processingTimeout = null;
       updateStatus('Listening...', 'listening');
     }
 
