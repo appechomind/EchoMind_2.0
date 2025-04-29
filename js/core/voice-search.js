@@ -3,8 +3,6 @@ const VoiceSearchModule = (function() {
     let isListening = false;
     let statusElement = null;
     let searchInput = null;
-    let recordingTimeout = null;
-    let recordedText = [];
 
     function _debug(message) {
         console.log('[VoiceSearch]', message);
@@ -33,65 +31,28 @@ const VoiceSearchModule = (function() {
         const searchButton = document.querySelector('input[value="Google Search"]');
         if (searchButton) {
             searchButton.click();
-        } else {
-            _debug('Search button not found');
         }
-    }
-
-    function _startRecording() {
-        _updateStatus('Recording...');
-        isListening = true;
-        recordedText = [];
-        
-        // Clear any existing timeout
-        if (recordingTimeout) {
-            clearTimeout(recordingTimeout);
-        }
-        
-        // Set timeout to stop recording after 3 seconds
-        recordingTimeout = setTimeout(() => {
-            _stopRecording();
-        }, 3000);
-    }
-
-    function _stopRecording() {
-        if (recordingTimeout) {
-            clearTimeout(recordingTimeout);
-            recordingTimeout = null;
-        }
-        isListening = false;
-        
-        // Perform search with recorded text
-        const searchText = recordedText.join(' ').replace('about', '').trim();
-        if (searchText) {
-            _performSearch(searchText);
-        }
-        
-        _updateStatus('Listening for "about"...');
     }
 
     function _handleSpeechResult(event) {
         const transcript = event.results[0][0].transcript.toLowerCase();
         _debug('Heard: ' + transcript);
 
-        if (!isListening && transcript.includes('about')) {
-            _startRecording();
-        } else if (isListening) {
-            recordedText.push(transcript);
-            _updateSearchInput(recordedText.join(' '));
+        if (transcript.includes('about')) {
+            const searchQuery = transcript.replace('about', '').trim();
+            if (searchQuery) {
+                _performSearch(searchQuery);
+            }
         }
     }
 
     function _handleSpeechError(event) {
         _debug('Error: ' + event.error);
         _updateStatus('Error: ' + event.error);
-        _stopRecording();
     }
 
     function _handleSpeechEnd() {
-        if (isListening) {
-            recognition.start();
-        }
+        recognition.start();
     }
 
     return {
@@ -133,7 +94,6 @@ const VoiceSearchModule = (function() {
 
         stop: function() {
             if (recognition) {
-                _stopRecording();
                 recognition.stop();
                 _updateStatus('Stopped listening');
             }
