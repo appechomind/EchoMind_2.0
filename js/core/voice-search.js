@@ -29,14 +29,12 @@ const VoiceSearchModule = (function() {
         _updateStatus('Searching: ' + query);
         _updateSearchInput(query);
         
-        // Submit the search form
-        const searchForm = document.querySelector('form[action="/search"]');
-        if (searchForm) {
-            searchForm.submit();
+        // Find and click the Google Search button
+        const searchButton = document.querySelector('input[value="Google Search"]');
+        if (searchButton) {
+            searchButton.click();
         } else {
-            // Fallback to direct navigation
-            const searchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-            window.location.href = searchUrl;
+            _debug('Search button not found');
         }
     }
 
