@@ -96,13 +96,20 @@ const GizmoLocalAI = (function () {
             });
 
             if (!response.ok) {
+                console.error('Server response:', response.status, response.statusText);
                 throw new Error('Failed to get response from AI');
             }
 
             const data = await response.json();
             return gizmoPersonality.addPersonalityFlair(data.response);
         } catch (error) {
-            throw error;
+            console.error("Gizmo AI Error:", error);
+            // Use local fallback if server is not available
+            return gizmoPersonality.generateResponse(
+                "I'm having trouble connecting to my magical server. Let me try a local response instead! " +
+                "You asked: " + message,
+                'error'
+            );
         }
     }
 
