@@ -187,4 +187,60 @@ EchoMind.PermissionsHandler = (function() {
 document.addEventListener('DOMContentLoaded', function() {
     window.permissionsHandler = EchoMind.PermissionsHandler;
     EchoMind.PermissionsHandler.init({ debugMode: false });
-}); 
+});
+
+class PermissionsHandler {
+    constructor() {
+        this.permissionStatus = document.getElementById('permissionStatus');
+        this.checkMicrophonePermission();
+    }
+
+    async checkMicrophonePermission() {
+        try {
+            const result = await navigator.permissions.query({ name: 'microphone' });
+            this.updatePermissionStatus(result.state);
+            
+            result.onchange = () => {
+                this.updatePermissionStatus(result.state);
+            };
+        } catch (error) {
+            console.error('Error checking microphone permission:', error);
+            this.updatePermissionStatus('error');
+        }
+    }
+
+    updatePermissionStatus(state) {
+        if (!this.permissionStatus) return;
+
+        this.permissionStatus.className = state;
+        switch (state) {
+            case 'granted':
+                this.permissionStatus.textContent = 'Microphone access granted';
+                break;
+            case 'denied':
+                this.permissionStatus.textContent = 'Microphone access denied';
+                break;
+            case 'prompt':
+                this.permissionStatus.textContent = 'Microphone permission needed';
+                break;
+            default:
+                this.permissionStatus.textContent = 'Could not check microphone permission';
+        }
+    }
+
+    async requestMicrophonePermission() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            this.updatePermissionStatus('granted');
+            return true;
+        } catch (error) {
+            console.error('Error requesting microphone permission:', error);
+            this.updatePermissionStatus('denied');
+            return false;
+        }
+    }
+}
+
+// Initialize permissions handler
+const permissionsHandler = new PermissionsHandler(); 
