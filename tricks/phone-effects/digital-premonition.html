@@ -1,245 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoMind - Digital Premonition</title>
-  <link rel="stylesheet" href="../../css/styles.css">
-  <style>
-    .trick-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    .prediction-input {
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      padding: 20px;
-      margin: 30px 0;
-      text-align: center;
-    }
-    
-    .prediction-input input {
-      background: rgba(255,255,255,0.2);
-      border: 1px solid #6032a8;
-      border-radius: 5px;
-      padding: 10px;
-      color: white;
-      width: 100%;
-      max-width: 300px;
-      margin: 10px 0;
-    }
-    
-    .prediction-input input:focus {
-      outline: none;
-      border-color: #9966ff;
-      box-shadow: 0 0 10px rgba(153,102,255,0.3);
-    }
-    
-    .phone-display {
-      background: #111;
-      border-radius: 20px;
-      padding: 20px;
-      margin: 30px auto;
-      max-width: 300px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    
-    .phone-screen {
-      background: #222;
-      border-radius: 10px;
-      padding: 15px;
-      min-height: 200px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .phone-item {
-      background: rgba(255,255,255,0.1);
-      border-radius: 5px;
-      padding: 10px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    
-    .phone-item:hover {
-      background: rgba(255,255,255,0.2);
-    }
-    
-    .phone-item.selected {
-      background: #6032a8;
-    }
-    
-    .controls {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      margin: 20px 0;
-    }
-    
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background: #4a2080;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    
-    button:hover {
-      background: #6032a8;
-    }
-    
-    button:disabled {
-      background: #333;
-      cursor: not-allowed;
-    }
-    
-    .back-button {
-      display: inline-block;
-      background-color: #6032a8;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-top: 20px;
-      transition: background-color 0.3s;
-    }
-    
-    .back-button:hover {
-      background-color: #7944d4;
-    }
-    
-    .error-message {
-      color: #ff4444;
-      text-align: center;
-      margin: 20px 0;
-      padding: 10px;
-      background: rgba(255,0,0,0.1);
-      border-radius: 5px;
-      display: none;
-    }
-    
-    .reveal-section {
-      text-align: center;
-      margin: 30px 0;
-      padding: 20px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Premonition - EchoMind 2.0</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/tricks.css">
+    <style>
+        .prediction-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .prediction-input {
+            width: 100%;
+            padding: 1rem;
+            margin: 1rem 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .prediction-input:focus {
+            border-color: #2c3e50;
+            outline: none;
+        }
+
+        .prediction-display {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .prediction-display h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .prediction-display p {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+
+        .button:hover {
+            background: #34495e;
+        }
+
+        .button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .steps {
+            margin: 2rem 0;
+            padding: 0;
+            list-style-position: inside;
+        }
+
+        .steps li {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .steps li.active {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .steps li.completed {
+            background: #27ae60;
+            color: white;
+        }
+    </style>
 </head>
 <body>
-  <div class="trick-container">
-    <h1>Digital Premonition</h1>
-    <p>Write down your prediction, then have your spectator make selections from their phone...</p>
-    
-    <div class="error-message" id="errorMessage">
-      Your browser doesn't support this feature. Please try a modern browser.
+    <div class="container">
+        <h1>Digital Premonition</h1>
+        
+        <div class="message" id="message">
+            Follow the steps below to experience this incredible prediction.
+        </div>
+        
+        <ol class="steps" id="steps">
+            <li class="active">Write down your prediction and seal it</li>
+            <li>Ask your spectator to open their phone's calculator</li>
+            <li>Have them enter their birth year (e.g., 1990)</li>
+            <li>Add their age this year</li>
+            <li>Subtract their birth year</li>
+            <li>Add the number of letters in their first name</li>
+            <li>Add 7</li>
+            <li>Multiply by 2</li>
+        </ol>
+        
+        <div class="prediction-container">
+            <div id="predictionInput" style="display: block;">
+                <label for="prediction">Enter your prediction:</label>
+                <input type="number" id="prediction" class="prediction-input" placeholder="Enter the number you predict">
+                <div class="controls">
+                    <button class="button" id="sealButton">Seal Prediction</button>
+                </div>
+            </div>
+            
+            <div id="predictionDisplay" class="prediction-display">
+                <h2>Your Sealed Prediction</h2>
+                <p>Your prediction has been sealed. Continue with the steps above.</p>
+                <div class="controls">
+                    <button class="button" id="revealButton">Reveal Prediction</button>
+                </div>
+            </div>
+        </div>
+        
+        <a href="../index.html" class="back-button">Back to Tricks</a>
     </div>
-    
-    <div class="prediction-input">
-      <h2>Your Prediction</h2>
-      <input type="text" id="predictionInput" placeholder="Write your prediction here...">
-      <button id="lockPrediction">Lock Prediction</button>
-    </div>
-    
-    <div class="phone-display">
-      <div class="phone-screen" id="phoneScreen">
-        <div class="phone-item" data-item="Recent Call">Last called: Mom (2 mins ago)</div>
-        <div class="phone-item" data-item="Text Message">Latest text: "On my way!" (5 mins ago)</div>
-        <div class="phone-item" data-item="Photo">Recent photo: Sunset at beach (Yesterday)</div>
-        <div class="phone-item" data-item="App">Most used app: Instagram (2 hours today)</div>
-        <div class="phone-item" data-item="Song">Now playing: "Happy" by Pharrell Williams</div>
-      </div>
-    </div>
-    
-    <div class="reveal-section" id="revealSection">
-      <h2>The Prediction Was Correct!</h2>
-      <p>Your prediction: <span id="predictionText"></span></p>
-      <p>Selected item: <span id="selectedItem"></span></p>
-    </div>
-    
-    <div class="controls">
-      <button id="revealBtn" disabled>Reveal Prediction</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    
-    <a href="../index.html" class="back-button">← Back to Tricks Menu</a>
-  </div>
 
-  <script>
-    let prediction = '';
-    let selectedItem = null;
-    let isPredictionLocked = false;
-    
-    function lockPrediction() {
-      prediction = document.getElementById('predictionInput').value.trim();
-      if (!prediction) {
-        alert('Please write your prediction first!');
-        return;
-      }
-      
-      isPredictionLocked = true;
-      document.getElementById('predictionInput').disabled = true;
-      document.getElementById('lockPrediction').disabled = true;
-      document.getElementById('revealBtn').disabled = false;
-    }
-    
-    function selectItem(item) {
-      if (!isPredictionLocked) {
-        alert('Please lock your prediction first!');
-        return;
-      }
-      
-      selectedItem = item;
-      document.querySelectorAll('.phone-item').forEach(el => {
-        el.classList.remove('selected');
-      });
-      event.target.classList.add('selected');
-    }
-    
-    function revealPrediction() {
-      if (!selectedItem) {
-        alert('Please select an item from the phone first!');
-        return;
-      }
-      
-      const revealSection = document.getElementById('revealSection');
-      document.getElementById('predictionText').textContent = prediction;
-      document.getElementById('selectedItem').textContent = selectedItem;
-      revealSection.style.display = 'block';
-    }
-    
-    function resetTrick() {
-      prediction = '';
-      selectedItem = null;
-      isPredictionLocked = false;
-      
-      document.getElementById('predictionInput').value = '';
-      document.getElementById('predictionInput').disabled = false;
-      document.getElementById('lockPrediction').disabled = false;
-      document.getElementById('revealBtn').disabled = true;
-      document.getElementById('revealSection').style.display = 'none';
-      
-      document.querySelectorAll('.phone-item').forEach(el => {
-        el.classList.remove('selected');
-      });
-    }
-    
-    // Initialize
-    document.getElementById('lockPrediction').onclick = lockPrediction;
-    document.getElementById('revealBtn').onclick = revealPrediction;
-    document.getElementById('resetBtn').onclick = resetTrick;
-    
-    document.querySelectorAll('.phone-item').forEach(item => {
-      item.onclick = () => selectItem(item.dataset.item);
-    });
-  </script>
+    <script>
+        let prediction = null;
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.steps li');
+        
+        function updateSteps() {
+            steps.forEach((step, index) => {
+                if (index < currentStep) {
+                    step.className = 'completed';
+                } else if (index === currentStep) {
+                    step.className = 'active';
+                } else {
+                    step.className = '';
+                }
+            });
+        }
+        
+        function handleSealPrediction() {
+            const input = document.getElementById('prediction');
+            prediction = parseInt(input.value);
+            
+            if (isNaN(prediction)) {
+                alert('Please enter a valid number.');
+                return;
+            }
+            
+            document.getElementById('predictionInput').style.display = 'none';
+            document.getElementById('predictionDisplay').style.display = 'block';
+            currentStep++;
+            updateSteps();
+        }
+        
+        function handleReveal() {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = `Your prediction of ${prediction} matches their result! Their mind has been read!`;
+            
+            steps.forEach(step => step.className = 'completed');
+            document.getElementById('revealButton').disabled = true;
+        }
+        
+        // Add event listeners
+        document.getElementById('sealButton').addEventListener('click', handleSealPrediction);
+        document.getElementById('revealButton').addEventListener('click', handleReveal);
+        
+        // Initialize
+        updateSteps();
+    </script>
 </body>
-</html> 
+</html>

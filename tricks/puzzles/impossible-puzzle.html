@@ -1,236 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoMind - Impossible Puzzle</title>
-  <link rel="stylesheet" href="../../css/styles.css">
-  <style>
-    .trick-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    .puzzle-container {
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      padding: 20px;
-      margin: 30px 0;
-      text-align: center;
-    }
-    
-    .puzzle-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      max-width: 300px;
-      margin: 20px auto;
-    }
-    
-    .puzzle-cell {
-      background: rgba(255,255,255,0.2);
-      border: 1px solid #6032a8;
-      border-radius: 5px;
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2em;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.3s;
-    }
-    
-    .puzzle-cell:hover {
-      background: rgba(255,255,255,0.3);
-      transform: scale(1.05);
-    }
-    
-    .puzzle-cell.selected {
-      background: #6032a8;
-      border-color: #9966ff;
-    }
-    
-    .solution-section {
-      text-align: center;
-      margin: 30px 0;
-      padding: 20px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      display: none;
-    }
-    
-    .controls {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      margin: 20px 0;
-    }
-    
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background: #4a2080;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    
-    button:hover {
-      background: #6032a8;
-    }
-    
-    button:disabled {
-      background: #333;
-      cursor: not-allowed;
-    }
-    
-    .back-button {
-      display: inline-block;
-      background-color: #6032a8;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-top: 20px;
-      transition: background-color 0.3s;
-    }
-    
-    .back-button:hover {
-      background-color: #7944d4;
-    }
-    
-    .error-message {
-      color: #ff4444;
-      text-align: center;
-      margin: 20px 0;
-      padding: 10px;
-      background: rgba(255,0,0,0.1);
-      border-radius: 5px;
-      display: none;
-    }
-    
-    .hint {
-      color: #b88eff;
-      font-style: italic;
-      margin: 10px 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impossible Puzzle - EchoMind 2.0</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/tricks.css">
+    <style>
+        .puzzle-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .puzzle-cell {
+            aspect-ratio: 1;
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .puzzle-cell:hover {
+            background: #e9ecef;
+        }
+
+        .puzzle-cell.selected {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+
+        .button:hover {
+            background: #34495e;
+        }
+
+        .button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .hint {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .hint.visible {
+            display: block;
+        }
+
+        .solution {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #2c3e50;
+            color: white;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .solution.visible {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-  <div class="trick-container">
-    <h1>Impossible Puzzle</h1>
-    <p>Can you solve this seemingly impossible puzzle? Select three numbers that add up to 15...</p>
-    
-    <div class="error-message" id="errorMessage">
-      Your browser doesn't support this feature. Please try a modern browser.
+    <div class="container">
+        <h1>Impossible Puzzle</h1>
+        
+        <div class="message" id="message">
+            Can you make all numbers equal by moving just one line?
+        </div>
+        
+        <div class="puzzle-container">
+            <div class="puzzle-grid" id="puzzleGrid">
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+            </div>
+            
+            <div class="controls">
+                <button class="button" id="hintButton">Get Hint</button>
+                <button class="button" id="solutionButton">Show Solution</button>
+                <button class="button" id="resetButton">Reset Puzzle</button>
+            </div>
+            
+            <div class="hint" id="hint">
+                Think outside the box! Sometimes the solution is simpler than it seems.
+            </div>
+            
+            <div class="solution" id="solution">
+                <h2>Solution</h2>
+                <p>Move the bottom line of the second "5" to make it a "6". Now all numbers are equal (to six)!</p>
+            </div>
+        </div>
+        
+        <a href="../index.html" class="back-button">Back to Tricks</a>
     </div>
-    
-    <div class="puzzle-container">
-      <h2>The Puzzle</h2>
-      <p>Select three numbers that add up to exactly 15.</p>
-      <p class="hint">Hint: The solution is not what it seems...</p>
-      
-      <div class="puzzle-grid" id="puzzleGrid">
-        <div class="puzzle-cell" data-value="4">4</div>
-        <div class="puzzle-cell" data-value="9">9</div>
-        <div class="puzzle-cell" data-value="2">2</div>
-        <div class="puzzle-cell" data-value="3">3</div>
-        <div class="puzzle-cell" data-value="5">5</div>
-        <div class="puzzle-cell" data-value="7">7</div>
-        <div class="puzzle-cell" data-value="8">8</div>
-        <div class="puzzle-cell" data-value="1">1</div>
-        <div class="puzzle-cell" data-value="6">6</div>
-      </div>
-      
-      <p>Selected sum: <span id="currentSum">0</span></p>
-    </div>
-    
-    <div class="solution-section" id="solutionSection">
-      <h2>Incredible Solution!</h2>
-      <p>The numbers you selected: <span id="selectedNumbers"></span></p>
-      <p>Not only do they add up to 15, but they also form a magic square pattern!</p>
-      <p>Every row, column, and diagonal in the grid adds up to 15.</p>
-    </div>
-    
-    <div class="controls">
-      <button id="checkBtn" disabled>Check Solution</button>
-      <button id="resetBtn">Reset</button>
-      <button id="hintBtn">Get Hint</button>
-    </div>
-    
-    <a href="../index.html" class="back-button">← Back to Tricks Menu</a>
-  </div>
 
-  <script>
-    let selectedCells = [];
-    let currentSum = 0;
-    let hints = [
-      "Try thinking in patterns rather than just numbers...",
-      "Notice anything special about the grid layout?",
-      "What if the solution involves more than just addition?",
-      "Think about classic mathematical puzzles...",
-      "Have you heard of a magic square?"
-    ];
-    let currentHint = 0;
-    
-    function selectCell(cell) {
-      const value = parseInt(cell.dataset.value);
-      
-      if (cell.classList.contains('selected')) {
-        cell.classList.remove('selected');
-        selectedCells = selectedCells.filter(c => c !== cell);
-        currentSum -= value;
-      } else if (selectedCells.length < 3) {
-        cell.classList.add('selected');
-        selectedCells.push(cell);
-        currentSum += value;
-      } else {
-        alert('You can only select three numbers!');
-        return;
-      }
-      
-      document.getElementById('currentSum').textContent = currentSum;
-      document.getElementById('checkBtn').disabled = selectedCells.length !== 3;
-    }
-    
-    function checkSolution() {
-      if (currentSum !== 15) {
-        alert('The numbers must add up to exactly 15!');
-        return;
-      }
-      
-      const values = selectedCells.map(cell => parseInt(cell.dataset.value));
-      document.getElementById('selectedNumbers').textContent = values.join(', ');
-      document.getElementById('solutionSection').style.display = 'block';
-    }
-    
-    function showHint() {
-      alert(hints[currentHint]);
-      currentHint = (currentHint + 1) % hints.length;
-    }
-    
-    function resetPuzzle() {
-      selectedCells = [];
-      currentSum = 0;
-      document.getElementById('currentSum').textContent = '0';
-      document.getElementById('checkBtn').disabled = true;
-      document.getElementById('solutionSection').style.display = 'none';
-      document.querySelectorAll('.puzzle-cell').forEach(cell => {
-        cell.classList.remove('selected');
-      });
-    }
-    
-    // Initialize
-    document.querySelectorAll('.puzzle-cell').forEach(cell => {
-      cell.onclick = () => selectCell(cell);
-    });
-    
-    document.getElementById('checkBtn').onclick = checkSolution;
-    document.getElementById('resetBtn').onclick = resetPuzzle;
-    document.getElementById('hintBtn').onclick = showHint;
-  </script>
+    <script>
+        let hintShown = false;
+        let solutionShown = false;
+        
+        function handleHint() {
+            if (!hintShown) {
+                document.getElementById('hint').classList.add('visible');
+                hintShown = true;
+            }
+        }
+        
+        function handleSolution() {
+            if (!solutionShown) {
+                document.getElementById('solution').classList.add('visible');
+                solutionShown = true;
+                
+                // Update the puzzle grid to show the solution
+                const cells = document.querySelectorAll('.puzzle-cell');
+                cells[1].textContent = '6';
+            }
+        }
+        
+        function handleReset() {
+            const cells = document.querySelectorAll('.puzzle-cell');
+            cells.forEach(cell => {
+                cell.textContent = '5';
+                cell.classList.remove('selected');
+            });
+            
+            document.getElementById('hint').classList.remove('visible');
+            document.getElementById('solution').classList.remove('visible');
+            hintShown = false;
+            solutionShown = false;
+        }
+        
+        // Add event listeners
+        document.getElementById('hintButton').addEventListener('click', handleHint);
+        document.getElementById('solutionButton').addEventListener('click', handleSolution);
+        document.getElementById('resetButton').addEventListener('click', handleReset);
+        
+        // Make cells interactive
+        document.querySelectorAll('.puzzle-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                if (!solutionShown) {
+                    cell.classList.toggle('selected');
+                }
+            });
+        });
+    </script>
 </body>
-</html> 
+</html>

@@ -1,232 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoMind - Synchronized Mind Reading</title>
-  <link rel="stylesheet" href="../../css/styles.css">
-  <style>
-    .trick-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    .choice-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 20px;
-      margin: 30px 0;
-    }
-    
-    .choice-card {
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: transform 0.3s, box-shadow 0.3s;
-      border: 1px solid #6032a8;
-    }
-    
-    .choice-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    .choice-card.selected {
-      background: #6032a8;
-      border-color: #9966ff;
-    }
-    
-    .sync-status {
-      text-align: center;
-      margin: 30px 0;
-      padding: 20px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-    }
-    
-    .controls {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      margin: 20px 0;
-    }
-    
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background: #4a2080;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    
-    button:hover {
-      background: #6032a8;
-    }
-    
-    button:disabled {
-      background: #333;
-      cursor: not-allowed;
-    }
-    
-    .back-button {
-      display: inline-block;
-      background-color: #6032a8;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-top: 20px;
-      transition: background-color 0.3s;
-    }
-    
-    .back-button:hover {
-      background-color: #7944d4;
-    }
-    
-    .error-message {
-      color: #ff4444;
-      text-align: center;
-      margin: 20px 0;
-      padding: 10px;
-      background: rgba(255,0,0,0.1);
-      border-radius: 5px;
-      display: none;
-    }
-    
-    #qrCode {
-      text-align: center;
-      margin: 20px 0;
-    }
-    
-    #connectionId {
-      font-family: monospace;
-      background: rgba(255,255,255,0.1);
-      padding: 5px 10px;
-      border-radius: 5px;
-      user-select: all;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronized Mind Reading - EchoMind 2.0</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/tricks.css">
+    <style>
+        .choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .choice-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .choice-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .choice-card.selected {
+            border: 3px solid #2c3e50;
+        }
+
+        .choice-card img {
+            width: 100%;
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .choice-card h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+
+        .button:hover {
+            background: #34495e;
+        }
+
+        .button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .connection-status {
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .connection-status.connected {
+            background: #27ae60;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .sync-code {
+            text-align: center;
+            font-size: 2rem;
+            font-family: monospace;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-  <div class="trick-container">
-    <h1>Synchronized Mind Reading</h1>
-    <p>Connect two devices and experience the power of synchronized thoughts...</p>
-    
-    <div class="error-message" id="errorMessage">
-      Your browser doesn't support this feature. Please try a modern browser.
+    <div class="container">
+        <h1>Synchronized Mind Reading</h1>
+        
+        <div class="message" id="message">
+            Enter a sync code to connect with another device, or generate a new one.
+        </div>
+        
+        <div class="connection-status disconnected" id="connectionStatus">
+            Not Connected
+        </div>
+        
+        <div class="controls">
+            <input type="text" id="syncCodeInput" placeholder="Enter sync code" class="button">
+            <button class="button" id="connectButton">Connect</button>
+            <button class="button" id="generateButton">Generate New Code</button>
+        </div>
+        
+        <div class="sync-code" id="syncCode" style="display: none;"></div>
+        
+        <div class="choice-grid" id="choiceGrid" style="display: none;">
+            <div class="choice-card" data-choice="circle">
+                <img src="../../images/circle.svg" alt="Circle">
+                <h3>Circle</h3>
+            </div>
+            <div class="choice-card" data-choice="square">
+                <img src="../../images/square.svg" alt="Square">
+                <h3>Square</h3>
+            </div>
+            <div class="choice-card" data-choice="triangle">
+                <img src="../../images/triangle.svg" alt="Triangle">
+                <h3>Triangle</h3>
+            </div>
+            <div class="choice-card" data-choice="star">
+                <img src="../../images/star.svg" alt="Star">
+                <h3>Star</h3>
+            </div>
+        </div>
+        
+        <div class="controls" id="revealControls" style="display: none;">
+            <button class="button" id="revealButton" disabled>Reveal Connection</button>
+        </div>
+        
+        <a href="../index.html" class="back-button">Back to Tricks</a>
     </div>
-    
-    <div class="sync-status" id="syncStatus">
-      <h2>Connection Status</h2>
-      <p>Your Connection ID: <span id="connectionId">Generating...</span></p>
-      <div id="qrCode"></div>
-      <p>Status: <span id="statusText">Waiting for connection...</span></p>
-    </div>
-    
-    <div class="choice-grid" id="choiceGrid">
-      <div class="choice-card" data-choice="1">
-        <h3>Choice 1</h3>
-        <p>A peaceful beach at sunset</p>
-      </div>
-      <div class="choice-card" data-choice="2">
-        <h3>Choice 2</h3>
-        <p>A snowy mountain peak</p>
-      </div>
-      <div class="choice-card" data-choice="3">
-        <h3>Choice 3</h3>
-        <p>A bustling city street</p>
-      </div>
-      <div class="choice-card" data-choice="4">
-        <h3>Choice 4</h3>
-        <p>A quiet forest path</p>
-      </div>
-    </div>
-    
-    <div class="controls">
-      <button id="connectBtn">Connect Devices</button>
-      <button id="revealBtn" disabled>Reveal Connection</button>
-      <button id="resetBtn">Reset</button>
-    </div>
-    
-    <a href="../index.html" class="back-button">← Back to Tricks Menu</a>
-  </div>
 
-  <script>
-    let selectedChoice = null;
-    let connectionId = null;
-    let isConnected = false;
-    
-    function generateConnectionId() {
-      return Math.random().toString(36).substring(2, 10).toUpperCase();
-    }
-    
-    function updateConnectionStatus(status) {
-      document.getElementById('statusText').textContent = status;
-    }
-    
-    function selectChoice(choice) {
-      if (!isConnected) {
-        alert('Please connect devices first!');
-        return;
-      }
-      
-      selectedChoice = choice;
-      document.querySelectorAll('.choice-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      event.target.closest('.choice-card').classList.add('selected');
-      document.getElementById('revealBtn').disabled = false;
-    }
-    
-    function setupChoices() {
-      document.querySelectorAll('.choice-card').forEach(card => {
-        card.onclick = () => selectChoice(card.dataset.choice);
-      });
-    }
-    
-    function connectDevices() {
-      connectionId = generateConnectionId();
-      document.getElementById('connectionId').textContent = connectionId;
-      // In a real implementation, this would establish a WebSocket or WebRTC connection
-      setTimeout(() => {
-        isConnected = true;
-        updateConnectionStatus('Connected!');
-      }, 2000);
-    }
-    
-    function revealConnection() {
-      if (!selectedChoice) {
-        alert('Please make a choice first!');
-        return;
-      }
-      
-      // In a real implementation, this would compare choices between devices
-      alert('Amazing! Both participants chose the same option!');
-    }
-    
-    function resetTrick() {
-      selectedChoice = null;
-      isConnected = false;
-      connectionId = null;
-      document.getElementById('connectionId').textContent = 'Generating...';
-      document.getElementById('revealBtn').disabled = true;
-      document.querySelectorAll('.choice-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      updateConnectionStatus('Waiting for connection...');
-    }
-    
-    // Initialize
-    document.getElementById('connectBtn').onclick = connectDevices;
-    document.getElementById('revealBtn').onclick = revealConnection;
-    document.getElementById('resetBtn').onclick = resetTrick;
-    setupChoices();
-  </script>
+    <script>
+        let selectedChoice = null;
+        let syncCode = null;
+        let isConnected = false;
+        
+        function generateSyncCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+            statusEl.textContent = connected ? 'Connected' : 'Not Connected';
+            isConnected = connected;
+            
+            if (connected) {
+                document.getElementById('choiceGrid').style.display = 'grid';
+                document.getElementById('revealControls').style.display = 'block';
+                document.getElementById('message').textContent = 'Select a shape below.';
+            }
+        }
+        
+        function handleConnect() {
+            const input = document.getElementById('syncCodeInput');
+            const code = input.value.trim().toUpperCase();
+            
+            if (code.length === 6) {
+                // Simulate connection (in real app, this would connect to another device)
+                syncCode = code;
+                updateConnectionStatus(true);
+                document.getElementById('syncCode').style.display = 'none';
+            } else {
+                alert('Please enter a valid 6-character sync code.');
+            }
+        }
+        
+        function handleGenerate() {
+            syncCode = generateSyncCode();
+            const syncCodeEl = document.getElementById('syncCode');
+            syncCodeEl.textContent = syncCode;
+            syncCodeEl.style.display = 'block';
+            document.getElementById('message').textContent = 'Share this code with your partner.';
+        }
+        
+        function handleChoiceSelection(choice) {
+            if (!isConnected) return;
+            
+            if (selectedChoice) {
+                document.querySelector(`[data-choice="${selectedChoice}"]`).classList.remove('selected');
+            }
+            
+            selectedChoice = choice;
+            document.querySelector(`[data-choice="${choice}"]`).classList.add('selected');
+            document.getElementById('revealButton').disabled = false;
+        }
+        
+        function handleReveal() {
+            if (!selectedChoice) return;
+            
+            // Simulate synchronized reveal (in real app, this would check both devices)
+            document.getElementById('message').textContent = 
+                `Amazing! You both selected ${selectedChoice}! Your minds are in sync!`;
+            
+            document.getElementById('revealButton').disabled = true;
+            document.querySelectorAll('.choice-card').forEach(card => {
+                if (card.dataset.choice !== selectedChoice) {
+                    card.style.opacity = '0.3';
+                }
+            });
+        }
+        
+        // Add event listeners
+        document.getElementById('connectButton').addEventListener('click', handleConnect);
+        document.getElementById('generateButton').addEventListener('click', handleGenerate);
+        document.getElementById('revealButton').addEventListener('click', handleReveal);
+        
+        document.querySelectorAll('.choice-card').forEach(card => {
+            card.addEventListener('click', () => handleChoiceSelection(card.dataset.choice));
+        });
+    </script>
 </body>
-</html> 
+</html>
