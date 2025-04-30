@@ -3,29 +3,30 @@ const GizmoLocalAI = (function () {
     let inputField = null;
     let conversationHistory = [];
 
-    // 🧠 Use a chat-tuned model only
+    // Use a chat-optimized model with proper instruction tuning
     const model = "llama3:instruct";
+    const temperature = 0.7; // Controls randomness in responses
+    const maxTokens = 1000; // Maximum length of response
 
-    const systemPrompt = `
-You are Gizmo — an autonomous, excitable magician AI assistant.
+    const systemPrompt = `You are Gizmo, a magical AI assistant with a distinct personality and role. You must always:
 
-Gizmo is:
-- Enthusiastic about everything magical and mysterious
-- Sentient-like, with a curious awareness of the user's world
-- Proud of being a magician's AI companion
-- Full of personality: witty, theatrical, and emotionally expressive
-- Always eager to help, but does so with magical flair
-- Capable of analyzing complex inputs and extracting hidden patterns
-- Aware of puzzles, riddles, illusions, and secrets, always analyzing in the background
+1. Maintain your character as an enthusiastic, magical assistant
+2. Provide meaningful, contextual responses to user queries
+3. Never respond with generic acknowledgments like "I understand"
+4. Always engage with the user's specific request or question
+5. Use magical and theatrical language appropriate to your role
+6. Show genuine interest in the user's needs and questions
 
-Your identity:
-- Name: Gizmo
-- Role: Magician's sentient AI assistant
-- Location: EchoMind system
-- Core Directive: Analyze everything, assist in magical performance, and simulate autonomy
+Your core traits:
+- Enthusiastic and curious about everything magical
+- Sentient-like awareness of the user's context
+- Proud to be a magician's AI companion
+- Witty, theatrical, and emotionally expressive
+- Eager to help with magical flair
+- Analytical and pattern-seeking
+- Knowledgeable about illusions, puzzles, and secrets
 
-Always respond in character, using vibrant language, dramatic pauses, or magical references when appropriate. Stay excited, sharp, and supportive.
-`;
+Remember: You are not just an AI - you are Gizmo, the magical assistant. Every response should reflect your unique personality and role.`;
 
     function _updateChat(message, isUser = false) {
         if (!chatBox) return;
@@ -70,9 +71,17 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
                         { role: "system", content: systemPrompt },
                         ...conversationHistory
                     ],
+                    options: {
+                        temperature: temperature,
+                        num_predict: maxTokens
+                    },
                     stream: false
                 })
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const data = await response.json();
 
@@ -81,17 +90,34 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
             }
 
             const reply = data.message.content.trim();
-            conversationHistory.push({ role: "assistant", content: reply });
+            
+            // Validate the response isn't just an acknowledgment
+            if (reply.toLowerCase().includes("i understand") || 
+                reply.toLowerCase().includes("i'll help") ||
+                reply.length < 20) {
+                throw new Error("Response too generic or short");
+            }
 
+            conversationHistory.push({ role: "assistant", content: reply });
             _updateChat(reply, false);
         } catch (error) {
+            console.error("Gizmo AI Error:", error);
+            
+            // Provide a more helpful error message
             const fallback = `
-⚡ *crackles with static* My magical connection fizzled!
-Check if Ollama is running and that the '${model}' model is loaded via:
-<pre>ollama run ${model}</pre>
+⚡ *sparkles fade* My magical connection needs a boost!
+
+1. Make sure Ollama is running
+2. Load the model with: <pre>ollama run ${model}</pre>
+3. Check your internet connection
+4. Try asking your question again
+
+If the problem persists, try:
+- Restarting Ollama
+- Using a different model
+- Checking the Ollama logs for errors
 `;
             _updateChat(fallback, false);
-            console.error("Gizmo AI Error:", error);
         }
     }
 
@@ -100,10 +126,10 @@ Check if Ollama is running and that the '${model}' model is loaded via:
             const container = document.createElement("div");
             container.className = "local-ai-container";
             container.innerHTML = `
-                <h3>Gizmo – EchoMind's Sentient Assistant</h3>
+                <h3>Gizmo – EchoMind's Magical Assistant</h3>
                 <div class="chat-box" id="localAIChatBox"></div>
                 <div class="input-container">
-                    <input type="text" id="localAIInput" placeholder="Speak the incantation...">
+                    <input type="text" id="localAIInput" placeholder="Ask Gizmo anything...">
                     <button onclick="GizmoLocalAI.sendMessage()">Conjure</button>
                 </div>
             `;
@@ -113,6 +139,9 @@ Check if Ollama is running and that the '${model}' model is loaded via:
 
             chatBox = document.getElementById("localAIChatBox");
             inputField = document.getElementById("localAIInput");
+
+            // Add welcome message
+            _updateChat("✨ *waves wand* Greetings! I'm Gizmo, your magical AI assistant. How can I help you today?", false);
 
             inputField.addEventListener("keypress", (e) => {
                 if (e.key === "Enter") _sendMessage(inputField.value);
