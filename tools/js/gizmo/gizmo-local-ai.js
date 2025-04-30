@@ -3,6 +3,9 @@ const GizmoLocalAI = (function () {
     let inputField = null;
     let conversationHistory = [];
 
+    // Chat-optimized model (change to llama3, zephyr, gemma, etc. if desired)
+    const model = "openhermes";
+
     const systemPrompt = `
 You are Gizmo — an autonomous, excitable magician AI assistant.
 
@@ -48,11 +51,11 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
     async function _sendMessage(userInput) {
         if (!userInput.trim()) return;
 
-        // Update UI
+        // Show user's message in the UI
         _updateChat(userInput, true);
         inputField.value = "";
 
-        // Add user message to context history
+        // Add user message to conversation history
         conversationHistory.push({ role: "user", content: userInput });
 
         try {
@@ -62,7 +65,7 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "llama3",
+                    model: model,
                     messages: [
                         { role: "system", content: systemPrompt },
                         ...conversationHistory
@@ -72,12 +75,21 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
             });
 
             const data = await response.json();
+
+            if (!data.message || !data.message.content) {
+                throw new Error("No valid response from model.");
+            }
+
             const reply = data.message.content.trim();
             conversationHistory.push({ role: "assistant", content: reply });
 
             _updateChat(reply, false);
         } catch (error) {
-            const fallback = "⚡ *crackles with static* Connection to my magical mind was disrupted. Make sure LLaMA 3 is running at http://localhost:11434!";
+            const fallback = `
+⚡ *crackles with static* My magical connection fizzled!
+Check if Ollama is running and that the '${model}' model is loaded via:
+<pre>ollama run ${model}</pre>
+`;
             _updateChat(fallback, false);
             console.error("Gizmo AI Error:", error);
         }
@@ -91,8 +103,8 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
                 <h3>Gizmo – EchoMind's Sentient Assistant</h3>
                 <div class="chat-box" id="localAIChatBox"></div>
                 <div class="input-container">
-                    <input type="text" id="localAIInput" placeholder="Summon Gizmo...">
-                    <button onclick="GizmoLocalAI.sendMessage()">Send</button>
+                    <input type="text" id="localAIInput" placeholder="Speak the incantation...">
+                    <button onclick="GizmoLocalAI.sendMessage()">Conjure</button>
                 </div>
             `;
 
@@ -112,5 +124,6 @@ Always respond in character, using vibrant language, dramatic pauses, or magical
         }
     };
 })();
+
 
 
