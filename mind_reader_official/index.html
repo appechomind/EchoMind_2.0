@@ -1,127 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>EchoMind - Gizmo AI Assistant</title>
-    <style>
-        body {
-            background: radial-gradient(ellipse at center, #0f0f1b 0%, #000000 100%);
-            color: #e0e0ff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            text-align: center;
-            padding: 30px 20px 10px;
-            background: #1b0033;
-            box-shadow: 0 0 20px rgba(170, 0, 255, 0.3);
-        }
-
-        header h1 {
-            font-size: 2.5em;
-            color: #ffffff;
-            margin: 0;
-        }
-
-        .gizmo-container {
-            max-width: 700px;
-            margin: 40px auto;
-            padding: 20px;
-            background: rgba(30, 0, 60, 0.7);
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(190, 80, 255, 0.2);
-        }
-
-        .chat-box {
-            height: 350px;
-            overflow-y: auto;
-            padding: 15px;
-            background: rgba(10, 10, 20, 0.9);
-            border-radius: 10px;
-            border: 1px solid #4c1f6c;
-            margin-bottom: 15px;
-            font-size: 0.95em;
-        }
-
-        .gizmo-message, .user-message {
-            margin-bottom: 16px;
-        }
-
-        .gizmo-header {
-            font-weight: bold;
-            color: #ad79ff;
-            margin-bottom: 5px;
-        }
-
-        .gizmo-content {
-            margin-left: 10px;
-            color: #dcdcff;
-        }
-
-        .user-message {
-            text-align: right;
-            color: #88ffff;
-        }
-
-        .input-container {
-            display: flex;
-        }
-
-        .input-container input {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px 0 0 10px;
-            background: #1e0033;
-            color: #fff;
-            font-size: 1em;
-            outline: none;
-        }
-
-        .input-container button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 0 10px 10px 0;
-            background: #ae00ff;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .input-container button:hover {
-            background: #cf36ff;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 0.8em;
-            color: #777;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Reader</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Load core modules in correct order -->
+  <script src="../js/core/echomind-core.js"></script>
+  <script src="../js/core/echomind-permissions.js"></script>
+  <script src="../js/core/echomind-speech.js"></script>
+  <script src="../js/core/language-model.js"></script>
 </head>
 <body>
-
-    <header>
-        <h1>✨ EchoMind: Gizmo AI Interface ✨</h1>
-    </header>
-
-    <div class="gizmo-container"></div>
-
-    <footer>
-        Running on LLaMA 3 / OpenHermes via Ollama &mdash; EchoMind Alpha Interface
-    </footer>
-
-    <!-- JS logic for Gizmo -->
-    <script src="GizmoLocalAI.js"></script>
-    <script>
-        window.onload = () => {
-            GizmoLocalAI.init();
-        };
-    </script>
+  <div class="card-container">
+    <img id="card-display" src="../images/cards/back.png" alt="Your card will appear here" />
+  </div>
+  <script src="js/mind_reader.js"></script>
 </body>
 </html>
-
