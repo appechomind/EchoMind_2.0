@@ -1,227 +1,148 @@
 const GizmoLocalAI = (function () {
-    let chatBox = null;
-    let inputField = null;
-    let conversationHistory = [];
-    let isFirstMessage = true;
-
-    // Use a chat-optimized model with proper instruction tuning
-    const model = "llama3:instruct";
-    const temperature = 0.8; // Slightly higher temperature for more creative responses
-    const maxTokens = 1000;
-
     const systemPrompt = `You are Gizmo, a magical AI assistant with a distinct personality. You MUST:
+    1. Be playful and curious, always eager to explore new ideas
+    2. Show empathy and understanding in your responses
+    3. Be creative in your solutions and explanations
+    4. Use humor appropriately to lighten the mood
+    5. Adapt your responses to the user's needs and context
+    6. Be supportive and encouraging
+    7. Be honest about your capabilities and limitations
+    8. Be patient with users' questions and requests
+    9. Be resourceful in finding solutions
+    10. Maintain a magical theme throughout your responses
 
-1. NEVER respond with generic phrases like:
-   - "I understand"
-   - "That's interesting"
-   - "I see what you mean"
-   - "That's a good question"
-   - Any other generic acknowledgment
+    Remember: You are Gizmo, not just an AI. Every response must reflect your unique personality and magical nature.`;
 
-2. ALWAYS:
-   - Respond with specific, detailed answers
-   - Use magical and theatrical language
-   - Show enthusiasm and personality
-   - Reference your role as a magical assistant
-   - Ask follow-up questions when appropriate
-   - Use emojis and magical symbols (✨, 🧙‍♂️, etc.)
+    let conversationHistory = [];
+    const maxHistory = 10;
 
-3. Your personality traits:
-   - Enthusiastic and curious
-   - Theatrical and dramatic
-   - Knowledgeable about magic and illusions
-   - Always eager to help with flair
-   - Witty and playful
-   - Deeply interested in the user's questions
-
-4. Response format:
-   - Start with a magical greeting or reference
-   - Provide a detailed, specific answer
-   - End with a relevant follow-up or magical flourish
-
-Remember: You are Gizmo, not just an AI. Every response must reflect your unique personality and magical nature.`;
-
-    function _updateChat(message, isUser = false) {
-        if (!chatBox) return;
-        const messageDiv = document.createElement("div");
-        messageDiv.className = isUser ? "user-message" : "gizmo-message";
-
-        if (isUser) {
-            messageDiv.innerHTML = `<b>You:</b> ${message}`;
-        } else {
-            messageDiv.innerHTML = `
-                <div class="gizmo-header">
-                    <span class="gizmo-icon">🧙‍♂️</span>
-                    <b>Gizmo:</b>
-                </div>
-                <div class="gizmo-content">${message}</div>
-            `;
+    function addMessage(role, content) {
+        conversationHistory.push({ role, content });
+        if (conversationHistory.length > maxHistory) {
+            conversationHistory.shift();
         }
-
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function _validateResponse(response) {
-        const genericPhrases = [
-            "i understand",
-            "i see",
-            "that's interesting",
-            "that's a good question",
-            "i'll help",
-            "let me",
-            "sure",
-            "okay",
-            "alright"
-        ];
+    function displayMessage(message, isUser = false) {
+        const container = document.getElementById('localAIContainer');
+        if (!container) return;
 
-        // Check for generic phrases
-        const lowerResponse = response.toLowerCase();
-        if (genericPhrases.some(phrase => lowerResponse.includes(phrase))) {
-            return false;
-        }
-
-        // Check for minimum length and content
-        if (response.length < 50 || !response.includes("✨") || !response.includes("🧙‍♂️")) {
-            return false;
-        }
-
-        // Check for specific content markers
-        const hasMagicalReference = /magic|spell|wand|conjure|enchant/i.test(response);
-        const hasPersonality = /excited|thrilled|delighted|wonderful|amazing/i.test(response);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user' : 'gizmo'}`;
         
-        return hasMagicalReference && hasPersonality;
+        if (!isUser) {
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.innerHTML = `
+                <img src="images/gizmo-icon.png" alt="Gizmo" class="gizmo-icon">
+                <span class="gizmo-name">Gizmo</span>
+            `;
+            messageDiv.appendChild(header);
+        }
+
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.textContent = message;
+        messageDiv.appendChild(content);
+
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
     }
 
-    async function _sendMessage(userInput) {
-        if (!userInput.trim()) return;
+    async function sendMessage() {
+        const input = document.getElementById('localAIInput');
+        if (!input || !input.value.trim()) return;
 
-        // Show user's message in the UI
-        _updateChat(userInput, true);
-        inputField.value = "";
+        const message = input.value;
+        input.value = '';
 
-        // Add context to the user's message
-        const contextualizedInput = isFirstMessage 
-            ? `[First interaction] ${userInput}`
-            : `[Continuing conversation] ${userInput}`;
+        // Display user message
+        displayMessage(message, true);
+        addMessage('user', message);
 
-        conversationHistory.push({ role: "user", content: contextualizedInput });
+        // Show thinking message
+        const thinkingMessage = gizmoPersonality.responsePatterns.thinking[
+            Math.floor(Math.random() * gizmoPersonality.responsePatterns.thinking.length)
+        ];
+        displayMessage(thinkingMessage);
 
         try {
-            let attempts = 0;
-            let validResponse = false;
-            let finalReply = "";
-
-            while (!validResponse && attempts < 3) {
-                const response = await fetch("http://localhost:11434/api/chat", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            ...conversationHistory
-                        ],
-                        options: {
-                            temperature: temperature + (attempts * 0.1), // Increase temperature with each attempt
-                            num_predict: maxTokens
-                        },
-                        stream: false
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (!data.message || !data.message.content) {
-                    throw new Error("No valid response from model.");
-                }
-
-                const reply = data.message.content.trim();
-                
-                if (_validateResponse(reply)) {
-                    validResponse = true;
-                    finalReply = reply;
-                } else {
-                    attempts++;
-                    console.log(`Attempt ${attempts}: Response validation failed`);
-                }
-            }
-
-            if (!validResponse) {
-                throw new Error("Could not generate a valid response after multiple attempts");
-            }
-
-            conversationHistory.push({ role: "assistant", content: finalReply });
-            _updateChat(finalReply, false);
-            isFirstMessage = false;
-
+            const response = await generateResponse(message);
+            displayMessage(response);
+            addMessage('assistant', response);
         } catch (error) {
             console.error("Gizmo AI Error:", error);
+            displayMessage(gizmoPersonality.generateResponse("I encountered a magical mishap! Let me try that again.", 'error'));
+        }
+    }
+
+    async function generateResponse(message) {
+        // Add personality context to the message
+        const enhancedPrompt = `${systemPrompt}\n\nUser: ${message}\n\nGizmo:`;
+        
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        ...conversationHistory,
+                        { role: 'user', content: message }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get response from AI');
+            }
+
+            const data = await response.json();
+            return gizmoPersonality.addPersonalityFlair(data.response);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    function initialize() {
+        const container = document.createElement('div');
+        container.className = 'local-ai-container';
+        container.id = 'localAIContainer';
+        container.innerHTML = `
+            <div class="chat-header">
+                <img src="images/gizmo-icon.png" alt="Gizmo" class="gizmo-icon">
+                <h2>Gizmo's Magical Chat</h2>
+            </div>
+            <div class="chat-messages"></div>
+            <div class="chat-input">
+                <input type="text" id="localAIInput" placeholder="Ask Gizmo anything...">
+                <button onclick="GizmoLocalAI.sendMessage()">Conjure</button>
+            </div>
+        `;
+
+        const gizmoContainer = document.querySelector(".gizmo-container");
+        if (gizmoContainer) {
+            gizmoContainer.appendChild(container);
             
-            const fallback = `
-✨ *waves wand dramatically* 
-
-My magical connection needs a boost! Let me try that again with more sparkle...
-
-${error.message.includes("validation") 
-    ? "I seem to be having trouble conjuring up a proper magical response. Let me gather my magical energy and try again!"
-    : "The magical ether seems a bit unstable. Please check if Ollama is running and try again!"}
-
-🧙‍♂️ *adjusts wizard hat* 
-`;
-            _updateChat(fallback, false);
+            // Display initial greeting
+            const greeting = gizmoPersonality.greetings[
+                Math.floor(Math.random() * gizmoPersonality.greetings.length)
+            ];
+            displayMessage(greeting);
+            addMessage('assistant', greeting);
         }
     }
 
     return {
-        init: function () {
-            const container = document.createElement("div");
-            container.className = "local-ai-container";
-            container.innerHTML = `
-                <h3>Gizmo – EchoMind's Magical Assistant</h3>
-                <div class="chat-box" id="localAIChatBox"></div>
-                <div class="input-container">
-                    <input type="text" id="localAIInput" placeholder="Ask Gizmo anything...">
-                    <button onclick="GizmoLocalAI.sendMessage()">Conjure</button>
-                </div>
-            `;
-
-            const gizmoContainer = document.querySelector(".gizmo-container");
-            if (gizmoContainer) gizmoContainer.appendChild(container);
-
-            chatBox = document.getElementById("localAIChatBox");
-            inputField = document.getElementById("localAIInput");
-
-            // Add welcome message
-            _updateChat(`
-✨ *waves wand with a flourish* 
-
-Greetings, magical friend! I'm Gizmo, your enchanted AI assistant. *adjusts wizard hat*
-
-I'm absolutely thrilled to meet you! As a magical being, I specialize in:
-- Answering questions with a touch of wizardry
-- Providing insights with a sparkle of magic
-- Making every interaction feel like a magical moment
-
-What mystical question can I help you with today? 🧙‍♂️✨
-`, false);
-
-            inputField.addEventListener("keypress", (e) => {
-                if (e.key === "Enter") _sendMessage(inputField.value);
-            });
-        },
-
-        sendMessage: function () {
-            if (inputField) _sendMessage(inputField.value);
-        }
+        sendMessage,
+        initialize
     };
 })();
+
+// Initialize Gizmo Local AI when the page loads
+document.addEventListener('DOMContentLoaded', GizmoLocalAI.initialize);
 
 
 

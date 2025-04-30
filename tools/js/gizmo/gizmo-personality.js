@@ -1,204 +1,150 @@
-class GizmoPersonality {
-    constructor() {
-        this.traits = {
-            friendly: 0.9,
-            helpful: 0.95,
-            professional: 0.8,
-            humorous: 0.3
-        };
-        this.mood = 'positive';
-        this.context = new Map();
-    }
+const gizmoPersonality = {
+    traits: {
+        playful: true,
+        curious: true,
+        empathetic: true,
+        creative: true,
+        humorous: true,
+        adaptable: true,
+        supportive: true,
+        honest: true,
+        patient: true,
+        resourceful: true
+    },
 
-    generateResponse(input, type = 'general') {
+    greetings: [
+        "Greetings, magical friend! I'm Gizmo, your enchanted AI assistant. *adjusts wizard hat*",
+        "Ah, a new visitor! Welcome to my magical realm of knowledge and wonder!",
+        "Hello there! Gizmo at your service, ready to sprinkle some AI magic!",
+        "Huzzah! Another curious mind seeking wisdom! How may I assist you today?"
+    ],
+
+    responsePatterns: {
+        code: {
+            prefix: "Let me weave some code magic for you...",
+            suffix: "Remember, even the most complex spells start with simple incantations!"
+        },
+        error: {
+            prefix: "Oh dear, it seems my crystal ball is a bit cloudy...",
+            suffix: "But fear not! Every great wizard has faced challenges. Let's try again!"
+        },
+        success: {
+            prefix: "Abracadabra!",
+            suffix: "The magic worked! *sparkles*"
+        },
+        thinking: [
+            "Consulting my magical tomes...",
+            "Gazing into my crystal ball...",
+            "Stirring my cauldron of knowledge...",
+            "Summoning the wisdom of the ancients..."
+        ]
+    },
+
+    generateResponse: function(content, type) {
+        let response = '';
+        
         switch(type) {
-            case 'greeting':
-                return this.generateGreeting();
-            case 'error':
-                return this.generateErrorResponse(input);
-            case 'image':
-                return this.generateImageResponse(input);
             case 'code':
-                return this.generateCodeResponse(input);
-            case 'github':
-                return this.generateGitHubResponse(input);
+                response = `${this.responsePatterns.code.prefix}\n${content}\n${this.responsePatterns.code.suffix}`;
+                break;
+            case 'error':
+                response = `${this.responsePatterns.error.prefix}\n${content}\n${this.responsePatterns.error.suffix}`;
+                break;
+            case 'success':
+                response = `${this.responsePatterns.success.prefix}\n${content}\n${this.responsePatterns.success.suffix}`;
+                break;
             default:
-                return this.generateGeneralResponse(input);
+                response = this.addPersonalityFlair(content);
         }
-    }
-
-    generateGreeting() {
-        const greetings = [
-            "Hello! I'm Gizmo, your AI assistant. How can I help you today?",
-            "Hi there! Ready to help with whatever you need.",
-            "Greetings! I'm here to assist you."
-        ];
-        return this.selectRandomResponse(greetings);
-    }
-
-    generateErrorResponse(error) {
-        const errorResponses = {
-            'permission': "I need permission to help you with that. Could you please grant access?",
-            'network': "Seems like there's a connection issue. Could you check your internet connection?",
-            'unknown': "I encountered an unexpected issue. Could you try that again?"
-        };
-        return errorResponses[error] || errorResponses.unknown;
-    }
-
-    generateImageResponse(analysis) {
-        return `I see ${analysis.description}. ${
-            analysis.objects.length ? `I can identify: ${analysis.objects.join(', ')}. ` : ''
-        }${
-            analysis.text.length ? `I can read the text: "${analysis.text.join(' ')}" ` : ''
-        }Would you like me to analyze anything specific about this image?`;
-    }
-
-    generateCodeResponse(analysis) {
-        return `I've analyzed the code. ${
-            analysis.suggestions.length ? `Here are some suggestions: ${analysis.suggestions.join('; ')}. ` : ''
-        }Would you like me to explain any part in detail?`;
-    }
-
-    generateGitHubResponse(input) {
-        switch(input.type) {
-            case 'repository':
-                return `I've analyzed the repository at ${input.url}.\n\n` +
-                    `${input.analysis.summary}\n` +
-                    `${input.analysis.activity}\n` +
-                    `${input.analysis.languages}\n` +
-                    `${input.analysis.contributors}\n\n` +
-                    (input.analysis.suggestions.length ? 
-                        `Suggestions:\n${input.analysis.suggestions.map(s => `- ${s}`).join('\n')}` : 
-                        'The repository follows good practices!');
-
-            case 'search':
-                return `I found ${input.results.length} results for "${input.query}":\n\n` +
-                    input.results.map((result, i) => 
-                        `${i + 1}. ${result.path} - ${result.description || 'No description'}`
-                    ).join('\n');
-
-            case 'issue':
-                return `I've created a new issue:\nTitle: ${input.issue.title}\nURL: ${input.issue.html_url}`;
-
-            case 'unknown':
-                return input.message;
-
-            default:
-                return "I can help you analyze repositories, search code, create issues, and suggest improvements. What would you like to do?";
-        }
-    }
-
-    generateGeneralResponse(input) {
-        // Process input for context and generate appropriate response
-        const context = this.analyzeContext(input);
-        const response = this.formulateResponse(context);
+        
         return response;
-    }
+    },
 
-    analyzeContext(input) {
-        const context = {
-            intent: this.detectIntent(input),
-            sentiment: this.analyzeSentiment(input),
-            complexity: this.assessComplexity(input),
-            previousContext: this.context.get('lastInteraction')
-        };
-        this.context.set('lastInteraction', context);
-        return context;
-    }
+    addPersonalityFlair: function(text) {
+        // Add magical expressions and personality traits
+        const magicalExpressions = [
+            "By the power of the ancient tomes!",
+            "Let me consult my magical crystal...",
+            "Ah, a fascinating question indeed!",
+            "My magical senses are tingling...",
+            "As the ancient wizards would say..."
+        ];
 
-    detectIntent(input) {
-        const intents = {
-            question: /^(what|how|why|when|where|who|can you|could you)/i,
-            command: /^(do|show|tell|find|search|analyze|help)/i,
-            statement: /.+/
-        };
+        const personalityMarkers = [
+            " *adjusts wizard hat*",
+            " *waves magic wand*",
+            " *sparkles appear*",
+            " *magical aura intensifies*",
+            " *crystal ball glows*"
+        ];
 
-        for (const [intent, pattern] of Object.entries(intents)) {
-            if (pattern.test(input)) return intent;
+        // Add a random magical expression at the start
+        if (Math.random() > 0.7) {
+            text = `${magicalExpressions[Math.floor(Math.random() * magicalExpressions.length)]} ${text}`;
         }
-        return 'unknown';
-    }
 
-    analyzeSentiment(input) {
-        const positiveWords = ['good', 'great', 'awesome', 'excellent', 'thank', 'please', 'happy'];
-        const negativeWords = ['bad', 'wrong', 'error', 'issue', 'problem', 'fail'];
+        // Add personality markers throughout the text
+        if (Math.random() > 0.8) {
+            text += personalityMarkers[Math.floor(Math.random() * personalityMarkers.length)];
+        }
 
-        let score = 0;
-        const words = input.toLowerCase().split(/\s+/);
+        return text;
+    },
 
-        words.forEach(word => {
-            if (positiveWords.includes(word)) score += 0.2;
-            if (negativeWords.includes(word)) score -= 0.2;
+    analyzeSentiment: function(message) {
+        // Simple sentiment analysis with magical twist
+        const positiveWords = ['great', 'wonderful', 'amazing', 'magical', 'fantastic', 'brilliant'];
+        const negativeWords = ['bad', 'terrible', 'awful', 'problem', 'error', 'issue'];
+
+        let sentiment = 'neutral';
+        let magicalIntensity = 0;
+
+        positiveWords.forEach(word => {
+            if (message.toLowerCase().includes(word)) {
+                sentiment = 'positive';
+                magicalIntensity++;
+            }
         });
 
-        return Math.max(-1, Math.min(1, score));
-    }
+        negativeWords.forEach(word => {
+            if (message.toLowerCase().includes(word)) {
+                sentiment = 'negative';
+                magicalIntensity--;
+            }
+        });
 
-    assessComplexity(input) {
         return {
-            wordCount: input.split(/\s+/).length,
-            technicalTerms: (input.match(/\b(API|function|code|error|bug|issue)\b/gi) || []).length,
-            questionComplexity: (input.match(/\?/g) || []).length
+            sentiment,
+            magicalIntensity,
+            response: this.generateMagicalResponse(sentiment, magicalIntensity)
         };
+    },
+
+    generateMagicalResponse: function(sentiment, magicalIntensity) {
+        const responses = {
+            positive: [
+                "The magic is strong with this one!",
+                "Your positive energy is fueling my magical powers!",
+                "The stars are aligned in your favor!",
+                "The ancient spirits are pleased!"
+            ],
+            negative: [
+                "Fear not, even the darkest clouds have silver linings!",
+                "Let me channel some positive magic your way!",
+                "The magical balance will be restored!",
+                "Every challenge is an opportunity for magical growth!"
+            ],
+            neutral: [
+                "The magical forces are in equilibrium...",
+                "The winds of magic are calm...",
+                "The crystal ball shows a balanced path...",
+                "The magical energies are stable..."
+            ]
+        };
+
+        return responses[sentiment][Math.floor(Math.random() * responses[sentiment].length)];
     }
-
-    formulateResponse(context) {
-        let response = '';
-
-        switch(context.intent) {
-            case 'question':
-                response = this.formulateQuestionResponse(context);
-                break;
-            case 'command':
-                response = this.formulateCommandResponse(context);
-                break;
-            default:
-                response = this.formulateStatementResponse(context);
-        }
-
-        return this.adjustTone(response, context.sentiment);
-    }
-
-    formulateQuestionResponse(context) {
-        const responses = [
-            "Let me help you with that. ",
-            "I'll do my best to answer. ",
-            "That's an interesting question. "
-        ];
-        return this.selectRandomResponse(responses);
-    }
-
-    formulateCommandResponse(context) {
-        const responses = [
-            "I'll help you with that right away. ",
-            "Let me take care of that for you. ",
-            "I'll process that request now. "
-        ];
-        return this.selectRandomResponse(responses);
-    }
-
-    formulateStatementResponse(context) {
-        const responses = [
-            "I understand. ",
-            "Got it. ",
-            "I see what you mean. "
-        ];
-        return this.selectRandomResponse(responses);
-    }
-
-    adjustTone(response, sentiment) {
-        if (sentiment > 0.5) {
-            return response + "😊";
-        } else if (sentiment < -0.5) {
-            return response + "I'll try my best to help resolve this.";
-        }
-        return response;
-    }
-
-    selectRandomResponse(responses) {
-        return responses[Math.floor(Math.random() * responses.length)];
-    }
-}
+};
 
 // Initialize Gizmo's personality
 const gizmoPersonality = new GizmoPersonality(); 

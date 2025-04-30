@@ -163,4 +163,57 @@
     .message {
         max-width: 90%;
     }
+}
+
+/* Local AI Chat Styles */
+.local-ai-container {
+    width: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 10px black;
+    margin: 20px;
+}
+
+.local-ai-container h3 {
+    color: white;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.local-ai-container .chat-box {
+    height: 300px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.local-ai-container .input-container {
+    display: flex;
+}
+
+.local-ai-container #localAIInput {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 10px 0 0 10px;
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.local-ai-container button {
+    padding: 10px 20px;
+    border: none;
+    background: #1f4068;
+    color: white;
+    border-radius: 0 10px 10px 0;
+    cursor: pointer;
+}
+
+.local-ai-container button:hover {
+    background: #16222a;
 } 

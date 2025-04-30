@@ -61,24 +61,26 @@ class GizmoAI {
                 response.type = 'github';
             } else if (messageContext.isCodeRelated) {
                 const codeAnalysis = await this.analyzeCode(message);
-                response.text += gizmoPersonality.generateResponse(codeAnalysis, 'code');
+                response.text = gizmoPersonality.generateResponse(codeAnalysis, 'code');
                 response.type = 'code';
             } else if (messageContext.isModification) {
                 const modificationPlan = await this.handleAppModification(message);
-                response.text += gizmoPersonality.generateResponse(modificationPlan, 'modification');
+                response.text = gizmoPersonality.generateResponse(modificationPlan, 'modification');
                 response.type = 'modification';
             } else {
-                response.text += await this.generateContextAwareResponse(message, messageContext);
+                response.text = await this.generateContextAwareResponse(message, messageContext);
             }
 
-            // Add relevant suggestions
-            response.suggestions = this.generateContextualSuggestions(messageContext);
+            // Add relevant suggestions with magical flair
+            response.suggestions = this.generateContextualSuggestions(messageContext).map(suggestion => 
+                gizmoPersonality.addPersonalityFlair(suggestion)
+            );
 
             return response;
         } catch (error) {
             console.error('Error processing message:', error);
             return {
-                text: gizmoPersonality.generateResponse('unknown', 'error'),
+                text: gizmoPersonality.generateResponse('My magical powers seem to be a bit unstable at the moment. Let me try that again!', 'error'),
                 type: 'error',
                 error: error.message
             };
@@ -86,7 +88,7 @@ class GizmoAI {
     }
 
     analyzeMessageContext(message) {
-        return {
+        const context = {
             isGitHubRelated: this.detectGitHubContent(message),
             isCodeRelated: this.detectCodeContent(message),
             isModification: this.detectModificationIntent(message),
@@ -94,6 +96,29 @@ class GizmoAI {
             sentiment: gizmoPersonality.analyzeSentiment(message),
             complexity: this.assessComplexity(message)
         };
+
+        // Add magical context
+        context.magicalIntensity = Math.random() * 0.5 + 0.5; // Random magical intensity between 0.5 and 1
+        context.magicalTheme = this.detectMagicalTheme(message);
+
+        return context;
+    }
+
+    detectMagicalTheme(message) {
+        const magicalThemes = {
+            spells: /spell|magic|conjure|enchant/i,
+            potions: /potion|brew|ingredient|cauldron/i,
+            creatures: /dragon|unicorn|phoenix|goblin/i,
+            artifacts: /wand|staff|crystal|amulet/i
+        };
+
+        for (const [theme, pattern] of Object.entries(magicalThemes)) {
+            if (pattern.test(message)) {
+                return theme;
+            }
+        }
+
+        return 'general';
     }
 
     detectGitHubContent(message) {
@@ -403,43 +428,55 @@ class GizmoAI {
     }
 
     async generateContextAwareResponse(message, context) {
-        // Generate response based on context and user preferences
-        const baseResponse = gizmoPersonality.generateResponse(message, 'general');
-        
-        // Add context-aware enhancements
-        let enhancedResponse = baseResponse;
-        
-        if (context.complexity > 0.7) {
-            enhancedResponse += '\n\nI notice this is a complex topic. Would you like me to break it down into smaller parts?';
+        let response = '';
+
+        // Add magical greeting based on context
+        if (context.magicalTheme !== 'general') {
+            response += gizmoPersonality.responsePatterns.thinking[
+                Math.floor(Math.random() * gizmoPersonality.responsePatterns.thinking.length)
+            ] + '\n\n';
         }
-        
-        if (context.topics.length > 0) {
-            enhancedResponse += '\n\nI can provide more information about: ' + context.topics.join(', ');
+
+        // Generate base response
+        const baseResponse = await this.generateBaseResponse(message, context);
+        response += baseResponse;
+
+        // Add magical flourish based on sentiment and theme
+        if (context.sentiment.sentiment === 'positive') {
+            response += '\n\n' + gizmoPersonality.generateMagicalResponse('positive', context.magicalIntensity);
         }
-        
-        return enhancedResponse;
+
+        return gizmoPersonality.addPersonalityFlair(response);
     }
 
     generateContextualSuggestions(context) {
         const suggestions = [];
-        
-        // Add suggestions based on context
+
         if (context.isCodeRelated) {
-            suggestions.push('Review code best practices');
-            suggestions.push('Explore similar patterns');
+            suggestions.push(
+                "Would you like me to analyze this code more deeply?",
+                "I can help optimize this code with some magical efficiency!",
+                "Let me check for any potential magical bugs in this code."
+            );
         }
-        
-        if (context.complexity > 0.5) {
-            suggestions.push('Break down into smaller tasks');
-            suggestions.push('See step-by-step explanation');
+
+        if (context.isGitHubRelated) {
+            suggestions.push(
+                "I can help you explore this repository's magical secrets!",
+                "Would you like me to search for specific magical incantations in the code?",
+                "I can help you create a new magical feature in this repository!"
+            );
         }
-        
-        // Add topic-specific suggestions
-        context.topics.forEach(topic => {
-            suggestions.push(`Learn more about ${topic}`);
-        });
-        
-        return suggestions.slice(0, 3); // Limit to top 3 suggestions
+
+        if (context.magicalTheme !== 'general') {
+            suggestions.push(
+                `Would you like to learn more about ${context.magicalTheme}?`,
+                "I can share some ancient magical knowledge about this topic!",
+                "Let me consult my magical tomes for more information!"
+            );
+        }
+
+        return suggestions;
     }
 
     async handleGitHubRequest(message) {
