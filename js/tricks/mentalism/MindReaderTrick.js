@@ -10,16 +10,75 @@ class MindReaderTrick extends Trick {
         this.selectedCard = null;
         this.cardStates = new Map();
         this.animationDuration = 2000;
+        this.recognition = null;
+        this.isListening = false;
+        this.startY = null;
+        this.setupCompleted = false;
     }
 
-    onActivate() {
+    async onActivate() {
+        await this.checkSetupStatus();
         this.initializeCards();
         this.displayCards();
+        this.setupEventListeners();
     }
 
     onDeactivate() {
         this.clearCards();
         this.cardStates.clear();
+        this.stopListening();
+    }
+
+    async checkSetupStatus() {
+        const setupCompleted = localStorage.getItem('setup_completed') === 'true';
+        const permissionGranted = localStorage.getItem('permission_granted') === 'true';
+
+        if (setupCompleted && permissionGranted) {
+            try {
+                const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                if (permissionStatus.state === 'granted') {
+                    this.setupCompleted = true;
+                    this.startListening();
+                    return;
+                }
+            } catch (e) {
+                console.error('Error checking permission:', e);
+            }
+        }
+
+        this.showSetupScreen();
+    }
+
+    showSetupScreen() {
+        const setupScreen = document.createElement('div');
+        setupScreen.id = 'setup-screen';
+        setupScreen.innerHTML = `
+            <div class="setup-content">
+                <h2>Setup Required</h2>
+                <p>To perform this trick, we need microphone access for voice commands.</p>
+                <button id="setupBtn">Grant Permission</button>
+            </div>
+        `;
+        document.body.appendChild(setupScreen);
+        
+        document.getElementById('setupBtn').addEventListener('click', () => this.beginSetup());
+    }
+
+    async beginSetup() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            
+            localStorage.setItem('permission_granted', 'true');
+            localStorage.setItem('setup_completed', 'true');
+            
+            document.getElementById('setup-screen').remove();
+            this.setupCompleted = true;
+            this.startListening();
+        } catch (e) {
+            console.error('Error during setup:', e);
+            alert('Permission denied. Please allow microphone access to use this feature.');
+        }
     }
 
     initializeCards() {
@@ -31,7 +90,6 @@ class MindReaderTrick extends Trick {
             { id: 5, name: 'Ten of Hearts', image: 'images/cards/ten-hearts.png' }
         ];
 
-        // Initialize card states
         this.cards.forEach(card => {
             this.cardStates.set(card.id, {
                 isSelected: false,
@@ -66,8 +124,34 @@ class MindReaderTrick extends Trick {
         
         cardElement.appendChild(cardImage);
         cardElement.addEventListener('click', () => this.selectCard(card));
+        cardElement.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        cardElement.addEventListener('touchend', (e) => this.handleTouchEnd(e));
         
         return cardElement;
+    }
+
+    handleTouchStart(e) {
+        this.startY = e.touches[0].clientY;
+    }
+
+    handleTouchEnd(e) {
+        if (!this.startY) return;
+        
+        const endY = e.changedTouches[0].clientY;
+        const deltaY = endY - this.startY;
+        
+        if (Math.abs(deltaY) > 50) {
+            const cardElement = e.target.closest('.card');
+            if (cardElement) {
+                const cardId = parseInt(cardElement.dataset.cardId);
+                const card = this.cards.find(c => c.id === cardId);
+                if (card) {
+                    this.selectCard(card);
+                }
+            }
+        }
+        
+        this.startY = null;
     }
 
     async selectCard(card) {
@@ -76,21 +160,77 @@ class MindReaderTrick extends Trick {
         this.selectedCard = card;
         this.cardStates.get(card.id).isSelected = true;
         
+        if (navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+        
         this.addMessage('user', `I'm thinking of the ${card.name}`);
         await this.performMindReading();
+    }
+
+    startListening() {
+        if (!this.setupCompleted) return;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            console.warn('Speech Recognition not supported');
+            return;
+        }
+
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = true;
+        this.recognition.interimResults = true;
+        this.recognition.lang = 'en-US';
+
+        this.recognition.onresult = (event) => {
+            const transcript = Array.from(event.results)
+                .map(result => result[0].transcript)
+                .join('');
+
+            this.processVoiceCommand(transcript);
+        };
+
+        this.recognition.onend = () => {
+            if (this.isListening) {
+                this.recognition.start();
+            }
+        };
+
+        try {
+            this.recognition.start();
+            this.isListening = true;
+        } catch (e) {
+            console.error('Error starting speech recognition:', e);
+        }
+    }
+
+    stopListening() {
+        if (this.recognition) {
+            this.isListening = false;
+            this.recognition.stop();
+        }
+    }
+
+    processVoiceCommand(transcript) {
+        const normalizedTranscript = transcript.toLowerCase();
+        
+        for (const card of this.cards) {
+            const cardName = card.name.toLowerCase();
+            if (normalizedTranscript.includes(cardName)) {
+                this.selectCard(card);
+                break;
+            }
+        }
     }
 
     async performMindReading() {
         if (!this.selectedCard) return;
 
-        // Add dramatic delay
         await AnimationUtils.delay(this.animationDuration);
 
-        // Perform the "mind reading"
         const response = `I sense... you're thinking of the ${this.selectedCard.name}!`;
         this.addMessage('ai', response);
         
-        // Mark card as revealed
         this.cardStates.get(this.selectedCard.id).isRevealed = true;
     }
 
@@ -98,6 +238,7 @@ class MindReaderTrick extends Trick {
         const chatBox = this.elements.chatBox;
         chatBox.innerHTML = '';
         this.selectedCard = null;
+        this.stopListening();
     }
 
     async onProcessMessage(message) {

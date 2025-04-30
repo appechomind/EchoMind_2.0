@@ -6,15 +6,11 @@ import { GoogleSearchBox } from '../../utils/components/google-search-box.js';
 import { ThoughtsContainer } from '../../utils/components/thoughts-container.js';
 import './google-interface.css';
 
-class GooglePeekTrick extends Trick {
+class GooglePeekMicrophoneTrick extends Trick {
     constructor() {
         super();
-        this.displayName = 'Google Peek';
+        this.displayName = 'Google Peek (Microphone)';
         this.inputPlaceholder = 'Search or speak your thoughts...';
-        this.isPerformer = false;
-        this.pairedDevice = null;
-        this.searchHistory = [];
-        this.searchTimeout = null;
         
         // Initialize components
         this.searchBox = new GoogleSearchBox({
@@ -29,19 +25,19 @@ class GooglePeekTrick extends Trick {
         
         // Initialize speech recognition
         this.speechManager = new SpeechRecognitionManager({
-            onResult: (transcript) => this.handleVoiceSearch(transcript),
-            onError: (error) => this.handleSpeechError(error),
+            onResult: (transcript) => this.handleThought(transcript),
+            onError: (error) => console.error('Speech recognition error:', error),
             onEnd: () => this.searchBox.updateVoiceButton(false)
         });
         
         // Initialize setup screen
         this.setupScreen = new SetupScreen({
-            title: 'Google Peek Setup',
-            description: 'To perform this trick, we need microphone access for voice search.',
-            buttonText: 'Grant Permission',
+            title: 'Mind Reading Setup',
+            description: 'To perform this mind reading trick, we need microphone access to hear your thoughts.\nDon\'t worry - your thoughts are completely private and won\'t be stored.',
+            buttonText: 'Enable Mind Reading',
             permissionType: 'microphone',
-            setupKey: 'setup_completed',
-            permissionKey: 'permission_granted',
+            setupKey: 'mic_setup_completed',
+            permissionKey: 'mic_permission_granted',
             onSetupComplete: () => this.startListening()
         });
     }
@@ -94,7 +90,7 @@ class GooglePeekTrick extends Trick {
             this.speechManager.start();
             this.searchBox.updateVoiceButton(true);
         } catch (e) {
-            this.handleSpeechError(e);
+            console.error('Error starting speech recognition:', e);
         }
     }
 
@@ -107,48 +103,37 @@ class GooglePeekTrick extends Trick {
         this.speechManager.toggle();
     }
 
-    handleVoiceSearch(transcript) {
-        this.searchBox.setValue(transcript);
-        this.handleSearch(transcript);
-    }
+    handleThought(thought) {
+        if (!thought.trim()) return;
 
-    handleSpeechError(error) {
-        console.error('Speech recognition error:', error);
-        this.searchBox.updateVoiceButton(false);
+        this.thoughtsContainer.addThought(thought);
+
+        // Add a slight delay before showing the thought
+        setTimeout(() => {
+            this.addMessage('ai', `I see you're thinking about "${thought}"...`);
+        }, 1000);
     }
 
     handleSearch(query) {
         if (!query.trim()) return;
 
-        // Clear any existing timeout
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
-
-        this.searchHistory.push(query);
         this.addMessage('user', `Searching for: ${query}`);
         
-        // Debounce search results
-        this.searchTimeout = setTimeout(() => {
+        // Simulate search results
+        setTimeout(() => {
             const results = this.generateSearchResults(query);
             this.addMessage('ai', results);
         }, 1000);
     }
 
     generateSearchResults(query) {
-        const isPerformer = this.isPerformer;
-        return isPerformer ? 
-            `I see you're thinking about "${query}"... Let me show you something interesting.` :
-            `Here are the search results for "${query}":\n\n1. First result\n2. Second result\n3. Third result`;
+        return `Here are the search results for "${query}":\n\n1. First result\n2. Second result\n3. Third result`;
     }
 
     cleanup() {
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
         const chatBox = this.elements.chatBox;
         chatBox.innerHTML = '';
     }
 }
 
-export default GooglePeekTrick; 
+export default GooglePeekMicrophoneTrick; 
