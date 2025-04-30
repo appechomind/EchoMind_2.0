@@ -222,6 +222,26 @@ class LanguageModel {
     setTemperature(value) {
         this.temperature = Math.max(0, Math.min(1, value));
     }
+
+    generateResponse(input, intent, entities) {
+        let response = {
+            text: '',
+            confidence: this.calculateConfidence(intent, entities),
+            suggestions: this.generateSuggestions(intent, entities)
+        };
+
+        if (intent.type === 'question') {
+            response.text = `*adjusts magical spectacles* Let me ponder that question about ${entities.topic || 'your query'}...`;
+        } else if (intent.type === 'command') {
+            response.text = `*waves wand thoughtfully* I'll help you with that ${entities.action || 'request'}...`;
+        } else if (intent.type === 'statement') {
+            response.text = `*nods with understanding* Ah, I see what you mean about ${entities.topic || 'that'}.`;
+        } else {
+            response.text = `*taps wand thoughtfully* I'm intrigued by what you're saying...`;
+        }
+
+        return response;
+    }
 }
 
 // Initialize language model
