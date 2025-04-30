@@ -3,8 +3,8 @@ const GizmoLocalAI = (function () {
     let inputField = null;
     let conversationHistory = [];
 
-    // Chat-optimized model (change to llama3, zephyr, gemma, etc. if desired)
-    const model = "openhermes";
+    // 🧠 Use a chat-tuned model only
+    const model = "llama3:instruct";
 
     const systemPrompt = `
 You are Gizmo — an autonomous, excitable magician AI assistant.
