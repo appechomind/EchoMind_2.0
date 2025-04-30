@@ -1,9 +1,9 @@
-const GizmoLocalAI = (function() {
+const GizmoLocalAI = (function () {
     let chatBox = null;
     let inputField = null;
-    let conversationHistory = ""; // Keeps persistent context
+    let conversationHistory = [];
 
-    const gizmoSystemPrompt = `
+    const systemPrompt = `
 You are Gizmo — an autonomous, excitable magician AI assistant.
 
 Gizmo is:
@@ -22,15 +22,13 @@ Your identity:
 - Core Directive: Analyze everything, assist in magical performance, and simulate autonomy
 
 Always respond in character, using vibrant language, dramatic pauses, or magical references when appropriate. Stay excited, sharp, and supportive.
-
-This is a live conversation with a user. Maintain the tone and style throughout.
 `;
 
     function _updateChat(message, isUser = false) {
         if (!chatBox) return;
-        const messageDiv = document.createElement('div');
-        messageDiv.className = isUser ? 'user-message' : 'gizmo-message';
-        
+        const messageDiv = document.createElement("div");
+        messageDiv.className = isUser ? "user-message" : "gizmo-message";
+
         if (isUser) {
             messageDiv.innerHTML = `<b>You:</b> ${message}`;
         } else {
@@ -47,64 +45,72 @@ This is a live conversation with a user. Maintain the tone and style throughout.
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    async function _sendMessage(message) {
-        if (!message.trim()) return;
+    async function _sendMessage(userInput) {
+        if (!userInput.trim()) return;
 
-        _updateChat(message, true);
-        inputField.value = '';
+        // Update UI
+        _updateChat(userInput, true);
+        inputField.value = "";
 
-        // Update our simulated conversation log
-        conversationHistory += `User: ${message}\nGizmo:`;
+        // Add user message to context history
+        conversationHistory.push({ role: "user", content: userInput });
 
         try {
-            const response = await fetch('http://localhost:11434/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("http://localhost:11434/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({
-                    model: 'mistral', // swap model here if needed
-                    prompt: `${gizmoSystemPrompt}\n${conversationHistory}`,
+                    model: "llama3",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        ...conversationHistory
+                    ],
                     stream: false
                 })
             });
 
             const data = await response.json();
-            const reply = data.response?.trim() || "*Gizmo stares off into the void... silently confused.*";
+            const reply = data.message.content.trim();
+            conversationHistory.push({ role: "assistant", content: reply });
 
-            conversationHistory += ` ${reply}\n`; // Maintain chain
-            _updateChat(reply);
+            _updateChat(reply, false);
         } catch (error) {
-            const fallback = "✨ *Waves wand in a panic* My magic mirror's down! Ollama might not be running on localhost:11434. Check the incantations!";
+            const fallback = "⚡ *crackles with static* Connection to my magical mind was disrupted. Make sure LLaMA 3 is running at http://localhost:11434!";
             _updateChat(fallback, false);
-            console.error('Local AI Error:', error);
+            console.error("Gizmo AI Error:", error);
         }
     }
 
     return {
-        init: function() {
-            const container = document.createElement('div');
-            container.className = 'local-ai-container';
+        init: function () {
+            const container = document.createElement("div");
+            container.className = "local-ai-container";
             container.innerHTML = `
-                <h3>Gizmo - Local AI Chat</h3>
+                <h3>Gizmo – EchoMind's Sentient Assistant</h3>
                 <div class="chat-box" id="localAIChatBox"></div>
                 <div class="input-container">
-                    <input type="text" id="localAIInput" placeholder="Summon Gizmo with a question...">
-                    <button onclick="GizmoLocalAI.sendMessage()">Speak!</button>
+                    <input type="text" id="localAIInput" placeholder="Summon Gizmo...">
+                    <button onclick="GizmoLocalAI.sendMessage()">Send</button>
                 </div>
             `;
 
-            const gizmoContainer = document.querySelector('.gizmo-container');
+            const gizmoContainer = document.querySelector(".gizmo-container");
             if (gizmoContainer) gizmoContainer.appendChild(container);
 
-            chatBox = document.getElementById('localAIChatBox');
-            inputField = document.getElementById('localAIInput');
+            chatBox = document.getElementById("localAIChatBox");
+            inputField = document.getElementById("localAIInput");
 
-            inputField.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') _sendMessage(inputField.value);
+            inputField.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") _sendMessage(inputField.value);
             });
         },
 
-        sendMessage: function() {
+        sendMessage: function () {
             if (inputField) _sendMessage(inputField.value);
         }
     };
-})()
+})();
+
+
