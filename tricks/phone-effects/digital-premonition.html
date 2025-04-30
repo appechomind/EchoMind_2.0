@@ -12,40 +12,64 @@
       padding: 20px;
     }
     
-    .prediction-section {
+    .prediction-input {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 30px 0;
       text-align: center;
-      margin: 30px 0;
-      padding: 20px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
     }
     
-    .prediction-box {
-      background: white;
-      color: #4a2080;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-      font-size: 1.5em;
-      font-weight: bold;
-      min-height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .phone-info {
-      margin: 30px 0;
-      padding: 20px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-    }
-    
-    .info-item {
-      margin: 15px 0;
-      padding: 10px;
-      background: rgba(255,255,255,0.05);
+    .prediction-input input {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid #6032a8;
       border-radius: 5px;
+      padding: 10px;
+      color: white;
+      width: 100%;
+      max-width: 300px;
+      margin: 10px 0;
+    }
+    
+    .prediction-input input:focus {
+      outline: none;
+      border-color: #9966ff;
+      box-shadow: 0 0 10px rgba(153,102,255,0.3);
+    }
+    
+    .phone-display {
+      background: #111;
+      border-radius: 20px;
+      padding: 20px;
+      margin: 30px auto;
+      max-width: 300px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .phone-screen {
+      background: #222;
+      border-radius: 10px;
+      padding: 15px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .phone-item {
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .phone-item:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .phone-item.selected {
+      background: #6032a8;
     }
     
     .controls {
@@ -69,6 +93,37 @@
       background: #6032a8;
     }
     
+    button:disabled {
+      background: #333;
+      cursor: not-allowed;
+    }
+    
+    .back-button {
+      display: inline-block;
+      background-color: #6032a8;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: background-color 0.3s;
+    }
+    
+    .back-button:hover {
+      background-color: #7944d4;
+    }
+    
+    .error-message {
+      color: #ff4444;
+      text-align: center;
+      margin: 20px 0;
+      padding: 10px;
+      background: rgba(255,0,0,0.1);
+      border-radius: 5px;
+      display: none;
+    }
+    
     .reveal-section {
       text-align: center;
       margin: 30px 0;
@@ -82,98 +137,109 @@
 <body>
   <div class="trick-container">
     <h1>Digital Premonition</h1>
-    <p>Write down your prediction, then let your spectator select information from their phone...</p>
+    <p>Write down your prediction, then have your spectator make selections from their phone...</p>
     
-    <div class="prediction-section">
-      <h2>Your Prediction</h2>
-      <div class="prediction-box" id="predictionBox">
-        Write your prediction here
-      </div>
+    <div class="error-message" id="errorMessage">
+      Your browser doesn't support this feature. Please try a modern browser.
     </div>
     
-    <div class="phone-info">
-      <h2>Phone Information</h2>
-      <div class="info-item">
-        <label>Battery Level: </label>
-        <span id="batteryLevel">Loading...</span>
-      </div>
-      <div class="info-item">
-        <label>Network Type: </label>
-        <span id="networkType">Loading...</span>
-      </div>
-      <div class="info-item">
-        <label>Device Memory: </label>
-        <span id="deviceMemory">Loading...</span>
+    <div class="prediction-input">
+      <h2>Your Prediction</h2>
+      <input type="text" id="predictionInput" placeholder="Write your prediction here...">
+      <button id="lockPrediction">Lock Prediction</button>
+    </div>
+    
+    <div class="phone-display">
+      <div class="phone-screen" id="phoneScreen">
+        <div class="phone-item" data-item="Recent Call">Last called: Mom (2 mins ago)</div>
+        <div class="phone-item" data-item="Text Message">Latest text: "On my way!" (5 mins ago)</div>
+        <div class="phone-item" data-item="Photo">Recent photo: Sunset at beach (Yesterday)</div>
+        <div class="phone-item" data-item="App">Most used app: Instagram (2 hours today)</div>
+        <div class="phone-item" data-item="Song">Now playing: "Happy" by Pharrell Williams</div>
       </div>
     </div>
     
     <div class="reveal-section" id="revealSection">
-      <h2>Incredible!</h2>
-      <p>Your prediction matches the selected information!</p>
+      <h2>The Prediction Was Correct!</h2>
+      <p>Your prediction: <span id="predictionText"></span></p>
+      <p>Selected item: <span id="selectedItem"></span></p>
     </div>
     
     <div class="controls">
+      <button id="revealBtn" disabled>Reveal Prediction</button>
       <button id="resetBtn">Reset</button>
-      <button id="revealBtn">Reveal</button>
     </div>
+    
+    <a href="../index.html" class="back-button">← Back to Tricks Menu</a>
   </div>
 
   <script>
-    let prediction = null;
+    let prediction = '';
+    let selectedItem = null;
+    let isPredictionLocked = false;
     
-    function getPhoneInfo() {
-      // Battery information
-      if ('getBattery' in navigator) {
-        navigator.getBattery().then(battery => {
-          document.getElementById('batteryLevel').textContent = 
-            `${Math.round(battery.level * 100)}%`;
-        });
-      }
-      
-      // Network information
-      if ('connection' in navigator) {
-        const connection = navigator.connection;
-        document.getElementById('networkType').textContent = 
-          connection.type || 'Unknown';
-      }
-      
-      // Device memory
-      if ('deviceMemory' in navigator) {
-        document.getElementById('deviceMemory').textContent = 
-          `${navigator.deviceMemory}GB`;
-      }
-    }
-    
-    function setPrediction() {
-      const predictionBox = document.getElementById('predictionBox');
-      const newPrediction = prompt('Enter your prediction:');
-      if (newPrediction) {
-        prediction = newPrediction;
-        predictionBox.textContent = prediction;
-      }
-    }
-    
-    function revealPrediction() {
+    function lockPrediction() {
+      prediction = document.getElementById('predictionInput').value.trim();
       if (!prediction) {
-        alert('Please set your prediction first!');
+        alert('Please write your prediction first!');
         return;
       }
       
-      document.getElementById('revealSection').style.display = 'block';
+      isPredictionLocked = true;
+      document.getElementById('predictionInput').disabled = true;
+      document.getElementById('lockPrediction').disabled = true;
+      document.getElementById('revealBtn').disabled = false;
+    }
+    
+    function selectItem(item) {
+      if (!isPredictionLocked) {
+        alert('Please lock your prediction first!');
+        return;
+      }
+      
+      selectedItem = item;
+      document.querySelectorAll('.phone-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+      event.target.classList.add('selected');
+    }
+    
+    function revealPrediction() {
+      if (!selectedItem) {
+        alert('Please select an item from the phone first!');
+        return;
+      }
+      
+      const revealSection = document.getElementById('revealSection');
+      document.getElementById('predictionText').textContent = prediction;
+      document.getElementById('selectedItem').textContent = selectedItem;
+      revealSection.style.display = 'block';
     }
     
     function resetTrick() {
-      prediction = null;
-      document.getElementById('predictionBox').textContent = 'Write your prediction here';
+      prediction = '';
+      selectedItem = null;
+      isPredictionLocked = false;
+      
+      document.getElementById('predictionInput').value = '';
+      document.getElementById('predictionInput').disabled = false;
+      document.getElementById('lockPrediction').disabled = false;
+      document.getElementById('revealBtn').disabled = true;
       document.getElementById('revealSection').style.display = 'none';
-      getPhoneInfo();
+      
+      document.querySelectorAll('.phone-item').forEach(el => {
+        el.classList.remove('selected');
+      });
     }
     
     // Initialize
-    document.getElementById('predictionBox').onclick = setPrediction;
-    document.getElementById('resetBtn').onclick = resetTrick;
+    document.getElementById('lockPrediction').onclick = lockPrediction;
     document.getElementById('revealBtn').onclick = revealPrediction;
-    getPhoneInfo();
+    document.getElementById('resetBtn').onclick = resetTrick;
+    
+    document.querySelectorAll('.phone-item').forEach(item => {
+      item.onclick = () => selectItem(item.dataset.item);
+    });
   </script>
 </body>
 </html> 
