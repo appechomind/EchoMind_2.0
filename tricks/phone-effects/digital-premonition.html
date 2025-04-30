@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoMind - Digital Premonition</title>
+  <link rel="stylesheet" href="../../css/styles.css">
+  <style>
+    .trick-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .prediction-section {
+      text-align: center;
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    
+    .prediction-box {
+      background: white;
+      color: #4a2080;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 1.5em;
+      font-weight: bold;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .phone-info {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    
+    .info-item {
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 5px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: #4a2080;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #6032a8;
+    }
+    
+    .reveal-section {
+      text-align: center;
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="trick-container">
+    <h1>Digital Premonition</h1>
+    <p>Write down your prediction, then let your spectator select information from their phone...</p>
+    
+    <div class="prediction-section">
+      <h2>Your Prediction</h2>
+      <div class="prediction-box" id="predictionBox">
+        Write your prediction here
+      </div>
+    </div>
+    
+    <div class="phone-info">
+      <h2>Phone Information</h2>
+      <div class="info-item">
+        <label>Battery Level: </label>
+        <span id="batteryLevel">Loading...</span>
+      </div>
+      <div class="info-item">
+        <label>Network Type: </label>
+        <span id="networkType">Loading...</span>
+      </div>
+      <div class="info-item">
+        <label>Device Memory: </label>
+        <span id="deviceMemory">Loading...</span>
+      </div>
+    </div>
+    
+    <div class="reveal-section" id="revealSection">
+      <h2>Incredible!</h2>
+      <p>Your prediction matches the selected information!</p>
+    </div>
+    
+    <div class="controls">
+      <button id="resetBtn">Reset</button>
+      <button id="revealBtn">Reveal</button>
+    </div>
+  </div>
+
+  <script>
+    let prediction = null;
+    
+    function getPhoneInfo() {
+      // Battery information
+      if ('getBattery' in navigator) {
+        navigator.getBattery().then(battery => {
+          document.getElementById('batteryLevel').textContent = 
+            `${Math.round(battery.level * 100)}%`;
+        });
+      }
+      
+      // Network information
+      if ('connection' in navigator) {
+        const connection = navigator.connection;
+        document.getElementById('networkType').textContent = 
+          connection.type || 'Unknown';
+      }
+      
+      // Device memory
+      if ('deviceMemory' in navigator) {
+        document.getElementById('deviceMemory').textContent = 
+          `${navigator.deviceMemory}GB`;
+      }
+    }
+    
+    function setPrediction() {
+      const predictionBox = document.getElementById('predictionBox');
+      const newPrediction = prompt('Enter your prediction:');
+      if (newPrediction) {
+        prediction = newPrediction;
+        predictionBox.textContent = prediction;
+      }
+    }
+    
+    function revealPrediction() {
+      if (!prediction) {
+        alert('Please set your prediction first!');
+        return;
+      }
+      
+      document.getElementById('revealSection').style.display = 'block';
+    }
+    
+    function resetTrick() {
+      prediction = null;
+      document.getElementById('predictionBox').textContent = 'Write your prediction here';
+      document.getElementById('revealSection').style.display = 'none';
+      getPhoneInfo();
+    }
+    
+    // Initialize
+    document.getElementById('predictionBox').onclick = setPrediction;
+    document.getElementById('resetBtn').onclick = resetTrick;
+    document.getElementById('revealBtn').onclick = revealPrediction;
+    getPhoneInfo();
+  </script>
+</body>
+</html> 
