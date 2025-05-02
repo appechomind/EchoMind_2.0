@@ -42,15 +42,17 @@ class GooglePeekTrick extends Trick {
             onEnd: () => this.searchBox.updateVoiceButton(false)
         });
         
-        // Initialize setup screen
+        // Initialize setup screen with new permissions system
         this.setupScreen = new SetupScreen({
             title: 'Google Peek Setup',
             description: 'To perform this trick, we need microphone access for voice search.',
             buttonText: 'Grant Permission',
-            permissionType: 'microphone',
-            setupKey: 'setup_completed',
-            permissionKey: 'permission_granted',
-            onSetupComplete: () => this.startListening()
+            debugMode: true,
+            onSetupComplete: () => {
+                this.initializeGoogleInterface();
+                this.startListening();
+            },
+            onSetupError: (error) => this.handleError('Setup failed', error)
         });
 
         // Check online status
@@ -248,7 +250,17 @@ class GooglePeekTrick extends Trick {
     handleError(context, error) {
         this.analytics.errors++;
         console.error(`${context}:`, error);
-        this.showError(`An error occurred: ${error.message}`);
+        
+        let errorMessage = 'An error occurred. ';
+        if (error.name === 'NotAllowedError') {
+            errorMessage += 'Please grant microphone access to use this feature.';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage += 'No microphone found. Please connect a microphone and try again.';
+        } else {
+            errorMessage += error.message || 'Please try again.';
+        }
+        
+        this.showError(errorMessage);
     }
 
     showError(message) {

@@ -1,3 +1,5 @@
+import { PermissionsManager } from './permissions-manager.js';
+
 export class SetupScreen {
     constructor(options = {}) {
         this.title = options.title || 'Setup Required';
@@ -5,15 +7,24 @@ export class SetupScreen {
         this.buttonText = options.buttonText || 'Enable';
         this.onSetupComplete = options.onSetupComplete || (() => {});
         this.onSetupError = options.onSetupError || (() => {});
-        this.permissionType = options.permissionType || 'microphone';
-        this.setupKey = options.setupKey || 'setup_completed';
-        this.permissionKey = options.permissionKey || 'permission_granted';
         this.setupScreen = null;
         this.setupBtn = null;
         this.isSettingUp = false;
         this.errorMessage = null;
-        this.retryCount = 0;
-        this.maxRetries = 3;
+
+        // Initialize permissions manager
+        this.permissionsManager = new PermissionsManager({
+            debugMode: options.debugMode || false
+        });
+
+        // Listen for permission changes
+        this.permissionsManager.addEventListener(event => {
+            if (event.type === 'permission_granted') {
+                this.handleSetupComplete();
+            } else if (event.type === 'permission_error') {
+                this.handleSetupError(event.error);
+            }
+        });
     }
 
     show() {
@@ -46,20 +57,10 @@ export class SetupScreen {
         }
 
         try {
-            const constraints = this.getMediaConstraints();
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            
-            // Stop all tracks immediately
-            stream.getTracks().forEach(track => track.stop());
-            
-            // Store setup status
-            this.storeSetupStatus();
-            
-            // Remove setup screen
-            this.cleanup();
-            
-            // Call completion handler
-            this.onSetupComplete();
+            const granted = await this.permissionsManager.requestPermission();
+            if (granted) {
+                this.handleSetupComplete();
+            }
         } catch (error) {
             this.handleSetupError(error);
         } finally {
@@ -67,25 +68,34 @@ export class SetupScreen {
         }
     }
 
+    handleSetupComplete() {
+        // Remove setup screen
+        this.cleanup();
+        
+        // Call completion handler
+        this.onSetupComplete();
+    }
+
     handleSetupError(error) {
         console.error('Error during setup:', error);
-        this.retryCount++;
         
         let errorMessage = 'An error occurred during setup. ';
-        if (this.retryCount < this.maxRetries) {
-            errorMessage += `Retrying... (${this.retryCount}/${this.maxRetries})`;
-            setTimeout(() => this.beginSetup(), 1000);
+        if (error.name === 'NotAllowedError') {
+            errorMessage = 'Microphone access was denied. Please grant permission to continue.';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage = 'No microphone found. Please connect a microphone and try again.';
         } else {
-            errorMessage += 'Please try again later.';
-            if (this.setupBtn) {
-                this.setupBtn.disabled = false;
-                this.setupBtn.textContent = this.buttonText;
-            }
+            errorMessage = 'An unexpected error occurred. Please try again.';
         }
 
         this.errorMessage = errorMessage;
         this.updateErrorDisplay();
         this.onSetupError(error);
+
+        if (this.setupBtn) {
+            this.setupBtn.disabled = false;
+            this.setupBtn.textContent = this.buttonText;
+        }
     }
 
     updateErrorDisplay() {
@@ -102,48 +112,8 @@ export class SetupScreen {
         }
     }
 
-    getMediaConstraints() {
-        switch (this.permissionType) {
-            case 'microphone':
-                return { audio: true };
-            case 'camera':
-                return { video: true };
-            case 'both':
-                return { audio: true, video: true };
-            default:
-                throw new Error('Unsupported permission type');
-        }
-    }
-
-    storeSetupStatus() {
-        try {
-            localStorage.setItem(this.permissionKey, 'true');
-            localStorage.setItem(this.setupKey, 'true');
-        } catch (error) {
-            console.error('Failed to store setup status:', error);
-        }
-    }
-
     async checkSetupStatus() {
-        try {
-            const setupCompleted = localStorage.getItem(this.setupKey) === 'true';
-            const permissionGranted = localStorage.getItem(this.permissionKey) === 'true';
-
-            if (setupCompleted && permissionGranted) {
-                try {
-                    const permissionStatus = await navigator.permissions.query({ name: this.permissionType });
-                    return permissionStatus.state === 'granted';
-                } catch (e) {
-                    console.error('Error checking permission:', e);
-                    return false;
-                }
-            }
-
-            return false;
-        } catch (error) {
-            console.error('Error checking setup status:', error);
-            return false;
-        }
+        return await this.permissionsManager.checkPermissionStatus();
     }
 
     cleanup() {
@@ -152,7 +122,7 @@ export class SetupScreen {
             this.setupScreen = null;
             this.setupBtn = null;
             this.errorMessage = null;
-            this.retryCount = 0;
         }
+        this.permissionsManager.cleanup();
     }
 } 
