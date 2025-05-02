@@ -1,79 +1,94 @@
 export class ThoughtsContainer {
     constructor(options = {}) {
-        this.options = {
-            onThoughtClick: options.onThoughtClick || (() => {}),
-            maxHeight: options.maxHeight || '300px'
-        };
-        
+        this.onThoughtClick = options.onThoughtClick || (() => {});
+        this.maxHeight = options.maxHeight || '300px';
+        this.container = null;
+        this.list = null;
         this.thoughts = [];
-        this.elements = {
-            container: null,
-            list: null
-        };
     }
 
     render() {
         return `
-            <div class="thoughts-container" style="display: none;">
-                <div class="thoughts-title">Your Thoughts</div>
-                <div class="thoughts-list" style="max-height: ${this.options.maxHeight}"></div>
+            <div class="thoughts-container">
+                <h3 class="thoughts-title">Your Thoughts</h3>
+                <div class="thoughts-list"></div>
             </div>
         `;
     }
 
-    initialize(container) {
-        this.elements.container = container.querySelector('.thoughts-container');
-        this.elements.list = container.querySelector('.thoughts-list');
+    initialize(parentElement) {
+        this.container = parentElement.querySelector('.thoughts-container');
+        this.list = parentElement.querySelector('.thoughts-list');
+        this.updateDisplay();
     }
 
-    addThought(thought) {
-        if (!thought.trim()) return;
-
-        this.thoughts.push(thought);
-        this.updateDisplay();
-
-        // Show the container after first thought
-        if (this.elements.container) {
-            this.elements.container.style.display = 'block';
+    addThought(thought, isInterim = false) {
+        if (!thought) return;
+        
+        const thoughtObj = {
+            text: thought,
+            timestamp: new Date().toISOString(),
+            isInterim
+        };
+        
+        if (isInterim) {
+            // Replace any existing interim thought
+            const interimIndex = this.thoughts.findIndex(t => t.isInterim);
+            if (interimIndex !== -1) {
+                this.thoughts[interimIndex] = thoughtObj;
+            } else {
+                this.thoughts.push(thoughtObj);
+            }
+        } else {
+            // Remove any interim thought
+            this.thoughts = this.thoughts.filter(t => !t.isInterim);
+            this.thoughts.push(thoughtObj);
         }
+        
+        this.updateDisplay();
     }
 
     updateDisplay() {
-        if (!this.elements.list) return;
-
-        this.elements.list.innerHTML = this.thoughts
-            .map(thought => `
-                <div class="thought-item" data-thought="${thought}">
-                    ${thought}
-                </div>
-            `)
-            .join('');
-
+        if (!this.list) return;
+        
+        this.list.innerHTML = this.thoughts.map(thought => `
+            <div class="thought-item ${thought.isInterim ? 'interim' : ''}" 
+                 data-timestamp="${thought.timestamp}">
+                ${thought.text}
+                ${thought.isInterim ? '<span class="interim-indicator">Listening...</span>' : ''}
+            </div>
+        `).join('');
+        
         // Add click handlers
-        const items = this.elements.list.querySelectorAll('.thought-item');
-        items.forEach(item => {
-            item.addEventListener('click', () => {
-                const thought = item.dataset.thought;
-                this.options.onThoughtClick(thought);
-            });
+        this.list.querySelectorAll('.thought-item').forEach(item => {
+            if (!item.classList.contains('interim')) {
+                item.addEventListener('click', () => {
+                    const thought = this.thoughts.find(t => 
+                        t.timestamp === item.dataset.timestamp
+                    );
+                    if (thought) {
+                        this.onThoughtClick(thought.text);
+                    }
+                });
+            }
         });
+        
+        // Show container if there are thoughts
+        if (this.thoughts.length > 0) {
+            this.container.classList.add('visible');
+        } else {
+            this.container.classList.remove('visible');
+        }
     }
 
     clear() {
         this.thoughts = [];
-        if (this.elements.list) {
-            this.elements.list.innerHTML = '';
-        }
-        if (this.elements.container) {
-            this.elements.container.style.display = 'none';
-        }
+        this.updateDisplay();
     }
 
     cleanup() {
         this.clear();
-        this.elements = {
-            container: null,
-            list: null
-        };
+        this.container = null;
+        this.list = null;
     }
 } 

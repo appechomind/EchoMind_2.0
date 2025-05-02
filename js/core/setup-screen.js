@@ -11,6 +11,9 @@ export class SetupScreen {
         this.setupScreen = null;
         this.setupBtn = null;
         this.isSettingUp = false;
+        this.errorMessage = null;
+        this.retryCount = 0;
+        this.maxRetries = 3;
     }
 
     show() {
@@ -22,7 +25,9 @@ export class SetupScreen {
             <div class="setup-content">
                 <h2>${this.title}</h2>
                 <p>${this.description}</p>
+                <div class="setup-status"></div>
                 <button id="setupBtn" ${this.isSettingUp ? 'disabled' : ''}>${this.buttonText}</button>
+                ${this.errorMessage ? `<div class="error-message">${this.errorMessage}</div>` : ''}
             </div>
         `;
         document.body.appendChild(this.setupScreen);
@@ -55,15 +60,45 @@ export class SetupScreen {
             
             // Call completion handler
             this.onSetupComplete();
-        } catch (e) {
-            console.error('Error during setup:', e);
-            this.onSetupError(e);
+        } catch (error) {
+            this.handleSetupError(error);
+        } finally {
+            this.isSettingUp = false;
+        }
+    }
+
+    handleSetupError(error) {
+        console.error('Error during setup:', error);
+        this.retryCount++;
+        
+        let errorMessage = 'An error occurred during setup. ';
+        if (this.retryCount < this.maxRetries) {
+            errorMessage += `Retrying... (${this.retryCount}/${this.maxRetries})`;
+            setTimeout(() => this.beginSetup(), 1000);
+        } else {
+            errorMessage += 'Please try again later.';
             if (this.setupBtn) {
                 this.setupBtn.disabled = false;
                 this.setupBtn.textContent = this.buttonText;
             }
-        } finally {
-            this.isSettingUp = false;
+        }
+
+        this.errorMessage = errorMessage;
+        this.updateErrorDisplay();
+        this.onSetupError(error);
+    }
+
+    updateErrorDisplay() {
+        if (!this.setupScreen) return;
+        
+        const errorElement = this.setupScreen.querySelector('.error-message');
+        if (errorElement) {
+            errorElement.textContent = this.errorMessage;
+        } else {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = this.errorMessage;
+            this.setupScreen.querySelector('.setup-content').appendChild(errorDiv);
         }
     }
 
@@ -81,25 +116,34 @@ export class SetupScreen {
     }
 
     storeSetupStatus() {
-        localStorage.setItem(this.permissionKey, 'true');
-        localStorage.setItem(this.setupKey, 'true');
+        try {
+            localStorage.setItem(this.permissionKey, 'true');
+            localStorage.setItem(this.setupKey, 'true');
+        } catch (error) {
+            console.error('Failed to store setup status:', error);
+        }
     }
 
     async checkSetupStatus() {
-        const setupCompleted = localStorage.getItem(this.setupKey) === 'true';
-        const permissionGranted = localStorage.getItem(this.permissionKey) === 'true';
+        try {
+            const setupCompleted = localStorage.getItem(this.setupKey) === 'true';
+            const permissionGranted = localStorage.getItem(this.permissionKey) === 'true';
 
-        if (setupCompleted && permissionGranted) {
-            try {
-                const permissionStatus = await navigator.permissions.query({ name: this.permissionType });
-                return permissionStatus.state === 'granted';
-            } catch (e) {
-                console.error('Error checking permission:', e);
-                return false;
+            if (setupCompleted && permissionGranted) {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: this.permissionType });
+                    return permissionStatus.state === 'granted';
+                } catch (e) {
+                    console.error('Error checking permission:', e);
+                    return false;
+                }
             }
-        }
 
-        return false;
+            return false;
+        } catch (error) {
+            console.error('Error checking setup status:', error);
+            return false;
+        }
     }
 
     cleanup() {
@@ -107,6 +151,8 @@ export class SetupScreen {
             this.setupScreen.remove();
             this.setupScreen = null;
             this.setupBtn = null;
+            this.errorMessage = null;
+            this.retryCount = 0;
         }
     }
 } 
