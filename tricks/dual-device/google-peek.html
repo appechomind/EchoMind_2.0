@@ -3,47 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Peek - EchoMind 2.0</title>
-    <link rel="stylesheet" href="../../css/styles.css">
-    <link rel="stylesheet" href="../../css/tricks.css">
+    <title>Google</title>
+    <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
     <style>
-        .google-interface {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: arial, sans-serif;
+            color: #202124;
         }
 
-        .google-header {
+        .header {
             display: flex;
             justify-content: flex-end;
-            padding: 1rem;
-            border-bottom: 1px solid #eee;
+            padding: 6px;
+            align-items: center;
         }
 
-        .google-header a {
-            color: #5f6368;
+        .header a {
+            color: rgba(0,0,0,.87);
             text-decoration: none;
-            margin-left: 1rem;
-            font-size: 0.9rem;
+            font-size: 13px;
+            margin: 0 8px;
+            padding: 5px;
         }
 
-        .google-content {
-            text-align: center;
-            padding: 2rem 0;
+        .header a:hover {
+            text-decoration: underline;
         }
 
-        .google-logo {
-            width: 272px;
-            height: 92px;
-            margin: 0 auto 2rem;
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 100px;
+        }
+
+        .logo {
+            margin-bottom: 20px;
         }
 
         .search-container {
             position: relative;
-            max-width: 584px;
+            width: 584px;
             margin: 0 auto;
         }
 
@@ -63,8 +65,18 @@
             box-shadow: 0 1px 10px rgba(32, 33, 36, 0.28);
         }
 
+        .voice-search {
+            position: absolute;
+            right: 20px;
+            top: 12px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
         .search-buttons {
-            margin-top: 2rem;
+            margin-top: 20px;
         }
 
         .search-button {
@@ -73,8 +85,8 @@
             border-radius: 4px;
             color: #3c4043;
             font-size: 14px;
-            margin: 0 0.5rem;
-            padding: 0.5rem 1rem;
+            margin: 0 8px;
+            padding: 8px 16px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -84,142 +96,178 @@
             box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
         }
 
-        .thought-bubble {
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #f2f2f2;
+            padding: 15px 0;
+            border-top: 1px solid #dadce0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .footer a {
+            color: #70757a;
+            text-decoration: none;
+            font-size: 14px;
+            margin: 0 10px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .listening-indicator {
             position: absolute;
-            top: -60px;
+            top: -30px;
             left: 50%;
             transform: translateX(-50%);
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .thought-bubble.visible {
-            opacity: 1;
-        }
-
-        .thought-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-top: 10px solid white;
-        }
-
-        .reveal-container {
-            margin-top: 2rem;
-            padding: 2rem;
             background: #f8f9fa;
-            border-radius: 8px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #3c4043;
             display: none;
         }
 
-        .reveal-container.visible {
+        .listening-indicator.visible {
             display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Google Peek</h1>
-        
-        <div class="google-interface">
-            <div class="google-header">
-                <a href="#">Gmail</a>
-                <a href="#">Images</a>
+    <div class="header">
+        <a href="#">Gmail</a>
+        <a href="#">Images</a>
+        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/apps_48dp.png" alt="Apps" style="width: 24px; height: 24px;"></a>
+        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/avatar_48dp.png" alt="Account" style="width: 32px; height: 32px; border-radius: 50%;"></a>
+    </div>
+
+    <div class="content">
+        <div class="logo">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+        </div>
+
+        <div class="search-container">
+            <div class="listening-indicator" id="listeningIndicator">Listening...</div>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search Google or type a URL">
+            <button class="voice-search" id="voiceSearchButton">
+                <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" alt="Voice Search">
+            </button>
+        </div>
+
+        <div class="search-buttons">
+            <button class="search-button" id="searchButton">Google Search</button>
+            <button class="search-button" id="luckyButton">I'm Feeling Lucky</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div>
+                <a href="#">About</a>
+                <a href="#">Advertising</a>
+                <a href="#">Business</a>
+                <a href="#">How Search works</a>
             </div>
-            
-            <div class="google-content">
-                <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="google-logo">
-                
-                <div class="search-container">
-                    <div class="thought-bubble" id="thoughtBubble">
-                        I'm thinking of something...
-                    </div>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Search Google or type a URL">
-                </div>
-                
-                <div class="search-buttons">
-                    <button class="search-button" id="searchButton">Google Search</button>
-                    <button class="search-button" id="luckyButton">I'm Feeling Lucky</button>
-                </div>
+            <div>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Settings</a>
             </div>
         </div>
-        
-        <div class="reveal-container" id="revealContainer">
-            <h2>Your Thoughts Revealed!</h2>
-            <p>I can see you were thinking about searching for: <span id="revealedSearch" class="highlight"></span></p>
-            <p>How did I know? That's the magic of EchoMind!</p>
-        </div>
-        
-        <a href="../index.html" class="back-button">Back to Tricks</a>
     </div>
 
     <script>
         const searchInput = document.getElementById('searchInput');
-        const thoughtBubble = document.getElementById('thoughtBubble');
-        const revealContainer = document.getElementById('revealContainer');
-        const revealedSearch = document.getElementById('revealedSearch');
-        
-        let currentSearch = '';
-        let isThinking = false;
-        
-        // Simulate thought reading
-        function simulateThoughtReading() {
-            if (!isThinking) {
-                isThinking = true;
-                thoughtBubble.classList.add('visible');
-                
-                // Simulate typing in the search box
-                const searchText = currentSearch;
-                let i = 0;
-                const typingInterval = setInterval(() => {
-                    if (i < searchText.length) {
-                        searchInput.value = searchText.substring(0, i + 1);
-                        i++;
-                    } else {
-                        clearInterval(typingInterval);
-                        revealThought();
-                    }
-                }, 100);
+        const voiceSearchButton = document.getElementById('voiceSearchButton');
+        const listeningIndicator = document.getElementById('listeningIndicator');
+        let recognition = null;
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                console.warn('Speech Recognition not supported in this browser');
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                listeningIndicator.classList.add('visible');
+            };
+
+            recognition.onend = () => {
+                listeningIndicator.classList.remove('visible');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                searchInput.focus();
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                listeningIndicator.classList.remove('visible');
+            };
+        }
+
+        // Request microphone permission and initialize speech recognition
+        async function requestMicrophonePermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                initSpeechRecognition();
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
             }
         }
-        
-        function revealThought() {
-            revealedSearch.textContent = currentSearch;
-            revealContainer.classList.add('visible');
-            thoughtBubble.classList.remove('visible');
-        }
-        
-        // Event listeners
-        searchInput.addEventListener('focus', () => {
-            currentSearch = 'how to perform magic tricks';
-            setTimeout(simulateThoughtReading, 1000);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            requestMicrophonePermission();
         });
-        
+
+        // Voice search button click handler
+        voiceSearchButton.addEventListener('click', () => {
+            if (recognition) {
+                recognition.start();
+            }
+        });
+
+        // Search button click handler
         document.getElementById('searchButton').addEventListener('click', () => {
-            if (!isThinking) {
-                currentSearch = searchInput.value || 'how to perform magic tricks';
-                simulateThoughtReading();
+            const query = searchInput.value.trim();
+            if (query) {
+                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
             }
         });
-        
+
+        // I'm Feeling Lucky button click handler
         document.getElementById('luckyButton').addEventListener('click', () => {
-            if (!isThinking) {
-                currentSearch = 'magic tricks revealed';
-                simulateThoughtReading();
+            const query = searchInput.value.trim();
+            if (query) {
+                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I%27m+Feeling+Lucky`;
+            }
+        });
+
+        // Handle Enter key in search input
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) {
+                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                }
             }
         });
     </script>
