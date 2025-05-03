@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>Google Peek - EchoMind 2.0</title>
     <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
     <script src="../../js/permissions-handler.js"></script>
     <script src="../../js/echomind-speech.js"></script>
+    <script src="../../js/mind-reader.js"></script>
     <style>
         body {
             font-family: arial,sans-serif;
@@ -15,6 +16,89 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            background: #1a1a1a;
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fractal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(45deg, #1a1a1a, #2a1a2a);
+            opacity: 0.8;
+        }
+
+        .fractal-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(128, 0, 128, 0.1) 0%, transparent 50%),
+                repeating-linear-gradient(45deg, rgba(128, 0, 128, 0.1) 0px, rgba(128, 0, 128, 0.1) 1px, transparent 1px, transparent 10px),
+                repeating-linear-gradient(-45deg, rgba(128, 0, 128, 0.1) 0px, rgba(128, 0, 128, 0.1) 1px, transparent 1px, transparent 10px);
+            animation: fractalMove 20s infinite linear;
+        }
+
+        @keyframes fractalMove {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        .setup-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .setup-content {
+            text-align: center;
+            padding: 30px;
+            background: rgba(26, 26, 26, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(128, 0, 128, 0.3);
+        }
+
+        .setup-content h2 {
+            color: #a96eff;
+            margin-bottom: 20px;
+        }
+
+        .setup-content p {
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        #setupBtn {
+            background: #a96eff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #setupBtn:hover {
+            background: #8a4dff;
+            transform: scale(1.05);
         }
 
         .header {
@@ -23,11 +107,13 @@
             justify-content: flex-end;
             padding: 6px;
             height: 60px;
+            background: rgba(26, 26, 26, 0.8);
+            backdrop-filter: blur(10px);
         }
 
         .header a {
             text-decoration: none;
-            color: rgba(0,0,0,0.87);
+            color: #ffffff;
             margin-right: 15px;
             font-size: 13px;
         }
@@ -43,6 +129,8 @@
             justify-content: center;
             align-items: center;
             margin-top: -120px;
+            position: relative;
+            z-index: 1;
         }
 
         .logo {
@@ -52,6 +140,7 @@
         .logo img {
             width: 272px;
             height: 92px;
+            filter: brightness(0) invert(1);
         }
 
         .search-container {
@@ -63,17 +152,19 @@
         .search-box {
             width: 100%;
             display: flex;
-            border: 1px solid #dfe1e5;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 24px;
             padding: 8px 14px;
             box-shadow: none;
             height: 44px;
             align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .search-box:hover, .search-box:focus-within {
-            box-shadow: 0 1px 6px rgba(32,33,36,.28);
-            border-color: rgba(223,225,229,0);
+            box-shadow: 0 1px 6px rgba(128, 0, 128, 0.3);
+            border-color: rgba(128, 0, 128, 0.5);
         }
         
         .search-input {
@@ -83,6 +174,8 @@
             height: 34px;
             font-size: 16px;
             margin-left: 10px;
+            background: transparent;
+            color: #ffffff;
         }
         
         .search-icons {
@@ -98,6 +191,7 @@
             cursor: pointer;
             opacity: 0.6;
             transition: all 0.3s ease;
+            filter: brightness(0) invert(1);
         }
 
         .search-icon:hover, .mic-icon:hover {
@@ -123,38 +217,39 @@
         }
 
         .buttons button {
-            background-color: #f8f9fa;
-            border: 1px solid #f8f9fa;
+            background-color: rgba(128, 0, 128, 0.3);
+            border: 1px solid rgba(128, 0, 128, 0.5);
             border-radius: 4px;
-            color: #3c4043;
+            color: #ffffff;
             font-family: arial,sans-serif;
             font-size: 14px;
             padding: 0 16px;
             height: 36px;
             cursor: pointer;
+            backdrop-filter: blur(10px);
         }
         
         .buttons button:hover {
-            box-shadow: 0 1px 1px rgba(0,0,0,.1);
-            background-color: #f8f9fa;
-            border: 1px solid #dadce0;
-            color: #202124;
+            box-shadow: 0 1px 1px rgba(128, 0, 128, 0.3);
+            background-color: rgba(128, 0, 128, 0.4);
+            border: 1px solid rgba(128, 0, 128, 0.7);
         }
         
         .footer {
-            background: #f2f2f2;
+            background: rgba(26, 26, 26, 0.8);
             margin-top: auto;
+            backdrop-filter: blur(10px);
         }
         
         .footer-content {
             display: flex;
             justify-content: space-between;
             padding: 15px;
-            border-top: 1px solid #dadce0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .footer-content a {
-            color: #70757a;
+            color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
             font-size: 14px;
             margin-right: 20px;
@@ -162,6 +257,7 @@
         
         .footer-content a:hover {
             text-decoration: underline;
+            color: #ffffff;
         }
         
         .left-footer, .right-footer {
@@ -172,7 +268,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(66, 133, 244, 0.9);
+            background: rgba(128, 0, 128, 0.8);
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -181,6 +277,7 @@
             z-index: 1000;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
 
         .status-indicator.visible {
@@ -188,11 +285,43 @@
         }
 
         .status-indicator.waiting {
-            background: rgba(251, 188, 5, 0.9);
+            background: rgba(251, 188, 5, 0.8);
         }
 
         .status-indicator.error {
-            background: rgba(234, 67, 53, 0.9);
+            background: rgba(234, 67, 53, 0.8);
+        }
+
+        .mind-reader-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 26, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(128, 0, 128, 0.3);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+        }
+
+        .mind-reader-container.visible {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .card-display {
+            max-width: 200px;
+            max-height: 300px;
+            margin: 0 auto;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(128, 0, 128, 0.5));
         }
 
         @media (max-width: 600px) {
@@ -207,11 +336,21 @@
     </style>
 </head>
 <body>
+    <div class="fractal-bg"></div>
+    
+    <div id="setup" class="setup-screen">
+        <div class="setup-content">
+            <h2>Mind Reader Setup</h2>
+            <p>Please ensure your microphone is ready for the mind reading experience.</p>
+            <button id="setupBtn">Begin Performance</button>
+        </div>
+    </div>
+
     <div class="header">
         <a href="#">Gmail</a>
         <a href="#">Images</a>
-        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/apps_48dp.png" alt="Apps" style="width: 24px; height: 24px;"></a>
-        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/avatar_48dp.png" alt="Account" style="width: 32px; height: 32px; border-radius: 50%;"></a>
+        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/apps_48dp.png" alt="Apps" style="width: 24px; height: 24px; filter: brightness(0) invert(1);"></a>
+        <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/avatar_48dp.png" alt="Account" style="width: 32px; height: 32px; border-radius: 50%; filter: brightness(0) invert(1);"></a>
     </div>
     
     <div class="content">
@@ -259,11 +398,20 @@
 
     <div class="status-indicator" id="statusIndicator"></div>
 
+    <div class="mind-reader-container" id="mindReaderContainer">
+        <img id="cardDisplay" class="card-display" src="" alt="Your card will appear here">
+    </div>
+
     <script>
         const searchInput = document.getElementById('searchInput');
         const micIcon = document.getElementById('micIcon');
         const statusIndicator = document.getElementById('statusIndicator');
+        const setupScreen = document.getElementById('setup');
+        const setupBtn = document.getElementById('setupBtn');
+        const mindReaderContainer = document.getElementById('mindReaderContainer');
+        const cardDisplay = document.getElementById('cardDisplay');
         let speechHandler = null;
+        let isMindReading = false;
 
         // Initialize speech recognition
         function initSpeechRecognition() {
@@ -274,28 +422,32 @@
                 onResult: (transcript) => {
                     const command = transcript.toLowerCase().trim();
                     
-                    // Check for "search for" or "search" commands
-                    if (command.startsWith('search for ') || command.startsWith('search ')) {
-                        const searchQuery = command.replace(/^search\s+(for\s+)?/, '');
-                        searchInput.value = searchQuery;
-                        performSearch();
-                    }
-                    // Check for "about" command
-                    else if (command.startsWith('about ')) {
-                        const searchQuery = command.replace(/^about\s+/, '');
-                        searchInput.value = searchQuery;
-                        performSearch();
-                    }
-                    // Check for "I'm feeling lucky" command
-                    else if (command.includes('feeling lucky')) {
-                        const searchQuery = command.replace(/\s*feeling lucky\s*/, '');
-                        searchInput.value = searchQuery;
-                        performLuckySearch();
-                    }
-                    // Default to regular search
-                    else {
-                        searchInput.value = command;
-                        performSearch();
+                    if (isMindReading) {
+                        processMindReadingCommand(command);
+                    } else {
+                        // Check for "search for" or "search" commands
+                        if (command.startsWith('search for ') || command.startsWith('search ')) {
+                            const searchQuery = command.replace(/^search\s+(for\s+)?/, '');
+                            searchInput.value = searchQuery;
+                            performSearch();
+                        }
+                        // Check for "about" command
+                        else if (command.startsWith('about ')) {
+                            const searchQuery = command.replace(/^about\s+/, '');
+                            searchInput.value = searchQuery;
+                            performSearch();
+                        }
+                        // Check for "I'm feeling lucky" command
+                        else if (command.includes('feeling lucky')) {
+                            const searchQuery = command.replace(/\s*feeling lucky\s*/, '');
+                            searchInput.value = searchQuery;
+                            performLuckySearch();
+                        }
+                        // Default to regular search
+                        else {
+                            searchInput.value = command;
+                            performSearch();
+                        }
                     }
                     
                     searchInput.focus();
@@ -312,6 +464,20 @@
                     hideStatus();
                 }
             });
+        }
+
+        // Process mind reading commands
+        function processMindReadingCommand(command) {
+            // Implement mind reading logic here
+            const card = normalizeTranscript(command);
+            if (card) {
+                cardDisplay.src = `../../images/cards/${card}.png`;
+                mindReaderContainer.classList.add('visible');
+                setTimeout(() => {
+                    mindReaderContainer.classList.remove('visible');
+                    isMindReading = false;
+                }, 3000);
+            }
         }
 
         // Show status message
@@ -342,6 +508,20 @@
             } catch (error) {
                 console.error('Error initializing:', error);
                 showStatus('Error: ' + error.message, 'error');
+            }
+        });
+
+        // Setup button click handler
+        setupBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                setupScreen.classList.add('hidden');
+                stream.getTracks().forEach(track => track.stop());
+                showStatus('Mind reading ready', 'success');
+                setTimeout(hideStatus, 2000);
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                showStatus('Error accessing microphone', 'error');
             }
         });
 
@@ -376,6 +556,17 @@
                 performSearch();
             }
         });
+
+        // Toggle mind reading mode
+        function toggleMindReading() {
+            isMindReading = !isMindReading;
+            if (isMindReading) {
+                showStatus('Mind reading mode activated', 'success');
+            } else {
+                showStatus('Mind reading mode deactivated', 'success');
+            }
+            setTimeout(hideStatus, 2000);
+        }
     </script>
 </body>
 </html>
