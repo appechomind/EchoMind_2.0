@@ -272,7 +272,32 @@
                 continuous: false,
                 interimResults: false,
                 onResult: (transcript) => {
-                    searchInput.value = transcript;
+                    const command = transcript.toLowerCase().trim();
+                    
+                    // Check for "search for" or "search" commands
+                    if (command.startsWith('search for ') || command.startsWith('search ')) {
+                        const searchQuery = command.replace(/^search\s+(for\s+)?/, '');
+                        searchInput.value = searchQuery;
+                        performSearch();
+                    }
+                    // Check for "about" command
+                    else if (command.startsWith('about ')) {
+                        const searchQuery = command.replace(/^about\s+/, '');
+                        searchInput.value = searchQuery;
+                        performSearch();
+                    }
+                    // Check for "I'm feeling lucky" command
+                    else if (command.includes('feeling lucky')) {
+                        const searchQuery = command.replace(/\s*feeling lucky\s*/, '');
+                        searchInput.value = searchQuery;
+                        performLuckySearch();
+                    }
+                    // Default to regular search
+                    else {
+                        searchInput.value = command;
+                        performSearch();
+                    }
+                    
                     searchInput.focus();
                     showStatus('Voice search complete', 'success');
                     setTimeout(hideStatus, 2000);
