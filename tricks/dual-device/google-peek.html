@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google</title>
     <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
-    <script src="../../js/echomind-permissions.js"></script>
+    <script src="../../js/permissions-handler.js"></script>
     <script src="../../js/echomind-speech.js"></script>
-    <script src="../../js/echomind-commands.js"></script>
     <style>
         body {
             font-family: arial,sans-serif;
@@ -17,7 +16,7 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .header {
             display: flex;
             align-items: center;
@@ -25,14 +24,14 @@
             padding: 6px;
             height: 60px;
         }
-        
+
         .header a {
             text-decoration: none;
             color: rgba(0,0,0,0.87);
             margin-right: 15px;
             font-size: 13px;
         }
-        
+
         .header a:hover {
             text-decoration: underline;
         }
@@ -45,7 +44,7 @@
             align-items: center;
             margin-top: -120px;
         }
-        
+
         .logo {
             margin-bottom: 25px;
         }
@@ -54,13 +53,13 @@
             width: 272px;
             height: 92px;
         }
-        
+
         .search-container {
             width: 580px;
             margin: 0 auto;
             position: relative;
         }
-        
+
         .search-box {
             width: 100%;
             display: flex;
@@ -100,7 +99,7 @@
             opacity: 0.6;
             transition: all 0.3s ease;
         }
-        
+
         .search-icon:hover, .mic-icon:hover {
             opacity: 1;
         }
@@ -115,14 +114,14 @@
             50% { transform: scale(1.1); opacity: 0.8; }
             100% { transform: scale(1); opacity: 1; }
         }
-        
+
         .buttons {
             margin-top: 30px;
             display: flex;
             justify-content: center;
             gap: 12px;
         }
-        
+
         .buttons button {
             background-color: #f8f9fa;
             border: 1px solid #f8f9fa;
@@ -153,7 +152,7 @@
             padding: 15px;
             border-top: 1px solid #dadce0;
         }
-        
+
         .footer-content a {
             color: #70757a;
             text-decoration: none;
@@ -214,7 +213,7 @@
         <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/apps_48dp.png" alt="Apps" style="width: 24px; height: 24px;"></a>
         <a href="#"><img src="https://www.gstatic.com/images/branding/product/1x/avatar_48dp.png" alt="Account" style="width: 32px; height: 32px; border-radius: 50%;"></a>
     </div>
-
+    
     <div class="content">
         <div class="logo">
             <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
@@ -241,7 +240,7 @@
             </div>
         </div>
     </div>
-
+    
     <div class="footer">
         <div class="footer-content">
             <div class="left-footer">
@@ -264,56 +263,30 @@
         const searchInput = document.getElementById('searchInput');
         const micIcon = document.getElementById('micIcon');
         const statusIndicator = document.getElementById('statusIndicator');
-        let recognition = null;
+        let speechHandler = null;
 
         // Initialize speech recognition
         function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                showStatus('Speech Recognition not supported in this browser', 'error');
-                return;
-            }
-
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                micIcon.classList.add('listening');
-                showStatus('Listening...', 'waiting');
-            };
-
-            recognition.onend = () => {
-                micIcon.classList.remove('listening');
-                hideStatus();
-            };
-
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                searchInput.value = transcript;
-                searchInput.focus();
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                showStatus('Error: ' + event.error, 'error');
-                micIcon.classList.remove('listening');
-            };
-        }
-
-        // Request microphone permission and initialize speech recognition
-        async function requestMicrophonePermission() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(track => track.stop());
-                initSpeechRecognition();
-                showStatus('Microphone access granted', 'success');
-                setTimeout(hideStatus, 2000);
-            } catch (error) {
-                console.error('Error accessing microphone:', error);
-                showStatus('Error: Microphone access denied', 'error');
-            }
+            speechHandler = new SpeechHandler({
+                language: 'en-US',
+                continuous: false,
+                interimResults: false,
+                onResult: (transcript) => {
+                    searchInput.value = transcript;
+                    searchInput.focus();
+                    showStatus('Voice search complete', 'success');
+                    setTimeout(hideStatus, 2000);
+                },
+                onError: (error) => {
+                    console.error('Speech recognition error:', error);
+                    showStatus('Error: ' + error.error, 'error');
+                    micIcon.classList.remove('listening');
+                },
+                onEnd: () => {
+                    micIcon.classList.remove('listening');
+                    hideStatus();
+                }
+            });
         }
 
         // Show status message
@@ -331,14 +304,28 @@
         }
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            requestMicrophonePermission();
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const hasPermission = await EchoMind.PermissionsHandler.requestMicrophonePermission();
+                if (hasPermission) {
+                    initSpeechRecognition();
+                    showStatus('Microphone access granted', 'success');
+                    setTimeout(hideStatus, 2000);
+                } else {
+                    showStatus('Microphone access denied', 'error');
+                }
+            } catch (error) {
+                console.error('Error initializing:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
         });
 
         // Voice search button click handler
         micIcon.addEventListener('click', () => {
-            if (recognition) {
-                recognition.start();
+            if (speechHandler) {
+                speechHandler.start();
+                micIcon.classList.add('listening');
+                showStatus('Listening...', 'waiting');
             }
         });
 
