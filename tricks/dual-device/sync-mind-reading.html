@@ -3,232 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synchronized Mind Reading - EchoMind 2.0</title>
+    <title>Mind Reader - EchoMind 2.0</title>
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/tricks.css">
     <style>
-        .choice-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin: 2rem 0;
+        .card-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 80%;
+            max-height: 80%;
+            display: none;
+            z-index: 1000;
         }
 
-        .choice-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
-            text-align: center;
+        .card-display.visible {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #a96eff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .status-indicator.visible {
+            display: block;
+        }
+
+        .status-indicator.success {
+            color: #4CAF50;
+        }
+
+        .status-indicator.error {
+            color: #f44336;
+        }
+
+        .status-indicator.waiting {
+            color: #FFC107;
+        }
+
+        .mic-icon {
+            width: 24px;
+            height: 24px;
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition: all 0.3s ease;
         }
 
-        .choice-card:hover {
-            transform: translateY(-4px);
+        .mic-icon.listening {
+            animation: pulse 2s infinite;
         }
 
-        .choice-card.selected {
-            border: 3px solid #2c3e50;
-        }
-
-        .choice-card img {
-            width: 100%;
-            max-width: 120px;
-            height: auto;
-            margin-bottom: 1rem;
-        }
-
-        .choice-card h3 {
-            margin: 0;
-            color: #2c3e50;
-        }
-
-        .controls {
-            text-align: center;
-            margin: 2rem 0;
-        }
-
-        .button {
-            background: #2c3e50;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.2s ease;
-            margin: 0 0.5rem;
-        }
-
-        .button:hover {
-            background: #34495e;
-        }
-
-        .button:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-        }
-
-        .message {
-            text-align: center;
-            margin: 2rem 0;
-            font-size: 1.2rem;
-            color: #2c3e50;
-        }
-
-        .connection-status {
-            text-align: center;
-            padding: 0.5rem;
-            border-radius: 4px;
-            margin: 1rem 0;
-        }
-
-        .connection-status.connected {
-            background: #27ae60;
-            color: white;
-        }
-
-        .connection-status.disconnected {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .sync-code {
-            text-align: center;
-            font-size: 2rem;
-            font-family: monospace;
-            margin: 1rem 0;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 4px;
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Synchronized Mind Reading</h1>
+        <h1>Mind Reader</h1>
         
-        <div class="message" id="message">
-            Enter a sync code to connect with another device, or generate a new one.
+        <div class="status-indicator" id="statusIndicator"></div>
+        
+        <div class="card-display" id="cardDisplay">
+            <img src="" alt="Your card will appear here">
         </div>
-        
-        <div class="connection-status disconnected" id="connectionStatus">
-            Not Connected
-        </div>
-        
+
         <div class="controls">
-            <input type="text" id="syncCodeInput" placeholder="Enter sync code" class="button">
-            <button class="button" id="connectButton">Connect</button>
-            <button class="button" id="generateButton">Generate New Code</button>
+            <button id="startBtn">Start Mind Reading</button>
+            <button id="stopBtn" disabled>Stop Mind Reading</button>
         </div>
-        
-        <div class="sync-code" id="syncCode" style="display: none;"></div>
-        
-        <div class="choice-grid" id="choiceGrid" style="display: none;">
-            <div class="choice-card" data-choice="circle">
-                <img src="../../images/circle.svg" alt="Circle">
-                <h3>Circle</h3>
-            </div>
-            <div class="choice-card" data-choice="square">
-                <img src="../../images/square.svg" alt="Square">
-                <h3>Square</h3>
-            </div>
-            <div class="choice-card" data-choice="triangle">
-                <img src="../../images/triangle.svg" alt="Triangle">
-                <h3>Triangle</h3>
-            </div>
-            <div class="choice-card" data-choice="star">
-                <img src="../../images/star.svg" alt="Star">
-                <h3>Star</h3>
-            </div>
+
+        <div class="mic-status">
+            <img src="https://www.google.com/images/searchbox/desktop_search_icon.png" alt="Microphone" class="mic-icon" id="micIcon">
+            <span id="micStatus">Click to start listening</span>
         </div>
-        
-        <div class="controls" id="revealControls" style="display: none;">
-            <button class="button" id="revealButton" disabled>Reveal Connection</button>
-        </div>
-        
+
         <a href="../index.html" class="back-button">Back to Tricks</a>
     </div>
 
     <script>
-        let selectedChoice = null;
-        let syncCode = null;
-        let isConnected = false;
-        
-        function generateSyncCode() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
-        
-        function updateConnectionStatus(connected) {
-            const statusEl = document.getElementById('connectionStatus');
-            statusEl.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
-            statusEl.textContent = connected ? 'Connected' : 'Not Connected';
-            isConnected = connected;
-            
-            if (connected) {
-                document.getElementById('choiceGrid').style.display = 'grid';
-                document.getElementById('revealControls').style.display = 'block';
-                document.getElementById('message').textContent = 'Select a shape below.';
-            }
-        }
-        
-        function handleConnect() {
-            const input = document.getElementById('syncCodeInput');
-            const code = input.value.trim().toUpperCase();
-            
-            if (code.length === 6) {
-                // Simulate connection (in real app, this would connect to another device)
-                syncCode = code;
-                updateConnectionStatus(true);
-                document.getElementById('syncCode').style.display = 'none';
-            } else {
-                alert('Please enter a valid 6-character sync code.');
-            }
-        }
-        
-        function handleGenerate() {
-            syncCode = generateSyncCode();
-            const syncCodeEl = document.getElementById('syncCode');
-            syncCodeEl.textContent = syncCode;
-            syncCodeEl.style.display = 'block';
-            document.getElementById('message').textContent = 'Share this code with your partner.';
-        }
-        
-        function handleChoiceSelection(choice) {
-            if (!isConnected) return;
-            
-            if (selectedChoice) {
-                document.querySelector(`[data-choice="${selectedChoice}"]`).classList.remove('selected');
-            }
-            
-            selectedChoice = choice;
-            document.querySelector(`[data-choice="${choice}"]`).classList.add('selected');
-            document.getElementById('revealButton').disabled = false;
-        }
-        
-        function handleReveal() {
-            if (!selectedChoice) return;
-            
-            // Simulate synchronized reveal (in real app, this would check both devices)
-            document.getElementById('message').textContent = 
-                `Amazing! You both selected ${selectedChoice}! Your minds are in sync!`;
-            
-            document.getElementById('revealButton').disabled = true;
-            document.querySelectorAll('.choice-card').forEach(card => {
-                if (card.dataset.choice !== selectedChoice) {
-                    card.style.opacity = '0.3';
+        const statusIndicator = document.getElementById('statusIndicator');
+        const cardDisplay = document.getElementById('cardDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const micIcon = document.getElementById('micIcon');
+        const micStatus = document.getElementById('micStatus');
+        let speechHandler = null;
+        let isListening = false;
+
+        // Card mapping for speech recognition
+        const cardMapping = {
+            'ace': 'A',
+            'two': '2',
+            'three': '3',
+            'four': '4',
+            'five': '5',
+            'six': '6',
+            'seven': '7',
+            'eight': '8',
+            'nine': '9',
+            'ten': '10',
+            'jack': 'J',
+            'queen': 'Q',
+            'king': 'K',
+            'hearts': 'H',
+            'diamonds': 'D',
+            'clubs': 'C',
+            'spades': 'S'
+        };
+
+        // Initialize speech handler
+        function initializeSpeechHandler() {
+            speechHandler = new SpeechHandler({
+                continuous: true,
+                onResult: handleSpeechResult,
+                onError: (error) => {
+                    console.error('Speech error:', error);
+                    showStatus('Error: ' + error.error, 'error');
                 }
             });
         }
-        
-        // Add event listeners
-        document.getElementById('connectButton').addEventListener('click', handleConnect);
-        document.getElementById('generateButton').addEventListener('click', handleGenerate);
-        document.getElementById('revealButton').addEventListener('click', handleReveal);
-        
-        document.querySelectorAll('.choice-card').forEach(card => {
-            card.addEventListener('click', () => handleChoiceSelection(card.dataset.choice));
+
+        function handleSpeechResult(transcript) {
+            const normalizedTranscript = normalizeTranscript(transcript);
+            if (normalizedTranscript) {
+                const cardImage = `../../images/cards/${normalizedTranscript}.png`;
+                cardDisplay.querySelector('img').src = cardImage;
+                cardDisplay.classList.add('visible');
+                
+                setTimeout(() => {
+                    cardDisplay.classList.remove('visible');
+                }, 3000);
+            }
+        }
+
+        function normalizeTranscript(transcript) {
+            const words = transcript.toLowerCase().split(' ');
+            let rank = '';
+            let suit = '';
+
+            // Find rank
+            for (const [key, value] of Object.entries(cardMapping)) {
+                if (words.includes(key) && !rank) {
+                    rank = value;
+                    break;
+                }
+            }
+
+            // Find suit
+            for (const [key, value] of Object.entries(cardMapping)) {
+                if (words.includes(key) && !suit && ['H', 'D', 'C', 'S'].includes(value)) {
+                    suit = value;
+                    break;
+                }
+            }
+
+            if (rank && suit) {
+                return `${rank}${suit}`;
+            }
+            return null;
+        }
+
+        function showStatus(message, type = '') {
+            statusIndicator.textContent = message;
+            statusIndicator.className = 'status-indicator visible';
+            if (type) {
+                statusIndicator.classList.add(type);
+            }
+        }
+
+        function hideStatus() {
+            statusIndicator.className = 'status-indicator';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const hasPermission = await EchoMind.PermissionsHandler.requestMicrophonePermission();
+                if (hasPermission) {
+                    initializeSpeechHandler();
+                    showStatus('Microphone access granted', 'success');
+                    setTimeout(hideStatus, 2000);
+                } else {
+                    showStatus('Microphone access denied', 'error');
+                }
+            } catch (error) {
+                console.error('Error initializing:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
+        });
+
+        // Start button click handler
+        startBtn.addEventListener('click', () => {
+            speechHandler.start();
+            isListening = true;
+            micIcon.classList.add('listening');
+            micStatus.textContent = 'Listening...';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            showStatus('Mind reading activated', 'success');
+            setTimeout(hideStatus, 2000);
+        });
+
+        // Stop button click handler
+        stopBtn.addEventListener('click', () => {
+            speechHandler.stop();
+            isListening = false;
+            micIcon.classList.remove('listening');
+            micStatus.textContent = 'Click to start listening';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            showStatus('Mind reading deactivated', 'success');
+            setTimeout(hideStatus, 2000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (speechHandler) {
+                speechHandler.cleanup();
+            }
         });
     </script>
 </body>
