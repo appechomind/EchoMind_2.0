@@ -412,14 +412,16 @@
 
     <div class="spectator-view" id="spectatorView">
         <div class="header">
-            <a href="#">Gmail</a>
-            <a href="#">Images</a>
-            <a href="#">Sign in</a>
+            <a href="https://www.google.com/gmail" target="_blank">Gmail</a>
+            <a href="https://www.google.com/imghp" target="_blank">Images</a>
+            <a href="https://accounts.google.com" target="_blank">Sign in</a>
         </div>
         
         <div class="content">
             <div class="logo">
-                <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+                <a href="https://www.google.com" target="_blank">
+                    <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+                </a>
             </div>
             
             <div class="search-container">
@@ -435,8 +437,8 @@
             </div>
             
             <div class="buttons">
-                <button>Google Search</button>
-                <button>I'm Feeling Lucky</button>
+                <button onclick="performSearch()">Google Search</button>
+                <button onclick="performLuckySearch()">I'm Feeling Lucky</button>
             </div>
         </div>
         
@@ -444,9 +446,9 @@
             <div class="footer-content">
                 <div>© 2024 Google</div>
                 <div>
-                    <a href="#">Privacy</a>
-                    <a href="#">Terms</a>
-                    <a href="#">Settings</a>
+                    <a href="https://policies.google.com/privacy" target="_blank">Privacy</a>
+                    <a href="https://policies.google.com/terms" target="_blank">Terms</a>
+                    <a href="https://www.google.com/preferences" target="_blank">Settings</a>
                 </div>
             </div>
         </div>
@@ -552,6 +554,27 @@
         window.addEventListener('beforeunload', () => {
             if (speechHandler) {
                 speechHandler.cleanup();
+            }
+        });
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            }
+        }
+
+        function performLuckySearch() {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I%27m+Feeling+Lucky`, '_blank');
+            }
+        }
+
+        // Add Enter key handler for search
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
             }
         });
     </script>
