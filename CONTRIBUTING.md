@@ -1,16 +1,10 @@
-# Contributing to EchoMind 2.0
+# Contributing to EchoMind
 
-First off, thank you for considering contributing to EchoMind 2.0! It's people like you that make EchoMind 2.0 such a great tool.
+First off, thank you for considering contributing to EchoMind! It's people like you that make EchoMind such a great tool.
 
 ## Code of Conduct
 
-By participating in this project, you are expected to uphold our Code of Conduct:
-
-- Use welcoming and inclusive language
-- Be respectful of differing viewpoints and experiences
-- Gracefully accept constructive criticism
-- Focus on what is best for the community
-- Show empathy towards other community members
+This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code.
 
 ## How Can I Contribute?
 
@@ -19,30 +13,32 @@ By participating in this project, you are expected to uphold our Code of Conduct
 Before creating bug reports, please check the issue list as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible:
 
 * Use a clear and descriptive title
-* Describe the exact steps to reproduce the problem
+* Describe the exact steps which reproduce the problem
 * Provide specific examples to demonstrate the steps
 * Describe the behavior you observed after following the steps
 * Explain which behavior you expected to see instead and why
 * Include screenshots and animated GIFs if possible
-* Include your environment details (OS, browser version, etc.)
 
 ### Suggesting Enhancements
 
 Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, please include:
 
-* A clear and descriptive title
-* A detailed description of the proposed functionality
-* Any possible drawbacks
-* Screenshots or sketches if applicable
+* Use a clear and descriptive title
+* Provide a step-by-step description of the suggested enhancement
+* Provide specific examples to demonstrate the steps
+* Describe the current behavior and explain which behavior you expected to see instead
+* Explain why this enhancement would be useful
+* List some other applications where this enhancement exists, if applicable
 
 ### Pull Requests
 
-1. Fork the repo and create your branch from `main`
-2. If you've added code that should be tested, add tests
-3. If you've changed APIs, update the documentation
-4. Ensure the test suite passes
-5. Make sure your code follows the existing style
-6. Issue that pull request!
+* Fill in the required template
+* Do not include issue numbers in the PR title
+* Include screenshots and animated GIFs in your pull request whenever possible
+* Follow the JavaScript/React styleguides
+* Include thoughtfully-worded, well-structured tests
+* Document new code
+* End all files with a newline
 
 ## Styleguides
 
@@ -52,42 +48,98 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 * Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
 * Limit the first line to 72 characters or less
 * Reference issues and pull requests liberally after the first line
+* Consider starting the commit message with an applicable emoji:
+    * 🎨 `:art:` when improving the format/structure of the code
+    * 🐎 `:racehorse:` when improving performance
+    * 🚱 `:non-potable_water:` when plugging memory leaks
+    * 📝 `:memo:` when writing docs
+    * 🐛 `:bug:` when fixing a bug
+    * 🔥 `:fire:` when removing code or files
+    * 💚 `:green_heart:` when fixing the CI build
+    * ✅ `:white_check_mark:` when adding tests
+    * 🔒 `:lock:` when dealing with security
+    * ⬆️ `:arrow_up:` when upgrading dependencies
+    * ⬇️ `:arrow_down:` when downgrading dependencies
 
 ### JavaScript Styleguide
 
+* Use modern ES6+ syntax
+* Use semicolons
 * Use 2 spaces for indentation
-* Use camelCase for variable and function names
-* Place spaces after list items and method parameters (`[1, 2, 3]`, not `[1,2,3]`)
-* End files with a single newline
-* Use single quotes for strings
-* Add trailing commas for cleaner diffs
-* Avoid console.log in production code
+* Prefer `const` over `let`
+* Avoid `var`
+* Use meaningful variable names
+* Use arrow functions
+* Use template literals
+* Use destructuring where possible
+* Use async/await over promises
+* Use === and !==
 
-### Documentation Styleguide
+### React Styleguide
 
-* Use [Markdown](https://guides.github.com/features/mastering-markdown/)
-* Reference methods and classes in markdown with the custom {} notation:
-    * Reference classes with {ClassName}
-    * Reference instance methods with {ClassName#methodName}
-    * Reference class methods with {ClassName.methodName}
+* Use functional components
+* Use hooks
+* Use prop-types
+* Use meaningful component names
+* Keep components small and focused
+* Use CSS-in-JS or CSS modules
+* Follow the React hooks rules
+* Use proper component organization
+* Write meaningful comments
+* Use proper error boundaries
 
-## Additional Notes
+### Testing Styleguide
 
-### Issue and Pull Request Labels
+* Treat `describe` as a noun or situation
+* Treat `it` as a statement about state or how an operation changes state
+* Use meaningful test names
+* Write testable code
+* Test edge cases
+* Keep tests simple
+* Use proper assertions
+* Clean up after tests
 
-This section lists the labels we use to help us track and manage issues and pull requests.
+## Development Process
 
-* `bug` - Issues that are bugs
-* `enhancement` - Issues that are feature requests
-* `documentation` - Issues or PRs that relate to documentation
-* `good first issue` - Good for newcomers
-* `help wanted` - Extra attention is needed
-* `invalid` - Issues that aren't valid
-* `question` - Further information is requested
-* `wontfix` - Issues that won't be worked on
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## Recognition
+## Setting Up Your Development Environment
 
-Contributors who submit accepted pull requests will be added to our Contributors list in the README.md file.
+1. Install Node.js (v14 or higher)
+2. Clone the repository
+3. Install dependencies (`npm install`)
+4. Start the development server (`npm start`)
+5. Run tests (`npm test`)
 
-Thank you for contributing to EchoMind 2.0! 
+## Project Structure
+
+```
+EchoMind_2.0/
+├── src/
+│   ├── core/
+│   │   ├── ai/
+│   │   ├── magic/
+│   │   ├── ui/
+│   │   └── utils/
+│   ├── components/
+│   │   ├── magic-tricks/
+│   │   ├── ai-assistant/
+│   │   └── settings/
+│   ├── styles/
+│   └── assets/
+├── public/
+│   ├── tricks/
+│   └── tools/
+├── tests/
+└── docs/
+```
+
+## Questions?
+
+Feel free to open an issue or contact the maintainers if you have any questions.
+
+Thank you for contributing to EchoMind! 🎭✨ 

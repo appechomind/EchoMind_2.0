@@ -2,50 +2,98 @@
 
 ## Supported Versions
 
-Currently, we support security updates for the following versions:
+Use this section to tell people about which versions of your project are currently being supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
 | 2.0.x   | :white_check_mark: |
-| < 2.0   | :x:                |
+| 1.0.x   | :x:                |
 
 ## Reporting a Vulnerability
 
-We take the security of EchoMind 2.0 seriously. If you believe you have found a security vulnerability, please follow these steps:
+We take the security of EchoMind seriously. If you believe you have found a security vulnerability, please report it to us as described below.
 
-1. **Do Not** disclose the vulnerability publicly
-2. Send details of the vulnerability to [your-email@example.com]
-3. Include the following in your report:
-   - Type of issue
-   - Full paths of source file(s) related to the issue
-   - Location of the affected source code
-   - Any special configuration required to reproduce the issue
-   - Step-by-step instructions to reproduce the issue
-   - Proof-of-concept or exploit code (if possible)
-   - Impact of the issue
+### Please do the following:
 
-## What to expect
+1. **DO NOT** open a public issue
+2. Email us at security@echomind.com with:
+   - A description of the vulnerability
+   - Steps to reproduce the issue
+   - Possible impacts of the vulnerability
+   - Any potential solutions you've identified
 
-- We will acknowledge receipt of your vulnerability report within 48 hours
-- We will provide a more detailed response within 72 hours
-- We will keep you informed about our progress
-- We will treat your report with strict confidentiality
+### What to expect:
 
-## Safe Harbor
+1. You'll receive an acknowledgment within 48 hours
+2. We'll investigate and keep you informed about our progress
+3. Once the issue is confirmed, we'll work on a fix
+4. After the fix is ready, we'll:
+   - Release a security patch
+   - Credit you (unless you prefer to remain anonymous)
+   - Add the vulnerability to our security advisories
 
-We support safe harbor for security researchers who:
+## Security Measures
 
-- Make a good faith effort to avoid privacy violations, destruction of data, and interruption or degradation of our services
-- Only interact with accounts you own or with explicit permission of the account holder
-- Do not exploit a security issue for purposes other than verification
-- Report any vulnerability to us immediately
-- Do not disclose the issue to others until we have had sufficient time to address it
+EchoMind implements several security measures:
 
-## Microphone Access Security
+### Data Protection
 
-EchoMind 2.0 requires microphone access to function. We ensure:
+- All user data is encrypted in transit using TLS
+- No sensitive data is stored locally
+- Session data is properly managed and secured
 
-- Microphone access is only requested when necessary
-- Audio data is processed locally and never stored or transmitted
-- Clear user feedback when the microphone is active
-- Immediate microphone release when not in use 
+### Access Control
+
+- Strong authentication mechanisms
+- Role-based access control
+- Regular security audits
+
+### Code Security
+
+- Regular dependency updates
+- Automated security scanning
+- Code review process
+- Static code analysis
+
+## Best Practices
+
+When using EchoMind, please follow these security best practices:
+
+1. Keep your dependencies up to date
+2. Use strong passwords
+3. Enable two-factor authentication where available
+4. Review your application's security settings regularly
+5. Monitor your application logs for suspicious activity
+
+## Security Updates
+
+Security updates will be released as soon as possible after a vulnerability is discovered and confirmed. These updates will be:
+
+1. Released as patch versions
+2. Documented in our changelog
+3. Announced through our security advisory channel
+
+## Contact
+
+For security-related inquiries, please contact:
+- Email: security@echomind.com
+- Security Team Lead: [Name]
+- PGP Key: [Key ID]
+
+## Acknowledgments
+
+We would like to thank the following individuals and organizations for their contributions to the security of EchoMind:
+
+- Security researchers who have responsibly disclosed vulnerabilities
+- Open source security tools and their maintainers
+- Our security team and contributors
+
+## Changes to This Policy
+
+We may update this security policy from time to time. We will notify users of any changes by:
+
+1. Updating the modification date at the bottom of this document
+2. Sending a notification to registered users
+3. Posting an announcement on our security advisory page
+
+Last modified: May 2024 
