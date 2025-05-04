@@ -59,6 +59,20 @@ const useIntentStore = create((set, get) => ({
       'search reveal',
       'google mind reading',
       'search mind reading'
+    ],
+    magician_view: [
+      'magician view',
+      'show magician view',
+      'magician mode',
+      'show prediction',
+      'reveal prediction'
+    ],
+    spectator_view: [
+      'spectator view',
+      'show spectator view',
+      'spectator mode',
+      'enter search',
+      'make search'
     ]
   },
 
@@ -107,6 +121,18 @@ const useIntentStore = create((set, get) => ({
       actions: ['magician_view', 'spectator_view'],
       followUp: "Which role would you like to play?",
       contextUpdate: { currentTrick: 'google_peek' }
+    },
+    magician_view: {
+      message: () => "Here's the magician's view. You'll see the predictions as they come in.",
+      actions: ['spectator_view'],
+      followUp: "Would you like to switch to spectator view?",
+      contextUpdate: { currentTrick: 'google_peek', role: 'magician' }
+    },
+    spectator_view: {
+      message: () => "Here's the spectator's view. Enter what you'd like to search for.",
+      actions: ['magician_view'],
+      followUp: "Would you like to switch to magician view?",
+      contextUpdate: { currentTrick: 'google_peek', role: 'spectator' }
     }
   },
 
