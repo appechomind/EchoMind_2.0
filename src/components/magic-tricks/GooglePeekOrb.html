@@ -178,106 +178,57 @@
 
     <script>
         // Global state
-        let audioStream = null;
-        let mediaRecorder = null;
+        let recognition = null;
         let isRecording = false;
         let recordingTimeout;
-        let speechRecognition = null;
 
-        // Setup audio stream and recorder
-        async function setupAudio() {
-            if (!audioStream) {
-                try {
-                    // Check permission status first
-                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-                    if (permissionStatus.state === 'granted') {
-                        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        setupMediaRecorder();
-                        setupSpeechRecognition();
-                    }
-                } catch (error) {
-                    console.error('Error setting up audio:', error);
-                }
-            }
-        }
-
-        // Setup MediaRecorder
-        function setupMediaRecorder() {
-            if (audioStream) {
-                mediaRecorder = new MediaRecorder(audioStream);
-                
-                mediaRecorder.ondataavailable = async (event) => {
-                    const audioBlob = new Blob([event.data], { type: 'audio/wav' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    
-                    // Create a temporary audio element to play the recording
-                    const audioElement = new Audio();
-                    audioElement.src = audioUrl;
-                    
-                    // When the audio is done playing, perform the search
-                    audioElement.onended = () => {
-                        // For now, we'll just open a generic search
-                        // In a real implementation, you'd send this to a speech-to-text service
-                        window.open('https://www.google.com/search?q=voice+search', '_blank');
-                        // Restart the MediaRecorder for the next recording
-                        setupMediaRecorder();
-                    };
-                    
-                    audioElement.play();
-                };
-            }
-        }
-
-        // Setup Speech Recognition
-        function setupSpeechRecognition() {
+        // Initialize speech recognition
+        function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window) {
-                speechRecognition = new webkitSpeechRecognition();
-                speechRecognition.continuous = true;
-                speechRecognition.interimResults = true;
-                
-                speechRecognition.onresult = (event) => {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event) => {
                     const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
                     if (transcript.includes('about')) {
                         startRecording();
                     }
                 };
-                
-                speechRecognition.onerror = (event) => {
+
+                recognition.onerror = (event) => {
                     console.error('Speech recognition error:', event.error);
                     // Restart recognition on error
                     setTimeout(() => {
-                        if (speechRecognition) {
-                            speechRecognition.start();
+                        if (recognition) {
+                            recognition.start();
                         }
                     }, 1000);
                 };
-                
-                speechRecognition.onend = () => {
+
+                recognition.onend = () => {
                     // Restart recognition when it ends
-                    if (speechRecognition) {
-                        speechRecognition.start();
+                    if (recognition) {
+                        recognition.start();
                     }
                 };
-                
-                speechRecognition.start();
+
+                // Start recognition
+                recognition.start();
             }
         }
 
         // Start recording
         function startRecording() {
-            if (mediaRecorder && !isRecording) {
+            if (!isRecording) {
                 isRecording = true;
-                mediaRecorder.start();
-                recordingTimeout = setTimeout(stopRecording, 3000); // Record for 3 seconds
-            }
-        }
-
-        // Stop recording
-        function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                isRecording = false;
-                clearTimeout(recordingTimeout);
-                mediaRecorder.stop();
+                // Record for 3 seconds
+                recordingTimeout = setTimeout(() => {
+                    isRecording = false;
+                    // Perform the search
+                    window.open('https://www.google.com/search?q=voice+search', '_blank');
+                }, 3000);
             }
         }
 
@@ -307,26 +258,20 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
-            // Check permission status first
-            const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-            if (permissionStatus.state === 'granted') {
-                await setupAudio();
-            } else {
-                // Only request permission if not already granted
-                await window.echoMindPermissions.requestPermission();
-                if (window.echoMindPermissions.microphoneGranted) {
-                    await setupAudio();
-                }
+            try {
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Initialize speech recognition
+                initSpeechRecognition();
+            } catch (error) {
+                console.error('Error initializing:', error);
             }
         });
 
         // Clean up on page unload
         window.addEventListener('beforeunload', function() {
-            if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
-            }
-            if (speechRecognition) {
-                speechRecognition.stop();
+            if (recognition) {
+                recognition.stop();
             }
         });
     </script>
