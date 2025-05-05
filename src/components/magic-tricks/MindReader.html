@@ -10,9 +10,122 @@
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
-    <script type="text/babel" src="MindReader.js"></script>
+    <script type="text/babel">
+        // MindReader component code
+        const MindReader = () => {
+            const [selectedCard, setSelectedCard] = React.useState(null);
+            const [isListening, setIsListening] = React.useState(false);
+            const [recognition, setRecognition] = React.useState(null);
+
+            React.useEffect(() => {
+                // Initialize speech recognition
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = 'en-US';
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                        
+                        // Check for card names in the transcript
+                        const cardNames = {
+                            'ace of spades': { image: 'ace_of_spades.png' },
+                            'ace of hearts': { image: 'ace_of_hearts.png' },
+                            'ace of diamonds': { image: 'ace_of_diamonds.png' },
+                            'ace of clubs': { image: 'ace_of_clubs.png' },
+                            'king of spades': { image: 'king_of_spades.png' },
+                            'king of hearts': { image: 'king_of_hearts.png' },
+                            'king of diamonds': { image: 'king_of_diamonds.png' },
+                            'king of clubs': { image: 'king_of_clubs.png' },
+                            'queen of spades': { image: 'queen_of_spades.png' },
+                            'queen of hearts': { image: 'queen_of_hearts.png' },
+                            'queen of diamonds': { image: 'queen_of_diamonds.png' },
+                            'queen of clubs': { image: 'queen_of_clubs.png' },
+                            'jack of spades': { image: 'jack_of_spades.png' },
+                            'jack of hearts': { image: 'jack_of_hearts.png' },
+                            'jack of diamonds': { image: 'jack_of_diamonds.png' },
+                            'jack of clubs': { image: 'jack_of_clubs.png' }
+                        };
+
+                        for (const [name, card] of Object.entries(cardNames)) {
+                            if (transcript.includes(name)) {
+                                setSelectedCard(card);
+                                setIsListening(false);
+                                recognition.stop();
+                                break;
+                            }
+                        }
+                    };
+
+                    recognition.onend = () => {
+                        if (isListening) {
+                            recognition.start();
+                        }
+                    };
+
+                    setRecognition(recognition);
+                }
+            }, []);
+
+            const startListening = () => {
+                if (recognition) {
+                    setIsListening(true);
+                    recognition.start();
+                }
+            };
+
+            const stopListening = () => {
+                if (recognition) {
+                    setIsListening(false);
+                    recognition.stop();
+                }
+            };
+
+            return (
+                <div className="mind-reader">
+                    <div className="card-container">
+                        {selectedCard ? (
+                            <div className="card">
+                                <img src={`../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
+                            </div>
+                        ) : (
+                            <div className="card-back">
+                                <img src="../../images/cards/back.png" alt="Card Back" />
+                            </div>
+                        )}
+                    </div>
+                    <div className="voice-controls">
+                        <button 
+                            onClick={startListening}
+                            className={isListening ? 'listening' : ''}
+                        >
+                            {isListening ? 'Listening...' : 'Start Voice Command'}
+                        </button>
+                        <button onClick={stopListening}>Stop</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the component
+        ReactDOM.render(<MindReader />, document.getElementById('root'));
+    </script>
 </body>
 </html> 
