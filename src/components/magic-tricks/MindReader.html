@@ -130,6 +130,13 @@
                         recognition.start();
                     });
             }
+
+            // Listen for permission changes
+            permissionStatus.onchange = function() {
+                if (permissionStatus.state === 'granted') {
+                    recognition.start();
+                }
+            };
         });
     </script>
 </body>
