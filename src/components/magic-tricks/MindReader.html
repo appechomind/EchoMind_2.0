@@ -30,17 +30,43 @@
         recognition.interimResults = false;
         recognition.lang = 'en-US';
 
+        // Store last card
+        let lastCard = 'back';
+
         recognition.onresult = function(event) {
-            const result = event.results[event.results.length - 1][0].transcript;
+            const result = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            
+            // Check for any card name
             if (result.includes('ace') && result.includes('spades')) {
-                card.src = '../../../images/cards/ace_of_spades.png';
+                lastCard = 'ace_of_spades';
             } else if (result.includes('king') && result.includes('hearts')) {
-                card.src = '../../../images/cards/king_of_hearts.png';
+                lastCard = 'king_of_hearts';
             } else if (result.includes('queen') && result.includes('diamonds')) {
-                card.src = '../../../images/cards/queen_of_diamonds.png';
+                lastCard = 'queen_of_diamonds';
             } else if (result.includes('jack') && result.includes('clubs')) {
-                card.src = '../../../images/cards/jack_of_clubs.png';
+                lastCard = 'jack_of_clubs';
+            } else if (result.includes('two') && result.includes('hearts')) {
+                lastCard = '2_of_hearts';
+            } else if (result.includes('three') && result.includes('spades')) {
+                lastCard = '3_of_spades';
+            } else if (result.includes('four') && result.includes('diamonds')) {
+                lastCard = '4_of_diamonds';
+            } else if (result.includes('five') && result.includes('clubs')) {
+                lastCard = '5_of_clubs';
+            } else if (result.includes('six') && result.includes('hearts')) {
+                lastCard = '6_of_hearts';
+            } else if (result.includes('seven') && result.includes('spades')) {
+                lastCard = '7_of_spades';
+            } else if (result.includes('eight') && result.includes('diamonds')) {
+                lastCard = '8_of_diamonds';
+            } else if (result.includes('nine') && result.includes('clubs')) {
+                lastCard = '9_of_clubs';
+            } else if (result.includes('ten') && result.includes('hearts')) {
+                lastCard = '10_of_hearts';
             }
+
+            // Show the last card
+            card.src = `../../../images/cards/${lastCard}.png`;
         };
 
         recognition.onerror = function() {
@@ -51,7 +77,23 @@
             recognition.start();
         };
 
-        recognition.start();
+        // Check if we have permission
+        navigator.permissions.query({ name: 'microphone' }).then(permissionStatus => {
+            if (permissionStatus.state === 'granted') {
+                recognition.start();
+            } else {
+                // Request permission
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                        recognition.start();
+                    })
+                    .catch(() => {
+                        // If permission denied, just keep trying
+                        recognition.start();
+                    });
+            }
+        });
     </script>
 </body>
 </html> 
