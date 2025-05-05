@@ -20,6 +20,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
         .mind-reader {
             width: 100%;
@@ -27,21 +28,37 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         .card-container {
             perspective: 1000px;
-        }
-        .card, .card-back {
+            position: relative;
             width: 300px;
             height: 450px;
-            position: relative;
+        }
+        .card, .card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
             transform-style: preserve-3d;
             transition: transform 0.5s;
+            backface-visibility: hidden;
         }
         .card img, .card-back img {
             width: 100%;
             height: 100%;
             object-fit: contain;
+        }
+        .card {
+            transform: rotateY(180deg);
+        }
+        .card-container.flipped .card {
+            transform: rotateY(0deg);
+        }
+        .card-container.flipped .card-back {
+            transform: rotateY(180deg);
         }
         .listening-indicator {
             position: fixed;
@@ -52,6 +69,11 @@
             border-radius: 50%;
             background-color: #ff4444;
             animation: pulse 1.5s infinite;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .listening-indicator.active {
+            opacity: 1;
         }
         @keyframes pulse {
             0% { transform: scale(1); opacity: 1; }
@@ -68,6 +90,7 @@
             const [selectedCard, setSelectedCard] = React.useState(null);
             const [isListening, setIsListening] = React.useState(false);
             const [recognition, setRecognition] = React.useState(null);
+            const [isFlipped, setIsFlipped] = React.useState(false);
 
             React.useEffect(() => {
                 // Initialize speech recognition
@@ -104,6 +127,7 @@
                         for (const [name, card] of Object.entries(cardNames)) {
                             if (transcript.includes(name)) {
                                 setSelectedCard(card);
+                                setIsFlipped(true);
                                 setIsListening(false);
                                 recognition.stop();
                                 break;
@@ -121,41 +145,26 @@
                 }
             }, []);
 
-            const startListening = () => {
+            // Start listening automatically when component mounts
+            React.useEffect(() => {
                 if (recognition) {
                     setIsListening(true);
                     recognition.start();
                 }
-            };
-
-            const stopListening = () => {
-                if (recognition) {
-                    setIsListening(false);
-                    recognition.stop();
-                }
-            };
+            }, [recognition]);
 
             return (
                 <div className="mind-reader">
-                    <div className="card-container">
-                        {selectedCard ? (
-                            <div className="card">
+                    <div className={`listening-indicator ${isListening ? 'active' : ''}`}></div>
+                    <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
+                        <div className="card">
+                            {selectedCard && (
                                 <img src={`../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
-                            </div>
-                        ) : (
-                            <div className="card-back">
-                                <img src="../../images/cards/back.png" alt="Card Back" />
-                            </div>
-                        )}
-                    </div>
-                    <div className="voice-controls">
-                        <button 
-                            onClick={startListening}
-                            className={isListening ? 'listening' : ''}
-                        >
-                            {isListening ? 'Listening...' : 'Start Voice Command'}
-                        </button>
-                        <button onClick={stopListening}>Stop</button>
+                            )}
+                        </div>
+                        <div className="card-back">
+                            <img src="../../images/cards/back.png" alt="Card Back" />
+                        </div>
                     </div>
                 </div>
             );
