@@ -10,17 +10,22 @@
             padding: 0;
             font-family: arial, sans-serif;
             background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .header {
             display: flex;
             justify-content: flex-end;
             padding: 15px;
             font-size: 13px;
+            align-items: center;
         }
         .header a {
             color: #000;
             text-decoration: none;
             margin: 0 10px;
+            white-space: nowrap;
         }
         .header a:hover {
             text-decoration: underline;
@@ -30,13 +35,22 @@
             flex-direction: column;
             align-items: center;
             margin-top: 100px;
+            flex: 1;
+            padding: 0 20px;
         }
         .logo {
             margin-bottom: 20px;
+            text-align: center;
+        }
+        .logo img {
+            max-width: 100%;
+            height: auto;
         }
         .search-container {
-            width: 584px;
+            width: 100%;
+            max-width: 584px;
             position: relative;
+            margin: 0 auto;
         }
         .search-box {
             width: 100%;
@@ -46,6 +60,7 @@
             padding: 0 20px;
             font-size: 16px;
             outline: none;
+            box-sizing: border-box;
         }
         .search-box:hover, .search-box:focus {
             box-shadow: 0 1px 6px rgba(32,33,36,0.28);
@@ -53,6 +68,9 @@
         }
         .buttons {
             margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
         }
         .search-button {
             background-color: #f8f9fa;
@@ -64,6 +82,7 @@
             padding: 0 16px;
             height: 36px;
             cursor: pointer;
+            min-width: 120px;
         }
         .search-button:hover {
             box-shadow: 0 1px 1px rgba(0,0,0,0.1);
@@ -71,24 +90,25 @@
             color: #202124;
         }
         .footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
             background: #f2f2f2;
             color: #70757a;
             font-size: 14px;
             padding: 15px 0;
+            margin-top: auto;
         }
         .footer a {
             color: #70757a;
             text-decoration: none;
             margin: 0 10px;
+            white-space: nowrap;
         }
         .footer a:hover {
             text-decoration: underline;
         }
         .footer-content {
             padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         .footer-top {
             border-bottom: 1px solid #dadce0;
@@ -96,6 +116,7 @@
         }
         .footer-bottom {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
             margin-top: 10px;
         }
@@ -109,10 +130,37 @@
             cursor: pointer;
             padding: 0;
             margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .mic-button img {
             width: 24px;
             height: 24px;
+        }
+        @media (max-width: 768px) {
+            .main {
+                margin-top: 50px;
+            }
+            .search-container {
+                padding: 0 10px;
+            }
+            .buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .search-button {
+                width: 100%;
+                max-width: 200px;
+            }
+            .footer-bottom {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .footer-bottom div {
+                margin: 5px 0;
+            }
         }
     </style>
     <script>
