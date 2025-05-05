@@ -182,7 +182,8 @@
                     // Use the recognition to transcribe the audio
                     recognition.onresult = (event) => {
                         const transcript = event.results[event.results.length - 1][0].transcript;
-                        const searchQuery = `what is ${transcript}`;
+                        // Remove "about" and "what is" from the search query
+                        const searchQuery = transcript.replace(/^(about|what is)\s+/i, '');
                         window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
                     };
                     
@@ -251,8 +252,8 @@
                 setupMediaRecorder().then(() => {
                     recognition.start();
                 });
-            } else {
-                // Request permission
+            } else if (permissionStatus.state === 'prompt') {
+                // Only request permission if it's in the prompt state
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
                         stream.getTracks().forEach(track => track.stop());
@@ -264,6 +265,9 @@
                         // If permission denied, just keep trying
                         recognition.start();
                     });
+            } else {
+                // If permission is denied, just start recognition without recording
+                recognition.start();
             }
 
             // Listen for permission changes
