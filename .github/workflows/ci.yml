@@ -16,5 +16,8 @@ jobs:
       run: |
         mkdir -p dist
         cp -r src dist/
-        cp -r public dist/
-        cp index.html dist/ 
+        cp -r js dist/
+        cp -r css dist/
+        cp -r images dist/
+        cp index.html dist/
+        cp styles.css dist/ 
