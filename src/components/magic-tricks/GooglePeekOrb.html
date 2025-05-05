@@ -249,6 +249,22 @@
         let recordingTimeout;
         let searchQuery = '';
 
+        // Check if device is mobile
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // Perform search based on device type
+        function performSearch(query) {
+            if (isMobileDevice()) {
+                // Redirect on mobile
+                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            } else {
+                // Open new tab on desktop
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            }
+        }
+
         // Initialize speech recognition
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window) {
@@ -298,25 +314,25 @@
                     isRecording = false;
                     // Perform the search with the recorded query
                     if (searchQuery) {
-                        window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+                        performSearch(searchQuery);
                         searchQuery = ''; // Reset the query
                     }
                 }, 3000);
             }
         }
 
-        // Handle search
-        function performSearch() {
+        // Handle search button click
+        function handleSearch() {
             const query = document.getElementById('search-input').value;
             if (query) {
-                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                performSearch(query);
             }
         }
 
         // Handle enter key in search box
         document.getElementById('search-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                performSearch();
+                handleSearch();
             }
         });
 
