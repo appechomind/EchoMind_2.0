@@ -256,12 +256,20 @@
 
         // Perform search based on device type
         function performSearch(query) {
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            
             if (isMobileDevice()) {
-                // Redirect on mobile
-                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                // On mobile, stop recognition before redirecting
+                if (recognition) {
+                    recognition.stop();
+                }
+                // Use a small delay to ensure recognition is stopped
+                setTimeout(() => {
+                    window.location.href = searchUrl;
+                }, 100);
             } else {
-                // Open new tab on desktop
-                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                // On desktop, open in new tab
+                window.open(searchUrl, '_blank');
             }
         }
 
@@ -294,8 +302,8 @@
                 };
 
                 recognition.onend = () => {
-                    // Restart recognition when it ends
-                    if (recognition) {
+                    // Only restart if we're not redirecting
+                    if (recognition && !isMobileDevice()) {
                         recognition.start();
                     }
                 };
