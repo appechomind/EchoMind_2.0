@@ -136,8 +136,11 @@
 
                 recognition.onresult = function(event) {
                     const result = event.results[event.results.length - 1][0].transcript;
-                    lastCard = findCard(result);
-                    card.src = `../../../images/cards/${lastCard}.png`;
+                    const newCard = findCard(result);
+                    if (newCard !== lastCard) {
+                        lastCard = newCard;
+                        card.src = `../../../images/cards/${lastCard}.png`;
+                    }
                 };
 
                 recognition.onerror = function(event) {
