@@ -124,6 +124,20 @@
                 return bestMatch;
             };
 
+            // Add touch event handling for mobile
+            const handleTouchStart = (e) => {
+                startY = e.touches[0].clientY;
+            };
+
+            const handleTouchEnd = (e) => {
+                const endY = e.changedTouches[0].clientY;
+                if (startY && startY - endY > 50) {
+                    setIsFlipped(false);
+                    setSelectedCard(null);
+                }
+                startY = null;
+            };
+
             React.useEffect(() => {
                 // Initialize speech recognition
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -146,6 +160,10 @@
                         if (match !== fallbackCard) {
                             setSelectedCard({ image: `${match}.png` });
                             setIsFlipped(true);
+                            // Add vibration feedback for mobile
+                            if (navigator.vibrate) {
+                                navigator.vibrate(100);
+                            }
                         }
                     };
 
@@ -180,6 +198,17 @@
                     }
 
                     setRecognition(recognition);
+
+                    // Add touch event listeners
+                    const container = document.querySelector('.mind-reader');
+                    container.addEventListener('touchstart', handleTouchStart);
+                    container.addEventListener('touchend', handleTouchEnd);
+
+                    // Cleanup
+                    return () => {
+                        container.removeEventListener('touchstart', handleTouchStart);
+                        container.removeEventListener('touchend', handleTouchEnd);
+                    };
                 }
             }, []);
 
