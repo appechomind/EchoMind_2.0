@@ -103,21 +103,21 @@
     <script>
         // Global permission state
         window.echoMindPermissions = {
-            microphone: null,
-            checkPermission: async function() {
-                if (this.microphone === null) {
+            microphoneGranted: false,
+            microphoneRequested: false,
+            requestPermission: async function() {
+                if (!this.microphoneRequested) {
+                    this.microphoneRequested = true;
                     try {
-                        const result = await navigator.permissions.query({ name: 'microphone' });
-                        this.microphone = result.state;
-                        result.onchange = () => {
-                            this.microphone = result.state;
-                        };
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        stream.getTracks().forEach(track => track.stop());
+                        this.microphoneGranted = true;
                     } catch (error) {
-                        console.error('Error checking permission:', error);
-                        this.microphone = 'unknown';
+                        console.error('Permission denied:', error);
+                        this.microphoneGranted = false;
                     }
                 }
-                return this.microphone;
+                return this.microphoneGranted;
             }
         };
     </script>
@@ -269,30 +269,14 @@
 
         // Initialize permissions and start
         document.addEventListener('DOMContentLoaded', async function() {
-            // Check current permission state
-            const permissionState = await window.echoMindPermissions.checkPermission();
+            // Request permission once
+            const granted = await window.echoMindPermissions.requestPermission();
             
-            if (permissionState === 'granted') {
-                // If already granted, start immediately
+            if (granted) {
                 setupMediaRecorder().then(() => {
                     recognition.start();
                 });
-            } else if (permissionState === 'prompt') {
-                // If in prompt state, request permission once
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    stream.getTracks().forEach(track => track.stop());
-                    window.echoMindPermissions.microphone = 'granted';
-                    setupMediaRecorder().then(() => {
-                        recognition.start();
-                    });
-                } catch (error) {
-                    console.error('Permission denied:', error);
-                    window.echoMindPermissions.microphone = 'denied';
-                    recognition.start();
-                }
             } else {
-                // If denied or unknown, just start recognition
                 recognition.start();
             }
         });
