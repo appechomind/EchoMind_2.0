@@ -161,21 +161,17 @@
                         }
                     };
 
-                    setRecognition(recognition);
-                }
-            }, []);
-
-            // Start listening automatically when component mounts
-            React.useEffect(() => {
-                if (recognition) {
+                    // Start recognition immediately
                     try {
                         recognition.start();
                         console.log("Initial speech recognition started");
                     } catch (err) {
                         console.log(`Error starting recognition: ${err.message}`);
                     }
+
+                    setRecognition(recognition);
                 }
-            }, [recognition]);
+            }, []);
 
             return (
                 <div className="mind-reader">
