@@ -118,7 +118,6 @@
                         
                         // If not granted, request it
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        stream.getTracks().forEach(track => track.stop());
                         this.microphoneGranted = true;
                         
                         // Listen for permission changes
@@ -272,6 +271,13 @@
                 if (window.echoMindPermissions.microphoneGranted) {
                     await setupAudio();
                 }
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
             }
         });
     </script>
