@@ -15,6 +15,7 @@ EchoMind.PermissionsHandler = (function() {
     // Private variables
     let _debugMode = false;
     let _eventHandlers = {};
+    let _permissionStates = {};
     
     // Private methods
     function _debug(message) {
@@ -56,6 +57,16 @@ EchoMind.PermissionsHandler = (function() {
                 permissionError: []
             };
             
+            // Initialize permission states from localStorage if available
+            try {
+                const savedStates = localStorage.getItem('echomind_permissions');
+                if (savedStates) {
+                    _permissionStates = JSON.parse(savedStates);
+                }
+            } catch (e) {
+                console.error('Error loading saved permission states:', e);
+            }
+            
             _debug('Initialized permissions handler');
         },
         
@@ -73,6 +84,8 @@ EchoMind.PermissionsHandler = (function() {
                     
                     if (status.state === 'granted') {
                         _debug('Microphone permission already granted');
+                        _permissionStates.microphone = 'granted';
+                        _savePermissionStates();
                         _triggerEvent('permissionGranted', { type: 'microphone' });
                         return true;
                     }
@@ -85,10 +98,14 @@ EchoMind.PermissionsHandler = (function() {
                 stream.getTracks().forEach(track => track.stop());
                 
                 _debug('Microphone permission granted');
+                _permissionStates.microphone = 'granted';
+                _savePermissionStates();
                 _triggerEvent('permissionGranted', { type: 'microphone' });
                 return true;
             } catch (error) {
                 _debug('Microphone permission denied: ' + error.message);
+                _permissionStates.microphone = 'denied';
+                _savePermissionStates();
                 _triggerEvent('permissionDenied', { 
                     type: 'microphone',
                     error: error.message
@@ -103,8 +120,15 @@ EchoMind.PermissionsHandler = (function() {
          */
         checkMicrophonePermission: async function() {
             try {
+                // First check saved state
+                if (_permissionStates.microphone) {
+                    return _permissionStates.microphone;
+                }
+                
                 if (_isPermissionsApiSupported()) {
                     const status = await navigator.permissions.query({ name: 'microphone' });
+                    _permissionStates.microphone = status.state;
+                    _savePermissionStates();
                     return status.state;
                 } else {
                     return 'unknown';
@@ -112,6 +136,17 @@ EchoMind.PermissionsHandler = (function() {
             } catch (error) {
                 console.error('Error checking microphone permission:', error);
                 return 'unknown';
+            }
+        },
+        
+        /**
+         * Save permission states to localStorage
+         */
+        _savePermissionStates: function() {
+            try {
+                localStorage.setItem('echomind_permissions', JSON.stringify(_permissionStates));
+            } catch (e) {
+                console.error('Error saving permission states:', e);
             }
         },
         
