@@ -33,39 +33,76 @@
         // Store last card
         let lastCard = 'back';
 
-        recognition.onresult = function(event) {
-            const result = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        // Number word to digit mapping
+        const numberMap = {
+            'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+            'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'
+        };
+
+        // Suit mapping
+        const suitMap = {
+            'hearts': 'hearts', 'heart': 'hearts',
+            'spades': 'spades', 'spade': 'spades',
+            'diamonds': 'diamonds', 'diamond': 'diamonds',
+            'clubs': 'clubs', 'club': 'clubs'
+        };
+
+        // Face card mapping
+        const faceMap = {
+            'ace': 'ace', 'aces': 'ace',
+            'jack': 'jack', 'jacks': 'jack',
+            'queen': 'queen', 'queens': 'queen',
+            'king': 'king', 'kings': 'king'
+        };
+
+        function findCard(transcript) {
+            const words = transcript.toLowerCase().split(' ');
             
-            // Check for any card name
-            if (result.includes('ace') && result.includes('spades')) {
-                lastCard = 'ace_of_spades';
-            } else if (result.includes('king') && result.includes('hearts')) {
-                lastCard = 'king_of_hearts';
-            } else if (result.includes('queen') && result.includes('diamonds')) {
-                lastCard = 'queen_of_diamonds';
-            } else if (result.includes('jack') && result.includes('clubs')) {
-                lastCard = 'jack_of_clubs';
-            } else if (result.includes('two') && result.includes('hearts')) {
-                lastCard = '2_of_hearts';
-            } else if (result.includes('three') && result.includes('spades')) {
-                lastCard = '3_of_spades';
-            } else if (result.includes('four') && result.includes('diamonds')) {
-                lastCard = '4_of_diamonds';
-            } else if (result.includes('five') && result.includes('clubs')) {
-                lastCard = '5_of_clubs';
-            } else if (result.includes('six') && result.includes('hearts')) {
-                lastCard = '6_of_hearts';
-            } else if (result.includes('seven') && result.includes('spades')) {
-                lastCard = '7_of_spades';
-            } else if (result.includes('eight') && result.includes('diamonds')) {
-                lastCard = '8_of_diamonds';
-            } else if (result.includes('nine') && result.includes('clubs')) {
-                lastCard = '9_of_clubs';
-            } else if (result.includes('ten') && result.includes('hearts')) {
-                lastCard = '10_of_hearts';
+            // Check for special cards first
+            if (words.includes('joker')) return 'joker';
+            if (words.includes('back')) return 'back';
+
+            // Find number/face and suit
+            let number = null;
+            let suit = null;
+
+            // Check for numbers
+            for (const word of words) {
+                if (numberMap[word]) {
+                    number = numberMap[word];
+                    break;
+                }
             }
 
-            // Show the last card
+            // Check for face cards
+            if (!number) {
+                for (const word of words) {
+                    if (faceMap[word]) {
+                        number = faceMap[word];
+                        break;
+                    }
+                }
+            }
+
+            // Check for suits
+            for (const word of words) {
+                if (suitMap[word]) {
+                    suit = suitMap[word];
+                    break;
+                }
+            }
+
+            // If we found both, return the card
+            if (number && suit) {
+                return `${number}_of_${suit}`;
+            }
+
+            return lastCard; // Keep current card if no match
+        }
+
+        recognition.onresult = function(event) {
+            const result = event.results[event.results.length - 1][0].transcript;
+            lastCard = findCard(result);
             card.src = `../../../images/cards/${lastCard}.png`;
         };
 
