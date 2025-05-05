@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './GooglePeek.css';
+import ReactDOM from 'react-dom';
 
 const GooglePeek = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -84,4 +85,4 @@ const GooglePeek = () => {
   );
 };
 
-export default GooglePeek; 
+ReactDOM.render(<GooglePeek />, document.getElementById('root')); 

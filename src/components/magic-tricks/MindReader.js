@@ -2,125 +2,106 @@ import React, { useState, useEffect } from 'react';
 import './MindReader.css';
 
 const MindReader = () => {
-  const [stage, setStage] = useState('intro'); // intro, thinking, reveal
-  const [userThought, setUserThought] = useState('');
-  const [prediction, setPrediction] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [visualEffect, setVisualEffect] = useState('');
+  const [stage, setStage] = React.useState('intro'); // intro, thinking, reveal
+  const [userThought, setUserThought] = React.useState('');
+  const [prediction, setPrediction] = React.useState('');
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [visualEffect, setVisualEffect] = React.useState('');
+  const [selectedCard, setSelectedCard] = React.useState(null);
+  const [isListening, setIsListening] = React.useState(false);
+  const [recognition, setRecognition] = React.useState(null);
 
-  const psychologicalPatterns = {
-    // Common thought patterns based on psychological principles
-    'future': ['tomorrow', 'next week', 'future', 'planning', 'later'],
-    'past': ['yesterday', 'last week', 'remember', 'memory', 'before'],
-    'emotion': ['happy', 'sad', 'excited', 'worried', 'angry', 'love', 'hate'],
-    'activity': ['work', 'play', 'exercise', 'read', 'write', 'watch', 'listen'],
-    'location': ['home', 'work', 'school', 'outside', 'travel', 'place'],
-    'people': ['friend', 'family', 'someone', 'person', 'they', 'them'],
-    'time': ['morning', 'afternoon', 'evening', 'night', 'today', 'now'],
-    'object': ['thing', 'item', 'object', 'something', 'stuff'],
-    'decision': ['choose', 'decide', 'pick', 'select', 'option'],
-    'problem': ['issue', 'problem', 'trouble', 'difficulty', 'challenge']
+  const cards = [
+    { id: 1, symbol: '♠', color: 'black' },
+    { id: 2, symbol: '♥', color: 'red' },
+    { id: 3, symbol: '♦', color: 'red' },
+    { id: 4, symbol: '♣', color: 'black' }
+  ];
+
+  React.useEffect(() => {
+    // Initialize speech recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        
+        // Check for card names in the transcript
+        const cardNames = {
+          'ace of spades': { image: 'ace_of_spades.png' },
+          'ace of hearts': { image: 'ace_of_hearts.png' },
+          'ace of diamonds': { image: 'ace_of_diamonds.png' },
+          'ace of clubs': { image: 'ace_of_clubs.png' },
+          'king of spades': { image: 'king_of_spades.png' },
+          'king of hearts': { image: 'king_of_hearts.png' },
+          'king of diamonds': { image: 'king_of_diamonds.png' },
+          'king of clubs': { image: 'king_of_clubs.png' },
+          'queen of spades': { image: 'queen_of_spades.png' },
+          'queen of hearts': { image: 'queen_of_hearts.png' },
+          'queen of diamonds': { image: 'queen_of_diamonds.png' },
+          'queen of clubs': { image: 'queen_of_clubs.png' },
+          'jack of spades': { image: 'jack_of_spades.png' },
+          'jack of hearts': { image: 'jack_of_hearts.png' },
+          'jack of diamonds': { image: 'jack_of_diamonds.png' },
+          'jack of clubs': { image: 'jack_of_clubs.png' }
+        };
+
+        for (const [name, card] of Object.entries(cardNames)) {
+          if (transcript.includes(name)) {
+            setSelectedCard(card);
+            setIsListening(false);
+            recognition.stop();
+            break;
+          }
+        }
+      };
+
+      recognition.onend = () => {
+        if (isListening) {
+          recognition.start();
+        }
+      };
+
+      setRecognition(recognition);
+    }
+  }, []);
+
+  const startListening = () => {
+    if (recognition) {
+      setIsListening(true);
+      recognition.start();
+    }
   };
 
-  const predictionTemplates = {
-    'future': [
-      'You were thinking about something that will happen in the future',
-      'Your mind was focused on upcoming events',
-      'You were planning something for later'
-    ],
-    'past': [
-      'You were reminiscing about the past',
-      'A memory from before was on your mind',
-      'You were thinking about something that happened earlier'
-    ],
-    'emotion': [
-      'You were feeling a strong emotion',
-      'Your thoughts were colored by your feelings',
-      'An emotional experience was on your mind'
-    ],
-    'activity': [
-      'You were thinking about something you do regularly',
-      'An activity you enjoy was on your mind',
-      'You were planning to do something specific'
-    ],
-    'location': [
-      'You were thinking about a specific place',
-      'A location was prominent in your thoughts',
-      'Your mind was focused on somewhere you know'
-    ],
-    'people': [
-      'You were thinking about someone important to you',
-      'A person was on your mind',
-      'Your thoughts were about someone you know'
-    ],
-    'time': [
-      'You were thinking about a specific time',
-      'The timing of something was on your mind',
-      'You were focused on when something would happen'
-    ],
-    'object': [
-      'You were thinking about a specific object',
-      'Something material was on your mind',
-      'Your thoughts were about a particular item'
-    ],
-    'decision': [
-      'You were making an important decision',
-      'A choice was weighing on your mind',
-      'You were thinking about different options'
-    ],
-    'problem': [
-      'You were working through a problem',
-      'A challenge was on your mind',
-      'You were thinking about how to solve something'
-    ]
+  const stopListening = () => {
+    if (recognition) {
+      setIsListening(false);
+      recognition.stop();
+    }
   };
 
-  const handleThoughtSubmit = async (e) => {
-    e.preventDefault();
-    if (!userThought.trim()) return;
-
+  const handleCardSelect = (card) => {
+    setSelectedCard(card);
     setIsProcessing(true);
     setStage('thinking');
     setVisualEffect('pulse');
 
     // Simulate mind reading process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const prediction = generatePrediction(userThought);
-    setPrediction(prediction);
-    setStage('reveal');
-    setVisualEffect('reveal');
-    setIsProcessing(false);
-  };
-
-  const generatePrediction = (thought) => {
-    // Analyze the thought for psychological patterns
-    const matches = Object.entries(psychologicalPatterns).reduce((acc, [category, patterns]) => {
-      const matchCount = patterns.filter(pattern => 
-        thought.toLowerCase().includes(pattern)
-      ).length;
-      if (matchCount > 0) {
-        acc.push({ category, confidence: matchCount / patterns.length });
-      }
-      return acc;
-    }, []);
-
-    // Sort by confidence
-    matches.sort((a, b) => b.confidence - a.confidence);
-
-    // Get the best matching category
-    const bestMatch = matches[0]?.category || 'general';
-    
-    // Select a random template from the best matching category
-    const templates = predictionTemplates[bestMatch] || 
-      ['I sense something interesting in your thoughts'];
-    
-    return templates[Math.floor(Math.random() * templates.length)];
+    setTimeout(() => {
+      setPrediction(`I sense you chose the ${card.color} ${card.symbol} card`);
+      setStage('reveal');
+      setVisualEffect('reveal');
+      setIsProcessing(false);
+    }, 2000);
   };
 
   const resetTrick = () => {
     setStage('intro');
-    setUserThought('');
+    setSelectedCard(null);
     setPrediction('');
     setVisualEffect('');
   };
@@ -130,19 +111,18 @@ const MindReader = () => {
       {stage === 'intro' && (
         <div className="intro-stage">
           <h2>Mind Reading Experience</h2>
-          <p>Think of something specific, and I'll try to read your mind...</p>
-          <form onSubmit={handleThoughtSubmit} className="thought-form">
-            <input
-              type="text"
-              value={userThought}
-              onChange={(e) => setUserThought(e.target.value)}
-              placeholder="What's on your mind?"
-              disabled={isProcessing}
-            />
-            <button type="submit" disabled={isProcessing}>
-              {isProcessing ? 'Reading...' : 'Read My Mind'}
-            </button>
-          </form>
+          <p>Pick a card, any card...</p>
+          <div className="card-grid">
+            {cards.map(card => (
+              <div
+                key={card.id}
+                className={`card ${card.color}`}
+                onClick={() => handleCardSelect(card)}
+              >
+                {card.symbol}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -152,7 +132,7 @@ const MindReader = () => {
             <div className="brain-waves"></div>
             <div className="thought-bubbles"></div>
           </div>
-          <p>Reading your thoughts...</p>
+          <p>Reading your mind...</p>
         </div>
       )}
 
@@ -167,6 +147,27 @@ const MindReader = () => {
           </button>
         </div>
       )}
+
+      <div className="card-container">
+        {selectedCard ? (
+          <div className="card">
+            <img src={`../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
+          </div>
+        ) : (
+          <div className="card-back">
+            <img src="../../images/cards/back.png" alt="Card Back" />
+          </div>
+        )}
+      </div>
+      <div className="voice-controls">
+        <button 
+          onClick={startListening}
+          className={isListening ? 'listening' : ''}
+        >
+          {isListening ? 'Listening...' : 'Start Voice Command'}
+        </button>
+        <button onClick={stopListening}>Stop</button>
+      </div>
     </div>
   );
 };
