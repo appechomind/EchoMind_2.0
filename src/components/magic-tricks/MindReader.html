@@ -35,6 +35,7 @@
             position: relative;
             width: 300px;
             height: 450px;
+            cursor: pointer;
         }
         .card, .card-back {
             width: 100%;
@@ -45,11 +46,14 @@
             transform-style: preserve-3d;
             transition: transform 0.5s;
             backface-visibility: hidden;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
         }
         .card img, .card-back img {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            border-radius: 15px;
         }
         .card {
             transform: rotateY(180deg);
@@ -71,6 +75,7 @@
             animation: pulse 1.5s infinite;
             opacity: 0;
             transition: opacity 0.3s;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
         }
         .listening-indicator.active {
             opacity: 1;
@@ -159,11 +164,11 @@
                     <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
                         <div className="card">
                             {selectedCard && (
-                                <img src={`../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
+                                <img src={`/images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
                             )}
                         </div>
                         <div className="card-back">
-                            <img src="../../images/cards/back.png" alt="Card Back" />
+                            <img src="/images/cards/back.png" alt="Card Back" />
                         </div>
                     </div>
                 </div>
