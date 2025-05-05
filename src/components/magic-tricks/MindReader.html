@@ -18,9 +18,8 @@
             color: white;
             font-family: sans-serif;
             height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 100%;
+            overflow: hidden;
         }
         .mind-reader {
             width: 100%;
@@ -30,11 +29,12 @@
             align-items: center;
         }
         .card-container {
-            perspective: 1000px;
-            position: relative;
             width: 300px;
             height: 450px;
             cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         @media (max-width: 480px) {
             .card-container {
