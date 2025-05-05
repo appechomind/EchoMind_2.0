@@ -98,6 +98,38 @@
             const [recognition, setRecognition] = React.useState(null);
             const [isFlipped, setIsFlipped] = React.useState(false);
 
+            const cardNames = ["ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king"];
+            const suits = ["hearts", "spades", "diamonds", "clubs"];
+            const numberMap = {
+                "two": "2", "three": "3", "four": "4", "five": "5",
+                "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
+            };
+
+            const normalizeTranscript = (transcript) => {
+                const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
+                const normalizedWords = words.map(word => numberMap[word] || word);
+                let bestScore = 0;
+                let bestMatch = "back";
+
+                // Combine all potential matches
+                const potentialMatches = normalizedWords;
+
+                for (let value of cardNames) {
+                    for (let suit of suits) {
+                        const combo = `${value}_of_${suit}`;
+                        const score = (potentialMatches.includes(value) ? 1 : 0) + 
+                                    (potentialMatches.includes(suit) ? 1 : 0);
+                        
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = combo;
+                        }
+                    }
+                }
+
+                return bestMatch;
+            };
+
             React.useEffect(() => {
                 // Initialize speech recognition
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -108,36 +140,14 @@
                     recognition.lang = 'en-US';
 
                     recognition.onresult = (event) => {
-                        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                        const transcript = event.results[event.results.length - 1][0].transcript;
+                        const cardName = normalizeTranscript(transcript);
                         
-                        // Check for card names in the transcript
-                        const cardNames = {
-                            'ace of spades': { image: 'ace_of_spades.png' },
-                            'ace of hearts': { image: 'ace_of_hearts.png' },
-                            'ace of diamonds': { image: 'ace_of_diamonds.png' },
-                            'ace of clubs': { image: 'ace_of_clubs.png' },
-                            'king of spades': { image: 'king_of_spades.png' },
-                            'king of hearts': { image: 'king_of_hearts.png' },
-                            'king of diamonds': { image: 'king_of_diamonds.png' },
-                            'king of clubs': { image: 'king_of_clubs.png' },
-                            'queen of spades': { image: 'queen_of_spades.png' },
-                            'queen of hearts': { image: 'queen_of_hearts.png' },
-                            'queen of diamonds': { image: 'queen_of_diamonds.png' },
-                            'queen of clubs': { image: 'queen_of_clubs.png' },
-                            'jack of spades': { image: 'jack_of_spades.png' },
-                            'jack of hearts': { image: 'jack_of_hearts.png' },
-                            'jack of diamonds': { image: 'jack_of_diamonds.png' },
-                            'jack of clubs': { image: 'jack_of_clubs.png' }
-                        };
-
-                        for (const [name, card] of Object.entries(cardNames)) {
-                            if (transcript.includes(name)) {
-                                setSelectedCard(card);
-                                setIsFlipped(true);
-                                setIsListening(false);
-                                recognition.stop();
-                                break;
-                            }
+                        if (cardName !== "back") {
+                            setSelectedCard({ image: `${cardName}.png` });
+                            setIsFlipped(true);
+                            setIsListening(false);
+                            recognition.stop();
                         }
                     };
 
@@ -165,11 +175,11 @@
                     <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
                         <div className="card">
                             {selectedCard && (
-                                <img src={`../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
+                                <img src={`/images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
                             )}
                         </div>
                         <div className="card-back">
-                            <img src="../../images/cards/back.png" alt="Card Back" />
+                            <img src="/images/cards/back.png" alt="Card Back" />
                         </div>
                     </div>
                 </div>
