@@ -33,8 +33,54 @@
         <img id="card-display" src="../../../images/cards/back.png" alt="Card" />
     </div>
     <script>
-        const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
-        const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const cardDisplay = document.getElementById('card-display');
+        const cardNames = ["ace","2","3","4","5","6","7","8","9","10","jack","queen","king"];
+        const suits = ["hearts","spades","diamonds","clubs"];
+        const fallbackCard = "back";
+        const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
+
+        const numberMap = {
+            "two": "2", "three": "3", "four": "4", "five": "5",
+            "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
+        };
+
+        function normalizeTranscript(transcript) {
+            const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
+            const normalizedWords = words.map(word => numberMap[word] || word);
+            let bestScore = 0;
+            let bestMatch = fallbackCard;
+
+            for (let value of cardNames) {
+                for (let suit of suits) {
+                    const combo = `${value}_of_${suit}`;
+                    const score = (normalizedWords.includes(value) ? 1 : 0) + 
+                                 (normalizedWords.includes(suit) ? 1 : 0);
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = combo;
+                    }
+                }
+            }
+
+            return bestMatch;
+        }
+
+        function showCard(cardName) {
+            let index = 0;
+            function tryNextExt() {
+                if (index >= extensions.length) {
+                    cardDisplay.src = `../../../images/cards/${fallbackCard}.png`;
+                    return;
+                }
+                const ext = extensions[index++];
+                const imgPath = `../../../images/cards/${cardName}.${ext}`;
+                cardDisplay.onerror = tryNextExt;
+                cardDisplay.src = imgPath;
+                if (navigator.vibrate && cardName !== fallbackCard) navigator.vibrate(100);
+            }
+            tryNextExt();
+        }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -43,49 +89,22 @@
         recognition.maxAlternatives = 3;
         recognition.lang = 'en-US';
 
-        function normalizeTranscript(transcript) {
-            transcript = transcript.toLowerCase().trim();
-            if (transcript.includes('ace')) return 'ace';
-            if (transcript.includes('jack')) return 'jack';
-            if (transcript.includes('queen')) return 'queen';
-            if (transcript.includes('king')) return 'king';
-            
-            const numberMap = {
-                'one': 'ace', 'two': 'two', 'three': 'three', 'four': 'four',
-                'five': 'five', 'six': 'six', 'seven': 'seven', 'eight': 'eight',
-                'nine': 'nine', 'ten': 'ten'
-            };
-            
-            for (const [word, number] of Object.entries(numberMap)) {
-                if (transcript.includes(word)) return number;
-            }
-            return transcript;
-        }
-
-        function showCard(transcript) {
-            const normalized = normalizeTranscript(transcript);
-            const matchingCard = cardNames.find(card => normalized.includes(card));
-            const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
-            
-            if (matchingCard && matchingSuit) {
-                document.getElementById('card-display').src = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
-            }
-        }
-
-        recognition.onresult = (event) => {
+        recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript;
-            showCard(transcript);
+            const match = normalizeTranscript(transcript);
+            showCard(match);
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = function() {
             recognition.start();
         };
 
-        recognition.onend = () => {
+        recognition.onend = function() {
             recognition.start();
         };
 
         recognition.start();
+        showCard(fallbackCard);
     </script>
 </body>
 </html> 
