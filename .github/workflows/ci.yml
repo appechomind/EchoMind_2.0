@@ -12,10 +12,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
     - name: Verify Repository
       run: |
-        echo "Verifying repository structure..."
-        [ -f index.html ] && echo "index.html exists" || exit 1
-        [ -d src ] && echo "src directory exists" || exit 1
-        [ -d js ] && echo "js directory exists" || exit 1
-        echo "Repository structure verified successfully" 
+        node -e "
+          const fs = require('fs');
+          const requiredFiles = ['index.html', 'src', 'js'];
+          const missingFiles = requiredFiles.filter(file => !fs.existsSync(file));
+          if (missingFiles.length > 0) {
+            console.error('Missing required files:', missingFiles);
+            process.exit(1);
+          }
+          console.log('All required files exist');
+        " 
