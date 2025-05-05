@@ -11,164 +11,130 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <style>
-        body, html {
+        body {
             margin: 0;
             padding: 0;
-            background-color: transparent;
-            color: white;
-            font-family: sans-serif;
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-        }
-        .mind-reader {
-            width: 100%;
-            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: transparent;
+            min-height: 100vh;
+            background-color: #f0f0f0;
         }
         .card-container {
-            width: 300px;
-            height: 450px;
-            cursor: pointer;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: transparent;
-        }
-        @media (max-width: 480px) {
-            .card-container {
-                width: 250px;
-                height: 375px;
-            }
-        }
-        .card, .card-back {
             width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-style: preserve-3d;
-            transition: transform 0.5s;
-            backface-visibility: hidden;
-            background: transparent;
+            max-width: 500px;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .card img, .card-back img {
+        #card-display {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background: transparent;
-        }
-        .card {
-            transform: rotateY(180deg);
-        }
-        .card-container.flipped .card {
-            transform: rotateY(0deg);
-        }
-        .card-container.flipped .card-back {
-            transform: rotateY(180deg);
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <img id="card-display" src="../../../images/cards/back.png" alt="Card Back" />
+    <div class="card-container">
+        <img id="card-display" src="images/cards/back.png" alt="Your card will appear here" />
     </div>
     <script>
-        const cardDisplay = document.getElementById('card-display');
-        const container = document.getElementById('container');
-        let startY = null;
+        // Card names and suits
+        const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
+        const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
 
-        const cardNames = ["ace","2","3","4","5","6","7","8","9","10","jack","queen","king"];
-        const suits = ["hearts","spades","diamonds","clubs"];
-        const fallbackCard = "back";
-        const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
+        // Initialize speech recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 3;
 
-        const numberMap = {
-            "two": "2", "three": "3", "four": "4", "five": "5",
-            "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
-        };
-
+        // Normalize transcript to match card names
         function normalizeTranscript(transcript) {
-            const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
-            const normalizedWords = words.map(word => numberMap[word] || word);
-            let bestScore = 0;
-            let bestMatch = fallbackCard;
-
-            for (let value of cardNames) {
-                for (let suit of suits) {
-                    const combo = `${value}_of_${suit}`;
-                    const score = (normalizedWords.includes(value) ? 1 : 0) + (normalizedWords.includes(suit) ? 1 : 0);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMatch = combo;
-                    }
-                }
+            transcript = transcript.toLowerCase().trim();
+            
+            // Handle special cases
+            if (transcript.includes('ace')) return 'ace';
+            if (transcript.includes('jack')) return 'jack';
+            if (transcript.includes('queen')) return 'queen';
+            if (transcript.includes('king')) return 'king';
+            
+            // Handle numbers
+            const numberMap = {
+                'one': 'ace',
+                'two': 'two',
+                'three': 'three',
+                'four': 'four',
+                'five': 'five',
+                'six': 'six',
+                'seven': 'seven',
+                'eight': 'eight',
+                'nine': 'nine',
+                'ten': 'ten'
+            };
+            
+            for (const [word, number] of Object.entries(numberMap)) {
+                if (transcript.includes(word)) return number;
             }
-
-            return bestMatch;
+            
+            return transcript;
         }
 
-        function showCard(cardName) {
-            let index = 0;
-            function tryNextExt() {
-                if (index >= extensions.length) {
-                    cardDisplay.src = `../../../images/cards/${fallbackCard}.png`;
-                    return;
-                }
-                const ext = extensions[index++];
-                const imgPath = `../../../images/cards/${cardName}.${ext}`;
-                cardDisplay.onerror = tryNextExt;
-                cardDisplay.src = imgPath;
-                if (navigator.vibrate && cardName !== fallbackCard) navigator.vibrate(100);
-            }
-            tryNextExt();
-        }
-
-        function startListening() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Your browser does not support Speech Recognition");
+        // Show card based on transcript
+        function showCard(transcript) {
+            const normalized = normalizeTranscript(transcript);
+            console.log('Normalized transcript:', normalized);
+            
+            // Find matching card name
+            const matchingCard = cardNames.find(card => normalized.includes(card));
+            if (!matchingCard) {
+                console.log('No matching card found');
                 return;
             }
-
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.lang = 'en-US';
-
-            recognition.onresult = function(event) {
-                const transcript = event.results[event.results.length - 1][0].transcript;
-                const match = normalizeTranscript(transcript);
-                showCard(match);
-            };
-
-            recognition.onerror = function(e) {
-                console.error("Speech recognition error", e);
-            };
-
-            recognition.start();
-            showCard(fallbackCard);
-        }
-
-        function handleTouchStart(e) {
-            startY = e.touches[0].clientY;
-        }
-        function handleTouchEnd(e) {
-            const endY = e.changedTouches[0].clientY;
-            if (startY && startY - endY > 50) {
-                showCard(fallbackCard);
+            
+            // Find matching suit
+            const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
+            if (!matchingSuit) {
+                console.log('No matching suit found');
+                return;
             }
-            startY = null;
+            
+            // Update card display
+            const cardDisplay = document.getElementById('card-display');
+            const cardPath = `images/cards/${matchingCard}_of_${matchingSuit}.png`;
+            console.log('Setting card path:', cardPath);
+            cardDisplay.src = cardPath;
         }
 
-        window.onload = () => {
-            startListening();
-            container.addEventListener('touchstart', handleTouchStart);
-            container.addEventListener('touchend', handleTouchEnd);
+        // Handle speech recognition results
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            console.log('Transcript:', transcript);
+            showCard(transcript);
         };
+
+        // Handle errors
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+        };
+
+        // Handle end of recognition
+        recognition.onend = () => {
+            console.log('Speech recognition ended');
+            // Restart recognition
+            recognition.start();
+        };
+
+        // Handle touch events for mobile
+        document.addEventListener('touchstart', () => {
+            console.log('Touch detected, starting recognition');
+            recognition.start();
+        });
+
+        // Start recognition
+        console.log('Starting speech recognition');
+        recognition.start();
     </script>
 </body>
 </html> 
