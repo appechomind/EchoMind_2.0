@@ -74,162 +74,101 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        // MindReader component code
-        const MindReader = () => {
-            const [selectedCard, setSelectedCard] = React.useState(null);
-            const [recognition, setRecognition] = React.useState(null);
-            const [isFlipped, setIsFlipped] = React.useState(false);
+    <div id="container">
+        <img id="card-display" src="../../../images/cards/back.png" alt="Card Back" />
+    </div>
+    <script>
+        const cardDisplay = document.getElementById('card-display');
+        const container = document.getElementById('container');
+        let startY = null;
 
-            const cardNames = ["ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king"];
-            const suits = ["hearts", "spades", "diamonds", "clubs"];
-            const fallbackCard = "back";
-            const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
+        const cardNames = ["ace","2","3","4","5","6","7","8","9","10","jack","queen","king"];
+        const suits = ["hearts","spades","diamonds","clubs"];
+        const fallbackCard = "back";
+        const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
 
-            const numberMap = {
-                "two": "2", "three": "3", "four": "4", "five": "5",
-                "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
-            };
-
-            function logDebug(message) {
-                console.log(message);
-            }
-
-            const normalizeTranscript = (transcript) => {
-                const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
-                const normalizedWords = words.map(word => numberMap[word] || word);
-                let bestScore = 0;
-                let bestMatch = fallbackCard;
-
-                logDebug(`Words heard: ${normalizedWords.join(', ')}`);
-
-                // Combine all potential matches
-                const potentialMatches = normalizedWords;
-
-                for (let value of cardNames) {
-                    for (let suit of suits) {
-                        const combo = `${value}_of_${suit}`;
-                        const score = (potentialMatches.includes(value) ? 1 : 0) + 
-                                    (potentialMatches.includes(suit) ? 1 : 0);
-                        
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMatch = combo;
-                        }
-                    }
-                }
-
-                logDebug(`Best match: ${bestMatch} (score: ${bestScore})`);
-                return bestMatch;
-            };
-
-            // Add touch event handling for mobile
-            const handleTouchStart = (e) => {
-                startY = e.touches[0].clientY;
-            };
-
-            const handleTouchEnd = (e) => {
-                const endY = e.changedTouches[0].clientY;
-                if (startY && startY - endY > 50) {
-                    setIsFlipped(false);
-                    setSelectedCard(null);
-                }
-                startY = null;
-            };
-
-            React.useEffect(() => {
-                // Initialize speech recognition
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (SpeechRecognition) {
-                    const recognition = new SpeechRecognition();
-                    recognition.continuous = true;
-                    recognition.interimResults = false;
-                    recognition.maxAlternatives = 3;
-                    recognition.lang = 'en-US';
-
-                    recognition.onstart = function() {
-                        logDebug("Speech recognition started");
-                    };
-
-                    recognition.onresult = async function(event) {
-                        const transcript = event.results[event.results.length - 1][0].transcript;
-                        logDebug(`Heard: "${transcript}"`);
-                        
-                        const match = normalizeTranscript(transcript);
-                        if (match !== fallbackCard) {
-                            setSelectedCard({ image: `${match}.png` });
-                            setIsFlipped(true);
-                            // Add vibration feedback for mobile
-                            if (navigator.vibrate) {
-                                navigator.vibrate(100);
-                            }
-                        }
-                    };
-
-                    recognition.onerror = function(e) {
-                        logDebug(`Speech recognition error: ${e.error}`);
-                        // Try to restart after error
-                        setTimeout(() => {
-                            try {
-                                recognition.start();
-                            } catch (err) {
-                                logDebug(`Failed to restart: ${err.message}`);
-                            }
-                        }, 1000);
-                    };
-
-                    recognition.onend = function() {
-                        logDebug("Speech recognition ended, restarting...");
-                        // Automatically restart recognition when it ends
-                        try {
-                            recognition.start();
-                        } catch (err) {
-                            logDebug(`Failed to restart: ${err.message}`);
-                        }
-                    };
-
-                    // Start recognition immediately
-                    try {
-                        recognition.start();
-                        logDebug("Initial speech recognition started");
-                    } catch (err) {
-                        logDebug(`Error starting recognition: ${err.message}`);
-                    }
-
-                    setRecognition(recognition);
-
-                    // Add touch event listeners
-                    const container = document.querySelector('.mind-reader');
-                    container.addEventListener('touchstart', handleTouchStart);
-                    container.addEventListener('touchend', handleTouchEnd);
-
-                    // Cleanup
-                    return () => {
-                        container.removeEventListener('touchstart', handleTouchStart);
-                        container.removeEventListener('touchend', handleTouchEnd);
-                    };
-                }
-            }, []);
-
-            return (
-                <div className="mind-reader">
-                    <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
-                        <div className="card">
-                            {selectedCard && (
-                                <img src={`../../../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
-                            )}
-                        </div>
-                        <div className="card-back">
-                            <img src="../../../images/cards/back.png" alt="Card Back" />
-                        </div>
-                    </div>
-                </div>
-            );
+        const numberMap = {
+            "two": "2", "three": "3", "four": "4", "five": "5",
+            "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
         };
 
-        // Render the component
-        ReactDOM.render(<MindReader />, document.getElementById('root'));
+        function normalizeTranscript(transcript) {
+            const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
+            const normalizedWords = words.map(word => numberMap[word] || word);
+            let bestScore = 0;
+            let bestMatch = fallbackCard;
+
+            for (let value of cardNames) {
+                for (let suit of suits) {
+                    const combo = `${value}_of_${suit}`;
+                    const score = (normalizedWords.includes(value) ? 1 : 0) + (normalizedWords.includes(suit) ? 1 : 0);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = combo;
+                    }
+                }
+            }
+
+            return bestMatch;
+        }
+
+        function showCard(cardName) {
+            let index = 0;
+            function tryNextExt() {
+                if (index >= extensions.length) {
+                    cardDisplay.src = `../../../images/cards/${fallbackCard}.png`;
+                    return;
+                }
+                const ext = extensions[index++];
+                const imgPath = `../../../images/cards/${cardName}.${ext}`;
+                cardDisplay.onerror = tryNextExt;
+                cardDisplay.src = imgPath;
+                if (navigator.vibrate && cardName !== fallbackCard) navigator.vibrate(100);
+            }
+            tryNextExt();
+        }
+
+        function startListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Your browser does not support Speech Recognition");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[event.results.length - 1][0].transcript;
+                const match = normalizeTranscript(transcript);
+                showCard(match);
+            };
+
+            recognition.onerror = function(e) {
+                console.error("Speech recognition error", e);
+            };
+
+            recognition.start();
+            showCard(fallbackCard);
+        }
+
+        function handleTouchStart(e) {
+            startY = e.touches[0].clientY;
+        }
+        function handleTouchEnd(e) {
+            const endY = e.changedTouches[0].clientY;
+            if (startY && startY - endY > 50) {
+                showCard(fallbackCard);
+            }
+            startY = null;
+        }
+
+        window.onload = () => {
+            startListening();
+            container.addEventListener('touchstart', handleTouchStart);
+            container.addEventListener('touchend', handleTouchEnd);
+        };
     </script>
 </body>
 </html> 
