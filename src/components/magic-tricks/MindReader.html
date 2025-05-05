@@ -3,13 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoMind 2.0 - Mind Reader</title>
-    <link rel="stylesheet" href="MindReader.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- React Dependencies -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <title>Mind Reader</title>
     <style>
         body {
             margin: 0;
@@ -32,240 +26,66 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        #status {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-        }
-        #permission-button {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 15px 30px;
-            font-size: 18px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        #permission-button:hover {
-            background: #45a049;
-        }
-        #permission-button:active {
-            transform: translate(-50%, -50%) scale(0.98);
-        }
     </style>
 </head>
 <body>
-    <div id="status">Initializing...</div>
-    <button id="permission-button" style="display: none;">Allow Microphone Access</button>
     <div class="card-container">
-        <img id="card-display" src="../../../images/cards/back.png" alt="Your card will appear here" />
+        <img id="card-display" src="../../../images/cards/back.png" alt="Card" />
     </div>
     <script>
-        const status = document.getElementById('status');
-        const permissionButton = document.getElementById('permission-button');
-        let recognition = null;
-        let isListening = false;
+        const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
+        const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
 
-        // Check for speech recognition support
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            status.textContent = 'Speech recognition not supported';
-            console.error('Speech recognition not supported');
-        } else {
-            // Initialize speech recognition
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 3;
-            recognition.lang = 'en-US';
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 3;
+        recognition.lang = 'en-US';
 
-            // Card names and suits
-            const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
-            const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
-
-            // Normalize transcript to match card names
-            function normalizeTranscript(transcript) {
-                transcript = transcript.toLowerCase().trim();
-                
-                // Handle special cases
-                if (transcript.includes('ace')) return 'ace';
-                if (transcript.includes('jack')) return 'jack';
-                if (transcript.includes('queen')) return 'queen';
-                if (transcript.includes('king')) return 'king';
-                
-                // Handle numbers
-                const numberMap = {
-                    'one': 'ace',
-                    'two': 'two',
-                    'three': 'three',
-                    'four': 'four',
-                    'five': 'five',
-                    'six': 'six',
-                    'seven': 'seven',
-                    'eight': 'eight',
-                    'nine': 'nine',
-                    'ten': 'ten'
-                };
-                
-                for (const [word, number] of Object.entries(numberMap)) {
-                    if (transcript.includes(word)) return number;
-                }
-                
-                return transcript;
+        function normalizeTranscript(transcript) {
+            transcript = transcript.toLowerCase().trim();
+            if (transcript.includes('ace')) return 'ace';
+            if (transcript.includes('jack')) return 'jack';
+            if (transcript.includes('queen')) return 'queen';
+            if (transcript.includes('king')) return 'king';
+            
+            const numberMap = {
+                'one': 'ace', 'two': 'two', 'three': 'three', 'four': 'four',
+                'five': 'five', 'six': 'six', 'seven': 'seven', 'eight': 'eight',
+                'nine': 'nine', 'ten': 'ten'
+            };
+            
+            for (const [word, number] of Object.entries(numberMap)) {
+                if (transcript.includes(word)) return number;
             }
-
-            // Show card based on transcript
-            function showCard(transcript) {
-                const normalized = normalizeTranscript(transcript);
-                console.log('Normalized transcript:', normalized);
-                
-                // Find matching card name
-                const matchingCard = cardNames.find(card => normalized.includes(card));
-                if (!matchingCard) {
-                    console.log('No matching card found');
-                    return;
-                }
-                
-                // Find matching suit
-                const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
-                if (!matchingSuit) {
-                    console.log('No matching suit found');
-                    return;
-                }
-                
-                // Update card display
-                const cardDisplay = document.getElementById('card-display');
-                const cardPath = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
-                console.log('Setting card path:', cardPath);
-                cardDisplay.src = cardPath;
-            }
-
-            // Handle speech recognition results
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                console.log('Transcript:', transcript);
-                status.textContent = `Heard: ${transcript}`;
-                showCard(transcript);
-            };
-
-            // Handle errors
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                status.textContent = `Error: ${event.error}`;
-                
-                // Don't restart on permission denied
-                if (event.error === 'not-allowed') {
-                    isListening = false;
-                    permissionButton.style.display = 'block';
-                    return;
-                }
-                
-                // Restart after a delay on other errors
-                setTimeout(() => {
-                    if (!isListening) {
-                        startListening();
-                    }
-                }, 1000);
-            };
-
-            // Handle start
-            recognition.onstart = () => {
-                console.log('Speech recognition started');
-                isListening = true;
-                status.textContent = 'Listening...';
-                permissionButton.style.display = 'none';
-            };
-
-            // Handle end
-            recognition.onend = () => {
-                console.log('Speech recognition ended');
-                isListening = false;
-                status.textContent = 'Ready';
-                
-                // Only restart if we're not in an error state
-                if (!recognition.error) {
-                    setTimeout(() => {
-                        if (!isListening) {
-                            startListening();
-                        }
-                    }, 1000);
-                }
-            };
-
-            // Start listening function
-            function startListening() {
-                if (!isListening) {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.error('Failed to start recognition:', e);
-                        status.textContent = 'Failed to start';
-                        setTimeout(startListening, 1000);
-                    }
-                }
-            }
-
-            // Handle touch events for mobile
-            document.addEventListener('touchstart', () => {
-                console.log('Touch detected, starting recognition');
-                startListening();
-            });
-
-            // Request permission and start
-            navigator.permissions.query({ name: 'microphone' })
-                .then(permissionStatus => {
-                    console.log('Microphone permission status:', permissionStatus.state);
-                    status.textContent = `Microphone: ${permissionStatus.state}`;
-                    
-                    if (permissionStatus.state === 'granted') {
-                        startListening();
-                    } else {
-                        status.textContent = 'Please allow microphone access';
-                        permissionButton.style.display = 'block';
-                    }
-                    
-                    permissionStatus.onchange = () => {
-                        console.log('Permission changed:', permissionStatus.state);
-                        status.textContent = `Microphone: ${permissionStatus.state}`;
-                        if (permissionStatus.state === 'granted') {
-                            startListening();
-                        } else {
-                            permissionButton.style.display = 'block';
-                        }
-                    };
-                })
-                .catch(error => {
-                    console.error('Permission query failed:', error);
-                    status.textContent = 'Failed to check permissions';
-                    permissionButton.style.display = 'block';
-                });
-
-            // Handle permission button click
-            permissionButton.addEventListener('click', () => {
-                status.textContent = 'Requesting microphone access...';
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        console.log('Microphone access granted');
-                        status.textContent = 'Microphone access granted';
-                        stream.getTracks().forEach(track => track.stop());
-                        startListening();
-                    })
-                    .catch(error => {
-                        console.error('Microphone access denied:', error);
-                        status.textContent = 'Microphone access denied';
-                    });
-            });
+            return transcript;
         }
+
+        function showCard(transcript) {
+            const normalized = normalizeTranscript(transcript);
+            const matchingCard = cardNames.find(card => normalized.includes(card));
+            const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
+            
+            if (matchingCard && matchingSuit) {
+                document.getElementById('card-display').src = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
+            }
+        }
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            showCard(transcript);
+        };
+
+        recognition.onerror = () => {
+            recognition.start();
+        };
+
+        recognition.onend = () => {
+            recognition.start();
+        };
+
+        recognition.start();
     </script>
 </body>
 </html> 
