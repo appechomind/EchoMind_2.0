@@ -134,16 +134,14 @@
                     };
 
                     recognition.onend = () => {
-                        // Restart recognition when it ends
+                        // Always restart recognition when it ends
                         recognition.start();
                     };
 
                     recognition.onerror = (event) => {
                         console.error('Speech recognition error:', event.error);
-                        // Only restart if it's not a permission error
-                        if (event.error !== 'not-allowed' && event.error !== 'permission-denied') {
-                            recognition.start();
-                        }
+                        // Always restart recognition on error
+                        recognition.start();
                     };
 
                     setRecognition(recognition);
