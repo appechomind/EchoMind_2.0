@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: arial, sans-serif;
+            background: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: flex-end;
+            padding: 15px;
+            font-size: 13px;
+        }
+        .header a {
+            color: #000;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 100px;
+        }
+        .logo {
+            margin-bottom: 20px;
+        }
+        .search-container {
+            width: 584px;
+            position: relative;
+        }
+        .search-box {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            padding: 0 20px;
+            font-size: 16px;
+            outline: none;
+        }
+        .search-box:hover, .search-box:focus {
+            box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        .search-button {
+            background-color: #f8f9fa;
+            border: 1px solid #f8f9fa;
+            border-radius: 4px;
+            color: #3c4043;
+            font-size: 14px;
+            margin: 11px 4px;
+            padding: 0 16px;
+            height: 36px;
+            cursor: pointer;
+        }
+        .search-button:hover {
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            border: 1px solid #dadce0;
+            color: #202124;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #f2f2f2;
+            color: #70757a;
+            font-size: 14px;
+            padding: 15px 0;
+        }
+        .footer a {
+            color: #70757a;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .footer-content {
+            padding: 0 20px;
+        }
+        .footer-top {
+            border-bottom: 1px solid #dadce0;
+            padding-bottom: 10px;
+        }
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="#">Gmail</a>
+        <a href="#">Images</a>
+        <a href="#">Apps</a>
+        <a href="#">Sign in</a>
+    </div>
+
+    <div class="main">
+        <div class="logo">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-box" id="search-input">
+        </div>
+        <div class="buttons">
+            <button class="search-button" onclick="performSearch()">Google Search</button>
+            <button class="search-button" onclick="performSearch()">I'm Feeling Lucky</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-top">
+                United States
+            </div>
+            <div class="footer-bottom">
+                <div>
+                    <a href="#">About</a>
+                    <a href="#">Advertising</a>
+                    <a href="#">Business</a>
+                    <a href="#">How Search works</a>
+                </div>
+                <div>
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Speech recognition setup
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        // Media recorder setup
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordingTimeout;
+
+        // Setup media recorder
+        async function setupMediaRecorder() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    audioChunks = [];
+                    
+                    // Convert audio to text using Web Speech API
+                    const audioContext = new AudioContext();
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    
+                    // Create a temporary audio element to play the recording
+                    const audioElement = new Audio();
+                    audioElement.src = URL.createObjectURL(audioBlob);
+                    
+                    // Use the recognition to transcribe the audio
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[event.results.length - 1][0].transcript;
+                        const searchQuery = `what is ${transcript}`;
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+                    };
+                    
+                    // Start recognition for the recorded audio
+                    recognition.start();
+                    audioElement.play();
+                };
+            } catch (error) {
+                console.error('Error setting up media recorder:', error);
+            }
+        }
+
+        // Start recording
+        function startRecording() {
+            if (mediaRecorder && !isRecording) {
+                isRecording = true;
+                mediaRecorder.start();
+                recordingTimeout = setTimeout(stopRecording, 3000); // Record for 3 seconds
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                isRecording = false;
+                clearTimeout(recordingTimeout);
+                mediaRecorder.stop();
+            }
+        }
+
+        // Handle speech recognition
+        recognition.onresult = function(event) {
+            const result = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            
+            if (result.includes('about')) {
+                startRecording();
+            }
+        };
+
+        recognition.onerror = function() {
+            recognition.start();
+        };
+
+        recognition.onend = function() {
+            recognition.start();
+        };
+
+        // Handle search
+        function performSearch() {
+            const query = document.getElementById('search-input').value;
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            }
+        }
+
+        // Handle enter key in search box
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Check permissions and start
+        navigator.permissions.query({ name: 'microphone' }).then(permissionStatus => {
+            if (permissionStatus.state === 'granted') {
+                setupMediaRecorder().then(() => {
+                    recognition.start();
+                });
+            } else {
+                // Request permission
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                        setupMediaRecorder().then(() => {
+                            recognition.start();
+                        });
+                    })
+                    .catch(() => {
+                        // If permission denied, just keep trying
+                        recognition.start();
+                    });
+            }
+
+            // Listen for permission changes
+            permissionStatus.onchange = function() {
+                if (permissionStatus.state === 'granted') {
+                    setupMediaRecorder().then(() => {
+                        recognition.start();
+                    });
+                }
+            };
+        });
+    </script>
+</body>
+</html> 
