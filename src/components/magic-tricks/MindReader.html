@@ -59,7 +59,7 @@
             const words = transcript.toLowerCase().split(' ');
             
             // Check for special cards first
-            if (words.includes('joker')) return 'joker';
+            if (words.includes('joker')) return 'red_joker';
             if (words.includes('back')) return 'back';
 
             // Find number/face and suit
