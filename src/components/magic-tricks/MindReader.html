@@ -125,25 +125,45 @@
 
                     recognition.onresult = (event) => {
                         const transcript = event.results[event.results.length - 1][0].transcript;
-                        console.log('Transcript:', transcript); // Debug log
+                        console.log('Transcript:', transcript);
                         const cardName = normalizeTranscript(transcript);
-                        console.log('Normalized card name:', cardName); // Debug log
+                        console.log('Normalized card name:', cardName);
                         
                         if (cardName !== "back") {
                             setSelectedCard({ image: `${cardName}.png` });
                             setIsFlipped(true);
+                            // Ensure recognition continues
+                            if (recognition.state === 'inactive') {
+                                recognition.start();
+                            }
                         }
                     };
 
                     recognition.onend = () => {
                         // Always restart recognition when it ends
-                        recognition.start();
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Restart error:', e);
+                            // Try again after a short delay
+                            setTimeout(() => {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.log('Second restart attempt failed:', e);
+                                }
+                            }, 1000);
+                        }
                     };
 
                     recognition.onerror = (event) => {
                         console.error('Speech recognition error:', event.error);
                         // Always restart recognition on error
-                        recognition.start();
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Error restart failed:', e);
+                        }
                     };
 
                     setRecognition(recognition);
@@ -153,7 +173,11 @@
             // Start listening automatically when component mounts
             React.useEffect(() => {
                 if (recognition) {
-                    recognition.start();
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log('Initial start failed:', e);
+                    }
                 }
             }, [recognition]);
 
