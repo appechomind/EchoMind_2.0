@@ -120,7 +120,8 @@
                 if (SpeechRecognition) {
                     const recognition = new SpeechRecognition();
                     recognition.continuous = true;
-                    recognition.interimResults = true;
+                    recognition.interimResults = false;
+                    recognition.maxAlternatives = 3;
                     recognition.lang = 'en-US';
 
                     recognition.onresult = (event) => {
@@ -132,10 +133,6 @@
                         if (cardName !== "back") {
                             setSelectedCard({ image: `${cardName}.png` });
                             setIsFlipped(true);
-                            // Ensure recognition continues
-                            if (recognition.state === 'inactive') {
-                                recognition.start();
-                            }
                         }
                     };
 
