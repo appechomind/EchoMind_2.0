@@ -19,18 +19,45 @@
             height: auto;
         }
     </style>
+    <script>
+        // Global permission state
+        window.echoMindPermissions = {
+            microphoneGranted: false,
+            microphoneRequested: false,
+            requestPermission: async function() {
+                if (!this.microphoneRequested) {
+                    this.microphoneRequested = true;
+                    try {
+                        // First check if we already have permission
+                        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                        if (permissionStatus.state === 'granted') {
+                            this.microphoneGranted = true;
+                            return true;
+                        }
+                        
+                        // If not granted, request it
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.microphoneGranted = true;
+                        
+                        // Listen for permission changes
+                        permissionStatus.onchange = () => {
+                            this.microphoneGranted = permissionStatus.state === 'granted';
+                        };
+                    } catch (error) {
+                        console.error('Permission denied:', error);
+                        this.microphoneGranted = false;
+                    }
+                }
+                return this.microphoneGranted;
+            }
+        };
+    </script>
 </head>
 <body>
     <img id="card" src="../../../images/cards/back.png" alt="Card">
     <script>
         const card = document.getElementById('card');
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        // Store last card
+        let recognition = null;
         let lastCard = 'back';
 
         // Number word to digit mapping
@@ -100,43 +127,58 @@
             return lastCard; // Keep current card if no match
         }
 
-        recognition.onresult = function(event) {
-            const result = event.results[event.results.length - 1][0].transcript;
-            lastCard = findCard(result);
-            card.src = `../../../images/cards/${lastCard}.png`;
-        };
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
 
-        recognition.onerror = function() {
-            recognition.start();
-        };
+                recognition.onresult = function(event) {
+                    const result = event.results[event.results.length - 1][0].transcript;
+                    lastCard = findCard(result);
+                    card.src = `../../../images/cards/${lastCard}.png`;
+                };
 
-        recognition.onend = function() {
-            recognition.start();
-        };
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    // Restart recognition on error
+                    setTimeout(() => {
+                        if (recognition) {
+                            recognition.start();
+                        }
+                    }, 1000);
+                };
 
-        // Check if we have permission
-        navigator.permissions.query({ name: 'microphone' }).then(permissionStatus => {
-            if (permissionStatus.state === 'granted') {
+                recognition.onend = function() {
+                    // Restart recognition
+                    if (recognition) {
+                        recognition.start();
+                    }
+                };
+
+                // Start recognition
                 recognition.start();
-            } else {
-                // Request permission
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        stream.getTracks().forEach(track => track.stop());
-                        recognition.start();
-                    })
-                    .catch(() => {
-                        // If permission denied, just keep trying
-                        recognition.start();
-                    });
             }
+        }
 
-            // Listen for permission changes
-            permissionStatus.onchange = function() {
-                if (permissionStatus.state === 'granted') {
-                    recognition.start();
-                }
-            };
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Initialize speech recognition
+                initSpeechRecognition();
+            } catch (error) {
+                console.error('Error initializing:', error);
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (recognition) {
+                recognition.stop();
+            }
         });
     </script>
 </body>
