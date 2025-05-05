@@ -105,7 +105,7 @@ const useIntentStore = create((set, get) => ({
         if (context.userPreferences.mindReading) {
           return `I remember your mind reading preferences. Would you like to try that again?`;
         }
-        return "I'll read your mind! Think of something and I'll try to guess it.";
+        return "I'll read your mind! Think of something specific and I'll try to guess it.";
       },
       actions: ['start_listening'],
       followUp: "What are you thinking about?",
