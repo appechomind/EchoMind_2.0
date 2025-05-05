@@ -99,6 +99,21 @@
             justify-content: space-between;
             margin-top: 10px;
         }
+        .mic-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+        .mic-button img {
+            width: 24px;
+            height: 24px;
+        }
     </style>
     <script>
         // Global permission state
@@ -148,6 +163,9 @@
         </div>
         <div class="search-container">
             <input type="text" class="search-box" id="search-input">
+            <button class="mic-button" id="mic-button">
+                <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" alt="Voice Search">
+            </button>
         </div>
         <div class="buttons">
             <button class="search-button" onclick="performSearch()">Google Search</button>
@@ -181,6 +199,7 @@
         let recognition = null;
         let isRecording = false;
         let recordingTimeout;
+        let searchQuery = '';
 
         // Initialize speech recognition
         function initSpeechRecognition() {
@@ -193,6 +212,9 @@
                 recognition.onresult = (event) => {
                     const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
                     if (transcript.includes('about')) {
+                        // Start recording after "about"
+                        const aboutIndex = transcript.indexOf('about');
+                        searchQuery = transcript.substring(aboutIndex + 5).trim();
                         startRecording();
                     }
                 };
@@ -226,8 +248,11 @@
                 // Record for 3 seconds
                 recordingTimeout = setTimeout(() => {
                     isRecording = false;
-                    // Perform the search
-                    window.open('https://www.google.com/search?q=voice+search', '_blank');
+                    // Perform the search with the recorded query
+                    if (searchQuery) {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+                        searchQuery = ''; // Reset the query
+                    }
                 }, 3000);
             }
         }
@@ -246,15 +271,6 @@
                 performSearch();
             }
         });
-
-        // Add microphone button
-        const searchContainer = document.querySelector('.search-container');
-        const micButton = document.createElement('button');
-        micButton.className = 'search-button';
-        micButton.innerHTML = '🎤';
-        micButton.style.marginLeft = '10px';
-        micButton.onclick = startRecording;
-        searchContainer.appendChild(micButton);
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
