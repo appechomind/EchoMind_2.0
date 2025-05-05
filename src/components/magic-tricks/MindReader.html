@@ -32,109 +32,198 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
+    <div id="status">Initializing...</div>
     <div class="card-container">
         <img id="card-display" src="../../../images/cards/back.png" alt="Your card will appear here" />
     </div>
     <script>
-        // Card names and suits
-        const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
-        const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const status = document.getElementById('status');
+        let recognition = null;
+        let isListening = false;
 
-        // Initialize speech recognition
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 3;
+        // Check for speech recognition support
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            status.textContent = 'Speech recognition not supported';
+            console.error('Speech recognition not supported');
+        } else {
+            // Initialize speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 3;
+            recognition.lang = 'en-US';
 
-        // Normalize transcript to match card names
-        function normalizeTranscript(transcript) {
-            transcript = transcript.toLowerCase().trim();
-            
-            // Handle special cases
-            if (transcript.includes('ace')) return 'ace';
-            if (transcript.includes('jack')) return 'jack';
-            if (transcript.includes('queen')) return 'queen';
-            if (transcript.includes('king')) return 'king';
-            
-            // Handle numbers
-            const numberMap = {
-                'one': 'ace',
-                'two': 'two',
-                'three': 'three',
-                'four': 'four',
-                'five': 'five',
-                'six': 'six',
-                'seven': 'seven',
-                'eight': 'eight',
-                'nine': 'nine',
-                'ten': 'ten'
+            // Card names and suits
+            const cardNames = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'];
+            const cardSuits = ['hearts', 'diamonds', 'clubs', 'spades'];
+
+            // Normalize transcript to match card names
+            function normalizeTranscript(transcript) {
+                transcript = transcript.toLowerCase().trim();
+                
+                // Handle special cases
+                if (transcript.includes('ace')) return 'ace';
+                if (transcript.includes('jack')) return 'jack';
+                if (transcript.includes('queen')) return 'queen';
+                if (transcript.includes('king')) return 'king';
+                
+                // Handle numbers
+                const numberMap = {
+                    'one': 'ace',
+                    'two': 'two',
+                    'three': 'three',
+                    'four': 'four',
+                    'five': 'five',
+                    'six': 'six',
+                    'seven': 'seven',
+                    'eight': 'eight',
+                    'nine': 'nine',
+                    'ten': 'ten'
+                };
+                
+                for (const [word, number] of Object.entries(numberMap)) {
+                    if (transcript.includes(word)) return number;
+                }
+                
+                return transcript;
+            }
+
+            // Show card based on transcript
+            function showCard(transcript) {
+                const normalized = normalizeTranscript(transcript);
+                console.log('Normalized transcript:', normalized);
+                
+                // Find matching card name
+                const matchingCard = cardNames.find(card => normalized.includes(card));
+                if (!matchingCard) {
+                    console.log('No matching card found');
+                    return;
+                }
+                
+                // Find matching suit
+                const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
+                if (!matchingSuit) {
+                    console.log('No matching suit found');
+                    return;
+                }
+                
+                // Update card display
+                const cardDisplay = document.getElementById('card-display');
+                const cardPath = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
+                console.log('Setting card path:', cardPath);
+                cardDisplay.src = cardPath;
+            }
+
+            // Handle speech recognition results
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                console.log('Transcript:', transcript);
+                status.textContent = `Heard: ${transcript}`;
+                showCard(transcript);
             };
-            
-            for (const [word, number] of Object.entries(numberMap)) {
-                if (transcript.includes(word)) return number;
+
+            // Handle errors
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                status.textContent = `Error: ${event.error}`;
+                
+                // Don't restart on permission denied
+                if (event.error === 'not-allowed') {
+                    isListening = false;
+                    return;
+                }
+                
+                // Restart after a delay on other errors
+                setTimeout(() => {
+                    if (!isListening) {
+                        startListening();
+                    }
+                }, 1000);
+            };
+
+            // Handle start
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                isListening = true;
+                status.textContent = 'Listening...';
+            };
+
+            // Handle end
+            recognition.onend = () => {
+                console.log('Speech recognition ended');
+                isListening = false;
+                status.textContent = 'Ready';
+                
+                // Only restart if we're not in an error state
+                if (!recognition.error) {
+                    setTimeout(() => {
+                        if (!isListening) {
+                            startListening();
+                        }
+                    }, 1000);
+                }
+            };
+
+            // Start listening function
+            function startListening() {
+                if (!isListening) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Failed to start recognition:', e);
+                        status.textContent = 'Failed to start';
+                        setTimeout(startListening, 1000);
+                    }
+                }
             }
-            
-            return transcript;
+
+            // Handle touch events for mobile
+            document.addEventListener('touchstart', () => {
+                console.log('Touch detected, starting recognition');
+                startListening();
+            });
+
+            // Request permission and start
+            navigator.permissions.query({ name: 'microphone' })
+                .then(permissionStatus => {
+                    console.log('Microphone permission status:', permissionStatus.state);
+                    status.textContent = `Microphone: ${permissionStatus.state}`;
+                    
+                    if (permissionStatus.state === 'granted') {
+                        startListening();
+                    } else {
+                        status.textContent = 'Please allow microphone access';
+                    }
+                    
+                    permissionStatus.onchange = () => {
+                        console.log('Permission changed:', permissionStatus.state);
+                        status.textContent = `Microphone: ${permissionStatus.state}`;
+                        if (permissionStatus.state === 'granted') {
+                            startListening();
+                        }
+                    };
+                })
+                .catch(error => {
+                    console.error('Permission query failed:', error);
+                    status.textContent = 'Failed to check permissions';
+                    // Try starting anyway
+                    startListening();
+                });
         }
-
-        // Show card based on transcript
-        function showCard(transcript) {
-            const normalized = normalizeTranscript(transcript);
-            console.log('Normalized transcript:', normalized);
-            
-            // Find matching card name
-            const matchingCard = cardNames.find(card => normalized.includes(card));
-            if (!matchingCard) {
-                console.log('No matching card found');
-                return;
-            }
-            
-            // Find matching suit
-            const matchingSuit = cardSuits.find(suit => normalized.includes(suit));
-            if (!matchingSuit) {
-                console.log('No matching suit found');
-                return;
-            }
-            
-            // Update card display
-            const cardDisplay = document.getElementById('card-display');
-            const cardPath = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
-            console.log('Setting card path:', cardPath);
-            cardDisplay.src = cardPath;
-        }
-
-        // Handle speech recognition results
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            console.log('Transcript:', transcript);
-            showCard(transcript);
-        };
-
-        // Handle errors
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-        };
-
-        // Handle end of recognition
-        recognition.onend = () => {
-            console.log('Speech recognition ended');
-            // Restart recognition
-            recognition.start();
-        };
-
-        // Handle touch events for mobile
-        document.addEventListener('touchstart', () => {
-            console.log('Touch detected, starting recognition');
-            recognition.start();
-        });
-
-        // Start recognition
-        console.log('Starting speech recognition');
-        recognition.start();
     </script>
 </body>
 </html> 
