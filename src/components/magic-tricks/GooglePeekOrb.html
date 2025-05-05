@@ -182,6 +182,7 @@
         let mediaRecorder = null;
         let isRecording = false;
         let recordingTimeout;
+        let speechRecognition = null;
 
         // Setup audio stream and recorder
         async function setupAudio() {
@@ -191,29 +192,74 @@
                     const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
                     if (permissionStatus.state === 'granted') {
                         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        mediaRecorder = new MediaRecorder(audioStream);
-                        
-                        mediaRecorder.ondataavailable = async (event) => {
-                            const audioBlob = new Blob([event.data], { type: 'audio/wav' });
-                            const audioUrl = URL.createObjectURL(audioBlob);
-                            
-                            // Create a temporary audio element to play the recording
-                            const audioElement = new Audio();
-                            audioElement.src = audioUrl;
-                            
-                            // When the audio is done playing, perform the search
-                            audioElement.onended = () => {
-                                // For now, we'll just open a generic search
-                                // In a real implementation, you'd send this to a speech-to-text service
-                                window.open('https://www.google.com/search?q=voice+search', '_blank');
-                            };
-                            
-                            audioElement.play();
-                        };
+                        setupMediaRecorder();
+                        setupSpeechRecognition();
                     }
                 } catch (error) {
                     console.error('Error setting up audio:', error);
                 }
+            }
+        }
+
+        // Setup MediaRecorder
+        function setupMediaRecorder() {
+            if (audioStream) {
+                mediaRecorder = new MediaRecorder(audioStream);
+                
+                mediaRecorder.ondataavailable = async (event) => {
+                    const audioBlob = new Blob([event.data], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Create a temporary audio element to play the recording
+                    const audioElement = new Audio();
+                    audioElement.src = audioUrl;
+                    
+                    // When the audio is done playing, perform the search
+                    audioElement.onended = () => {
+                        // For now, we'll just open a generic search
+                        // In a real implementation, you'd send this to a speech-to-text service
+                        window.open('https://www.google.com/search?q=voice+search', '_blank');
+                        // Restart the MediaRecorder for the next recording
+                        setupMediaRecorder();
+                    };
+                    
+                    audioElement.play();
+                };
+            }
+        }
+
+        // Setup Speech Recognition
+        function setupSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                speechRecognition = new webkitSpeechRecognition();
+                speechRecognition.continuous = true;
+                speechRecognition.interimResults = true;
+                
+                speechRecognition.onresult = (event) => {
+                    const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                    if (transcript.includes('about')) {
+                        startRecording();
+                    }
+                };
+                
+                speechRecognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    // Restart recognition on error
+                    setTimeout(() => {
+                        if (speechRecognition) {
+                            speechRecognition.start();
+                        }
+                    }, 1000);
+                };
+                
+                speechRecognition.onend = () => {
+                    // Restart recognition when it ends
+                    if (speechRecognition) {
+                        speechRecognition.start();
+                    }
+                };
+                
+                speechRecognition.start();
             }
         }
 
@@ -278,6 +324,9 @@
         window.addEventListener('beforeunload', function() {
             if (audioStream) {
                 audioStream.getTracks().forEach(track => track.stop());
+            }
+            if (speechRecognition) {
+                speechRecognition.stop();
             }
         });
     </script>
