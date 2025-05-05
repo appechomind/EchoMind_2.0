@@ -36,7 +36,7 @@
 </head>
 <body>
     <div class="card-container">
-        <img id="card-display" src="images/cards/back.png" alt="Your card will appear here" />
+        <img id="card-display" src="../../../images/cards/back.png" alt="Your card will appear here" />
     </div>
     <script>
         // Card names and suits
@@ -102,7 +102,7 @@
             
             // Update card display
             const cardDisplay = document.getElementById('card-display');
-            const cardPath = `images/cards/${matchingCard}_of_${matchingSuit}.png`;
+            const cardPath = `../../../images/cards/${matchingCard}_of_${matchingSuit}.png`;
             console.log('Setting card path:', cardPath);
             cardDisplay.src = cardPath;
         }
