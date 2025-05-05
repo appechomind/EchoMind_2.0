@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,99 +12,59 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f0f0f0;
+            background: #000;
         }
-        .card-container {
-            width: 100%;
-            max-width: 500px;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        #card-display {
-            width: 100%;
+        #card {
+            width: 300px;
             height: auto;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <div class="card-container">
-        <img id="card-display" src="../../../images/cards/back.png" alt="Card" />
-    </div>
+    <img id="card" src="../../../images/cards/back.png" alt="Card">
     <script>
-        const cardDisplay = document.getElementById('card-display');
-        const cardNames = ["ace","2","3","4","5","6","7","8","9","10","jack","queen","king"];
-        const suits = ["hearts","spades","diamonds","clubs"];
-        const fallbackCard = "back";
-        const extensions = ["png", "jpg", "jpeg", "webp", "PNG"];
+        // Get the card element
+        const card = document.getElementById('card');
 
-        const numberMap = {
-            "two": "2", "three": "3", "four": "4", "five": "5",
-            "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"
-        };
-
-        function normalizeTranscript(transcript) {
-            const words = transcript.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ');
-            const normalizedWords = words.map(word => numberMap[word] || word);
-            let bestScore = 0;
-            let bestMatch = fallbackCard;
-
-            for (let value of cardNames) {
-                for (let suit of suits) {
-                    const combo = `${value}_of_${suit}`;
-                    const score = (normalizedWords.includes(value) ? 1 : 0) + 
-                                 (normalizedWords.includes(suit) ? 1 : 0);
-                    
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMatch = combo;
-                    }
-                }
-            }
-
-            return bestMatch;
-        }
-
-        function showCard(cardName) {
-            let index = 0;
-            function tryNextExt() {
-                if (index >= extensions.length) {
-                    cardDisplay.src = `../../../images/cards/${fallbackCard}.png`;
-                    return;
-                }
-                const ext = extensions[index++];
-                const imgPath = `../../../images/cards/${cardName}.${ext}`;
-                cardDisplay.onerror = tryNextExt;
-                cardDisplay.src = imgPath;
-                if (navigator.vibrate && cardName !== fallbackCard) navigator.vibrate(100);
-            }
-            tryNextExt();
-        }
-
+        // Initialize speech recognition
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
+        
+        // Basic settings
         recognition.continuous = true;
         recognition.interimResults = false;
-        recognition.maxAlternatives = 3;
         recognition.lang = 'en-US';
 
+        // When speech is recognized
         recognition.onresult = function(event) {
-            const transcript = event.results[event.results.length - 1][0].transcript;
-            const match = normalizeTranscript(transcript);
-            showCard(match);
+            // Get the last result
+            const result = event.results[event.results.length - 1][0].transcript;
+            console.log('Heard:', result);
+
+            // Simple card matching
+            if (result.includes('ace') && result.includes('spades')) {
+                card.src = '../../../images/cards/ace_of_spades.png';
+            } else if (result.includes('king') && result.includes('hearts')) {
+                card.src = '../../../images/cards/king_of_hearts.png';
+            } else if (result.includes('queen') && result.includes('diamonds')) {
+                card.src = '../../../images/cards/queen_of_diamonds.png';
+            } else if (result.includes('jack') && result.includes('clubs')) {
+                card.src = '../../../images/cards/jack_of_clubs.png';
+            }
         };
 
+        // Restart on error
         recognition.onerror = function() {
             recognition.start();
         };
 
+        // Restart when done
         recognition.onend = function() {
             recognition.start();
         };
 
+        // Start listening
         recognition.start();
-        showCard(fallbackCard);
     </script>
 </body>
 </html> 
