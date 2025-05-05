@@ -3,14 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EchoMind - A Piece of Magic</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>EchoMind 2.0 - Mind Reader</title>
+  <link rel="stylesheet" href="src/styles/index.css">
+  <!-- Add any additional fonts or external resources here -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    html, body {
+    body {
       margin: 0;
-      overflow: hidden;
-      background: black;
-      font-family: 'Segoe UI', sans-serif;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #ffffff;
+    }
+    #root {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     canvas#fractalCanvas {
@@ -146,14 +159,15 @@
   <script src="js/echomind-commands.js" defer></script>
 </head>
 <body>
+  <div id="root"></div>
   <canvas id="fractalCanvas"></canvas>
   <div class="title">EchoMind</div>
   <div class="subtitle">A Piece of Magic</div>
   <div class="orb-container">
     <!-- Each orb will share the same fractal animation drawn independently -->
     <!-- Fixed position for each orb, ensuring proper links -->
-    <div class="orb" style="top: 0%; left: 50%;" onclick="alert('Mentalism features coming soon!')"><canvas></canvas><span>Mentalism</span></div>
-    <div class="orb" style="top: 20%; left: 85%;" onclick="alert('Dual-Device tricks coming soon!')"><canvas></canvas><span>Dual-Device<br>Tricks</span></div>
+    <div class="orb" style="top: 0%; left: 50%;" onclick="window.location.href='magic-tricks/mind-reader'"><canvas></canvas><span>Mind Reader</span></div>
+    <div class="orb" style="top: 20%; left: 85%;" onclick="window.location.href='magic-tricks/google-peek'"><canvas></canvas><span>Google Peek</span></div>
     <div class="orb" style="top: 50%; left: 100%;" onclick="alert('Phone Effects coming soon!')"><canvas></canvas><span>Phone Effects</span></div>
     <div class="orb" style="top: 80%; left: 85%;" onclick="alert('Puzzles coming soon!')"><canvas></canvas><span>Puzzles</span></div>
     <div class="orb" style="top: 100%; left: 50%;" onclick="alert('Community features coming soon!')"><canvas></canvas><span>Community</span></div>
@@ -315,5 +329,6 @@
       }
     });
   </script>
+  <script src="dist/bundle.js"></script>
 </body>
 </html>
