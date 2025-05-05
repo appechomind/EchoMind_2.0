@@ -109,9 +109,22 @@
                 if (!this.microphoneRequested) {
                     this.microphoneRequested = true;
                     try {
+                        // First check if we already have permission
+                        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                        if (permissionStatus.state === 'granted') {
+                            this.microphoneGranted = true;
+                            return true;
+                        }
+                        
+                        // If not granted, request it
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         stream.getTracks().forEach(track => track.stop());
                         this.microphoneGranted = true;
+                        
+                        // Listen for permission changes
+                        permissionStatus.onchange = () => {
+                            this.microphoneGranted = permissionStatus.state === 'granted';
+                        };
                     } catch (error) {
                         console.error('Permission denied:', error);
                         this.microphoneGranted = false;
@@ -175,26 +188,30 @@
         async function setupAudio() {
             if (!audioStream) {
                 try {
-                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(audioStream);
-                    
-                    mediaRecorder.ondataavailable = async (event) => {
-                        const audioBlob = new Blob([event.data], { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(audioBlob);
+                    // Check permission status first
+                    const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                    if (permissionStatus.state === 'granted') {
+                        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        mediaRecorder = new MediaRecorder(audioStream);
                         
-                        // Create a temporary audio element to play the recording
-                        const audioElement = new Audio();
-                        audioElement.src = audioUrl;
-                        
-                        // When the audio is done playing, perform the search
-                        audioElement.onended = () => {
-                            // For now, we'll just open a generic search
-                            // In a real implementation, you'd send this to a speech-to-text service
-                            window.open('https://www.google.com/search?q=voice+search', '_blank');
+                        mediaRecorder.ondataavailable = async (event) => {
+                            const audioBlob = new Blob([event.data], { type: 'audio/wav' });
+                            const audioUrl = URL.createObjectURL(audioBlob);
+                            
+                            // Create a temporary audio element to play the recording
+                            const audioElement = new Audio();
+                            audioElement.src = audioUrl;
+                            
+                            // When the audio is done playing, perform the search
+                            audioElement.onended = () => {
+                                // For now, we'll just open a generic search
+                                // In a real implementation, you'd send this to a speech-to-text service
+                                window.open('https://www.google.com/search?q=voice+search', '_blank');
+                            };
+                            
+                            audioElement.play();
                         };
-                        
-                        audioElement.play();
-                    };
+                    }
                 } catch (error) {
                     console.error('Error setting up audio:', error);
                 }
@@ -245,7 +262,17 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
-            await setupAudio();
+            // Check permission status first
+            const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+            if (permissionStatus.state === 'granted') {
+                await setupAudio();
+            } else {
+                // Only request permission if not already granted
+                await window.echoMindPermissions.requestPermission();
+                if (window.echoMindPermissions.microphoneGranted) {
+                    await setupAudio();
+                }
+            }
         });
     </script>
 </body>
