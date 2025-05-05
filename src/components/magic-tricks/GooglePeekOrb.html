@@ -143,30 +143,11 @@
             opacity: 0.7;
         }
         .mic-button.recording img {
+            opacity: 0.7;
             filter: hue-rotate(120deg);
-            animation: pulse 0.5s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
         }
         .status-text {
-            position: absolute;
-            top: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .status-text.visible {
-            opacity: 1;
+            display: none;
         }
         @media (max-width: 768px) {
             .main {
@@ -288,16 +269,13 @@
 
         // Update microphone status
         function updateMicStatus(status) {
-            if (micButton && statusText) {
+            if (micButton) {
                 micButton.classList.remove('listening', 'recording');
-                statusText.classList.remove('visible');
                 
                 if (status === 'listening') {
                     micButton.classList.add('listening');
                 } else if (status === 'recording') {
                     micButton.classList.add('recording');
-                    statusText.textContent = 'Recording...';
-                    statusText.classList.add('visible');
                 }
             }
         }
