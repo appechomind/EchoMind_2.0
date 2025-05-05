@@ -15,7 +15,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            background: transparent;
             font-family: 'Poppins', sans-serif;
             display: flex;
             justify-content: center;
@@ -164,11 +164,11 @@
                     <div className={`card-container ${isFlipped ? 'flipped' : ''}`}>
                         <div className="card">
                             {selectedCard && (
-                                <img src={`/images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
+                                <img src={`../images/cards/${selectedCard.image}`} alt={selectedCard.image.replace('.png', '').replace(/_/g, ' ')} />
                             )}
                         </div>
                         <div className="card-back">
-                            <img src="/images/cards/back.png" alt="Card Back" />
+                            <img src="../images/cards/back.png" alt="Card Back" />
                         </div>
                     </div>
                 </div>
