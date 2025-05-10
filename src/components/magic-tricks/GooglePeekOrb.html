@@ -175,11 +175,10 @@
         }
     </style>
     <script type="module">
-        // Import the permissions handler
-        import { PermissionsHandler } from '../../../js/permissions-handler.js';
+        // Import the permissions handler singleton
+        import { permissions } from '../../../js/permissions-handler.js';
 
         // Initialize permissions handler
-        const permissions = new PermissionsHandler();
         permissions.init({ debugMode: true });
 
         class SpeechRecognizer {
