@@ -206,6 +206,108 @@
                 return this.microphoneGranted;
             }
         };
+
+        // Speech recognition setup
+        let recognition = null;
+        let isListening = false;
+        let listeningForAbout = false;
+        let listeningTimeout = null;
+        let searchQuery = '';
+
+        function initializeSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.error('Speech recognition not supported');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript.toLowerCase().trim();
+                
+                if (transcript.includes('about') && !listeningForAbout) {
+                    listeningForAbout = true;
+                    document.getElementById('mic-button').classList.add('recording');
+                    
+                    // Clear any existing timeout
+                    if (listeningTimeout) {
+                        clearTimeout(listeningTimeout);
+                    }
+                    
+                    // Set timeout for 3 seconds
+                    listeningTimeout = setTimeout(() => {
+                        if (searchQuery) {
+                            document.getElementById('search-input').value = searchQuery;
+                            performSearch();
+                        }
+                        listeningForAbout = false;
+                        searchQuery = '';
+                        document.getElementById('mic-button').classList.remove('recording');
+                    }, 3000);
+                } else if (listeningForAbout) {
+                    // Only capture what comes after "about"
+                    const aboutIndex = transcript.indexOf('about');
+                    if (aboutIndex !== -1) {
+                        searchQuery = transcript.substring(aboutIndex + 5).trim();
+                    } else {
+                        searchQuery = transcript;
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                document.getElementById('mic-button').classList.remove('recording');
+                listeningForAbout = false;
+                searchQuery = '';
+                if (listeningTimeout) {
+                    clearTimeout(listeningTimeout);
+                }
+                // Restart recognition
+                setTimeout(() => {
+                    if (recognition) {
+                        recognition.start();
+                    }
+                }, 1000);
+            };
+
+            recognition.onend = () => {
+                // Always restart recognition
+                if (recognition) {
+                    recognition.start();
+                }
+            };
+        }
+
+        function performSearch() {
+            const query = document.getElementById('search-input').value;
+            if (query) {
+                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            }
+        }
+
+        // Initialize speech recognition when the page loads
+        window.addEventListener('load', async () => {
+            try {
+                await window.echoMindPermissions.requestPermission();
+                initializeSpeechRecognition();
+                recognition.start();
+            } catch (error) {
+                console.error('Error initializing speech recognition:', error);
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (recognition) {
+                recognition.stop();
+            }
+        });
     </script>
 </head>
 <body>
@@ -252,155 +354,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Global state
-        let recognition = null;
-        let isRecording = false;
-        let recordingTimeout;
-        let searchQuery = '';
-        let micButton = null;
-        let statusText = null;
-
-        // Check if device is mobile
-        function isMobileDevice() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        }
-
-        // Update microphone status
-        function updateMicStatus(status) {
-            if (micButton) {
-                micButton.classList.remove('listening', 'recording');
-                
-                if (status === 'listening') {
-                    micButton.classList.add('listening');
-                } else if (status === 'recording') {
-                    micButton.classList.add('recording');
-                }
-            }
-        }
-
-        // Perform search based on device type
-        function performSearch(query) {
-            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            
-            if (isMobileDevice()) {
-                // On mobile, stop recognition before redirecting
-                if (recognition) {
-                    recognition.stop();
-                }
-                // Use a small delay to ensure recognition is stopped
-                setTimeout(() => {
-                    window.location.href = searchUrl;
-                }, 100);
-            } else {
-                // On desktop, open in new tab
-                window.open(searchUrl, '_blank');
-            }
-        }
-
-        // Initialize speech recognition
-        function initSpeechRecognition() {
-            if ('webkitSpeechRecognition' in window) {
-                recognition = new webkitSpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
-
-                recognition.onstart = () => {
-                    updateMicStatus('listening');
-                };
-
-                recognition.onresult = (event) => {
-                    const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-                    if (transcript.includes('about')) {
-                        // Start recording after "about"
-                        const aboutIndex = transcript.indexOf('about');
-                        searchQuery = transcript.substring(aboutIndex + 5).trim();
-                        updateMicStatus('recording');
-                        startRecording();
-                    }
-                };
-
-                recognition.onerror = (event) => {
-                    console.error('Speech recognition error:', event.error);
-                    updateMicStatus('listening');
-                    // Restart recognition on error
-                    setTimeout(() => {
-                        if (recognition) {
-                            recognition.start();
-                        }
-                    }, 1000);
-                };
-
-                recognition.onend = () => {
-                    // Only restart if we're not redirecting
-                    if (recognition && !isMobileDevice()) {
-                        recognition.start();
-                    }
-                };
-
-                // Start recognition
-                recognition.start();
-            }
-        }
-
-        // Start recording
-        function startRecording() {
-            if (!isRecording) {
-                isRecording = true;
-                // Record for 3 seconds
-                recordingTimeout = setTimeout(() => {
-                    isRecording = false;
-                    updateMicStatus('listening');
-                    // Perform the search with the recorded query
-                    if (searchQuery) {
-                        performSearch(searchQuery);
-                        searchQuery = ''; // Reset the query
-                    }
-                }, 3000);
-            }
-        }
-
-        // Handle search button click
-        function handleSearch() {
-            const query = document.getElementById('search-input').value;
-            if (query) {
-                performSearch(query);
-            }
-        }
-
-        // Handle enter key in search box
-        document.getElementById('search-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleSearch();
-            }
-        });
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                // Create status elements
-                micButton = document.getElementById('mic-button');
-                statusText = document.createElement('div');
-                statusText.className = 'status-text';
-                micButton.appendChild(statusText);
-
-                // Request microphone permission
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                // Initialize speech recognition
-                initSpeechRecognition();
-            } catch (error) {
-                console.error('Error initializing:', error);
-            }
-        });
-
-        // Clean up on page unload
-        window.addEventListener('beforeunload', function() {
-            if (recognition) {
-                recognition.stop();
-            }
-        });
-    </script>
 </body>
 </html> 
