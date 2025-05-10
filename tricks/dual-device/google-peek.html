@@ -1,780 +1,582 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoMind - Google Peek</title>
-  <!-- Add the global permissions handler -->
-  <script src="../../js/permissions-handler.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f0f1a;
-      color: #e0e0ff;
-      margin: 0;
-      padding: 0;
-    }
-    
-    header {
-      background: linear-gradient(135deg, #4a2080 0%, #33104a 100%);
-      padding: 30px 20px;
-      text-align: center;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-    }
-    
-    h1 {
-      margin: 0;
-      font-size: 2.2em;
-      text-shadow: 0 0 10px #a96eff;
-    }
-    
-    .subtitle {
-      font-size: 1.1em;
-      margin-top: 10px;
-      color: #b88eff;
-    }
-    
-    .container {
-      max-width: 800px;
-      margin: 30px auto;
-      padding: 0 20px;
-    }
-    
-    .trick-panel {
-      background-color: rgba(30, 20, 50, 0.6);
-      border-radius: 10px;
-      padding: 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
-      border: 1px solid #6032a8;
-    }
-    
-    .stage-container {
-      position: relative;
-      min-height: 400px;
-    }
-
-    .stage {
-      position: absolute;
-      width: 100%;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.5s, visibility 0.5s;
-    }
-    
-    .stage.active {
-      opacity: 1;
-      visibility: visible;
-    }
-    
-    h2 {
-      color: #c09aff;
-      border-bottom: 2px solid #6032a8;
-      padding-bottom: 10px;
-      margin-top: 0;
-    }
-    
-    h3 {
-      color: #b088ff;
-      margin-top: 25px;
-      margin-bottom: 15px;
-    }
-    
-    .instructions {
-      line-height: 1.6;
-      margin-bottom: 20px;
-      background-color: rgba(60, 40, 100, 0.4);
-      border-radius: 6px;
-      padding: 15px;
-      border-left: 4px solid #9966ff;
-    }
-    
-    ol, ul {
-      padding-left: 25px;
-    }
-    
-    li {
-      margin-bottom: 10px;
-    }
-
-    .button-container {
-      margin-top: 30px;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-    
-    .action-button {
-      background-color: #6032a8;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      font-size: 1em;
-    }
-    
-    .action-button:hover {
-      background-color: #7944d4;
-    }
-    
-    .action-button:disabled {
-      background-color: #3a2062;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    
-    .back-button {
-      display: inline-block;
-      background-color: #442379;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-top: 20px;
-      transition: background-color 0.3s;
-      font-size: 0.9em;
-    }
-    
-    .back-button:hover {
-      background-color: #5e31a8;
-    }
-
-    .search-box {
-      width: 100%;
-      padding: 15px;
-      border-radius: 30px;
-      border: 2px solid #6032a8;
-      background-color: rgba(20, 15, 35, 0.8);
-      color: white;
-      font-size: 1.1em;
-      margin-bottom: 20px;
-      box-shadow: 0 0 15px rgba(122, 68, 212, 0.3);
-    }
-
-    .search-box:focus {
-      outline: none;
-      border-color: #9966ff;
-      box-shadow: 0 0 20px rgba(153, 102, 255, 0.5);
-    }
-
-    .search-result {
-      background-color: rgba(40, 30, 70, 0.6);
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      transition: transform 0.3s, box-shadow 0.3s;
-      border: 1px solid #7944d4;
-    }
-
-    .loading-indicator {
-      text-align: center;
-      margin: 30px 0;
-    }
-
-    .loading-indicator span {
-      display: inline-block;
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      background-color: #9966ff;
-      margin: 0 5px;
-      animation: loading 1.4s infinite ease-in-out both;
-    }
-
-    .loading-indicator span:nth-child(1) {
-      animation-delay: -0.32s;
-    }
-
-    .loading-indicator span:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-
-    @keyframes loading {
-      0%, 80%, 100% { 
-        transform: scale(0);
-      } 40% { 
-        transform: scale(1.0);
-      }
-    }
-
-    .speech-status {
-      display: flex;
-      align-items: center;
-      margin: 20px 0;
-      padding: 15px;
-      border-radius: 8px;
-      background-color: rgba(40, 30, 70, 0.6);
-      color: #e0e0ff;
-    }
-
-    .speech-status-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      margin-right: 15px;
-      background-color: #cc3333;
-    }
-
-    .speech-status.listening .speech-status-icon {
-      background-color: #33cc33;
-      animation: pulse 1.5s infinite;
-    }
-
-    .speech-status.processing .speech-status-icon {
-      background-color: #3366cc;
-      animation: pulse 0.8s infinite;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(51, 204, 51, 0.7);
-      }
-      70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 10px rgba(51, 204, 51, 0);
-      }
-      100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(51, 204, 51, 0);
-      }
-    }
-
-    .code-container {
-      font-family: 'Courier New', monospace;
-      font-size: 0.85em;
-      background-color: rgba(20, 15, 35, 0.8);
-      border-radius: 6px;
-      padding: 15px;
-      margin-top: 20px;
-      border: 1px solid #6032a8;
-      color: #b88eff;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-
-    .search-title {
-      color: #4285F4;
-      font-size: 1.3em;
-      margin-top: 0;
-      margin-bottom: 5px;
-    }
-
-    .search-url {
-      color: #34A853;
-      font-size: 0.9em;
-      margin-bottom: 10px;
-    }
-
-    .search-description {
-      color: #e0e0ff;
-      line-height: 1.5;
-    }
-    
-    /* Permission status display */
-    #permissionStatus {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background-color: rgba(0,0,0,0.6);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 0.8em;
-      z-index: 100;
-      display: none;
-    }
-  </style>
-</head>
-
-<body>
-  <header>
-    <h1>Google Peek</h1>
-    <div class="subtitle">Mind reading with Google</div>
-  </header>
-  
-  <div class="container">
-    <div class="trick-panel">
-      <div class="stage-container">
-        <!-- Stage 1: Introduction -->
-        <div class="stage active" id="stage1">
-          <h2>Stage 1: Introduction</h2>
-          <div class="instructions">
-            <p>Welcome to Google Peek, a mind reading effect that reveals what someone searches for online.</p>
-            <p>This trick requires no special props, just this web app. Here's how it works:</p>
-            <ol>
-              <li>Your spectator uses their phone to search for something on Google</li>
-              <li>Our system will detect what they've searched for</li>
-              <li>You'll reveal their search, creating an impossible moment of mind reading</li>
-            </ol>
-          </div>
-          <div class="button-container">
-            <button class="action-button" onclick="checkPermissionAndContinue(2)">Start Setup</button>
-          </div>
-        </div>
-        
-        <!-- Stage 2: Spectator Preparation -->
-        <div class="stage" id="stage2">
-          <h2>Stage 2: Spectator Preparation</h2>
-          <div class="instructions">
-            <p>First, you need to prepare your spectator:</p>
-            <ol>
-              <li>Ask to borrow your spectator's phone</li>
-              <li>Tell them you're going to demonstrate something amazing</li>
-              <li>Open their web browser and go to Google.com</li>
-              <li>Hand the phone back to them</li>
-              <li>Ask them to think of something they'd like to search for</li>
-              <li>Tell them to go ahead and <strong>actually perform the search</strong> when you turn away</li>
-            </ol>
-            <p><strong>Presentation tip:</strong> Turn away and give them privacy while they search, making it clear you can't see what they're doing.</p>
-          </div>
-          <div class="button-container">
-            <button class="action-button" onclick="goToStage(3)">Continue</button>
-          </div>
-        </div>
-        
-        <!-- Stage 3: Connection Setup -->
-        <div class="stage" id="stage3">
-          <h2>Stage 3: Connection Setup</h2>
-          <div class="instructions">
-            <p>Now, it's time to "establish a connection" to their device:</p>
-            <ol>
-              <li>Ask them if they've completed their search</li>
-              <li>Tell them you'll need to establish a connection with their device</li>
-              <li>Press the button below to "initiate" the connection</li>
-              <li>When the connection is "complete," continue to the next step</li>
-            </ol>
-            <p><strong>Note:</strong> This is theatrical - there's no actual connection. The effect relies on the next step.</p>
-          </div>
-          <div class="button-container">
-            <button class="action-button" onclick="simulateConnection()">Establish Connection</button>
-          </div>
-        </div>
-        
-        <!-- Stage 4: Processing -->
-        <div class="stage" id="stage4">
-          <h2>Stage 4: Processing</h2>
-          <div class="instructions">
-            <p>The system is now establishing a connection to Google's servers and analyzing recent search patterns...</p>
-          </div>
-          <div class="loading-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="code-container" id="codeDisplay">
-            Initializing...
-          </div>
-        </div>
-        
-        <!-- Stage 5: Speech Recognition -->
-        <div class="stage" id="stage5">
-          <h2>Stage 5: Voice Detection</h2>
-          <div class="instructions">
-            <p>Now, ask your spectator to tell you what they searched for. The system will listen and detect their search:</p>
-            <ol>
-              <li>Ask: "So what did you search for on Google?"</li>
-              <li>When they start to tell you, the system will listen and automatically detect their search</li>
-              <li>Keep the conversation natural and act surprised when the system finds the term</li>
-            </ol>
-            <p>The system is now listening for their response...</p>
-          </div>
-          
-          <div class="speech-status listening" id="speechStatus">
-            <div class="speech-status-icon"></div>
-            <div>Listening for search term...</div>
-          </div>
-          
-          <div class="button-container">
-            <button class="action-button" id="speechToggleButton" onclick="toggleSpeechRecognition()">Stop Listening</button>
-            <button class="action-button" onclick="goToStage(6)">Manual Entry</button>
-          </div>
-          
-          <div class="code-container" id="speechDebug">
-            Speech recognition active...
-          </div>
-        </div>
-        
-        <!-- Stage 6: Manual Peek Setup (Backup) -->
-        <div class="stage" id="stage6">
-          <h2>Stage 6: Manual Search Entry</h2>
-          <div class="instructions">
-            <p>Enter what your spectator searched for:</p>
-            <p>This is useful if speech recognition didn't work, or if you prefer to enter the search term manually.</p>
-          </div>
-          
-          <input type="text" id="manualSearch" class="search-box" placeholder="Enter their search term here..." />
-          
-          <div class="button-container">
-            <button class="action-button" onclick="useManualSearch()">Use This Search</button>
-            <button class="action-button" onclick="goToStage(5)">Back to Voice Detection</button>
-          </div>
-        </div>
-        
-        <!-- Stage 7: Reveal -->
-        <div class="stage" id="stage7">
-          <h2>Stage 7: Reveal</h2>
-          <div class="instructions">
-            <p>The system has detected the search! Here's what to do next:</p>
-            <ol>
-              <li>Act surprised, as if you're just receiving the information</li>
-              <li>Say something like: "I'm getting something... did you search for..."</li>
-              <li>Reveal exactly what they searched for</li>
-              <li>Their reaction should be amazement, as you couldn't possibly have known</li>
-            </ol>
-          </div>
-          
-          <h3>They searched for:</h3>
-          <div class="code-container" id="searchReveal">
-            [Search term will appear here]
-          </div>
-          
-          <div class="button-container">
-            <button class="action-button" onclick="goToStage(8)">Show Google Results</button>
-          </div>
-        </div>
-        
-        <!-- Stage 8: Google Results -->
-        <div class="stage" id="stage8">
-          <h2>Stage 8: Google Results</h2>
-          <div class="instructions">
-            <p>For the final reveal, show them these Google search results matching exactly what they searched for:</p>
-          </div>
-          
-          <div id="searchResultsContainer">
-            <!-- Search results will be populated here -->
-          </div>
-          
-          <div class="button-container">
-            <button class="action-button" onclick="resetTrick()">Reset Trick</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <a href="../dual-device.html" class="back-button">← Back to Dual Device Effects</a>
-  </div>
-  
-  <!-- Permission status display -->
-  <div id="permissionStatus">Checking microphone access...</div>
-  
-  <script>
-    // Current stage of the trick
-    let currentStage = 1;
-    let spectatorSearchText = "";
-    let connectionInterval;
-    let recognition = null;
-    let isListening = false;
-    
-    // Initialize the trick
-    function initTrick() {
-      goToStage(1);
-      
-      // Check permissions on load
-      if (window.permissionsHandler) {
-        // Hide permission status initially
-        document.getElementById('permissionStatus').style.display = 'none';
-        
-        // Check microphone permission state
-        window.permissionsHandler.checkMicrophonePermission()
-          .then(state => {
-            console.log("Initial microphone permission state:", state);
-          });
-      }
-    }
-    
-    // Check permission before continuing to next stage
-    function checkPermissionAndContinue(stageNumber) {
-      const permissionStatusElement = document.getElementById('permissionStatus');
-      
-      if (window.permissionsHandler) {
-        permissionStatusElement.style.display = 'block';
-        permissionStatusElement.textContent = "Checking microphone access...";
-        
-        window.permissionsHandler.checkMicrophonePermission()
-          .then(state => {
-            if (state !== 'granted') {
-              permissionStatusElement.textContent = "Requesting microphone access...";
-              
-              window.permissionsHandler.requestMicrophonePermission()
-                .then(granted => {
-                  if (granted) {
-                    permissionStatusElement.textContent = "Microphone access granted";
-                    setTimeout(() => {
-                      permissionStatusElement.style.display = 'none';
-                      goToStage(stageNumber);
-                    }, 1000);
-                  } else {
-                    permissionStatusElement.textContent = "Voice features may not work without microphone access";
-                    setTimeout(() => {
-                      permissionStatusElement.style.display = 'none';
-                      goToStage(stageNumber);
-                    }, 2000);
-                  }
-                });
-            } else {
-              permissionStatusElement.style.display = 'none';
-              goToStage(stageNumber);
-            }
-          });
-      } else {
-        // If no permissions handler, just continue
-        goToStage(stageNumber);
-      }
-    }
-    
-    // Move to a specific stage
-    function goToStage(stageNumber) {
-      // Hide all stages
-      document.querySelectorAll('.stage').forEach(stage => {
-        stage.classList.remove('active');
-      });
-      
-      // Show the requested stage
-      document.getElementById('stage' + stageNumber).classList.add('active');
-      currentStage = stageNumber;
-      
-      // If we're moving to the speech recognition stage, start listening
-      if (stageNumber === 5) {
-        startSpeechRecognition();
-      } else if (isListening) {
-        // If we're leaving the speech recognition stage, stop listening
-        stopSpeechRecognition();
-      }
-    }
-    
-    // Function to simulate establishing a connection
-    function simulateConnection() {
-      goToStage(4);
-      
-      const codeDisplay = document.getElementById('codeDisplay');
-      const connectionLines = [
-        "Initializing connection...",
-        "Connecting to Google API...",
-        "Connection established.",
-        "Scanning local network...",
-        "Identifying recent searches...",
-        "Analyzing search patterns...",
-        "Collecting metadata...",
-        "Processing search history...",
-        "Search pattern identified.",
-        "Ready for voice verification."
-      ];
-      
-      let lineIndex = 0;
-      codeDisplay.textContent = connectionLines[0];
-      
-      connectionInterval = setInterval(() => {
-        lineIndex++;
-        
-        if (lineIndex < connectionLines.length) {
-          codeDisplay.textContent += "\n" + connectionLines[lineIndex];
-          codeDisplay.scrollTop = codeDisplay.scrollHeight;
-        } else {
-          clearInterval(connectionInterval);
-          
-          // Move to speech recognition after a short delay
-          setTimeout(() => {
-            goToStage(5);
-          }, 1000);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Peek - EchoMind 2.0</title>
+    <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
+    <script src="../../js/permissions-handler.js"></script>
+    <script src="../../js/echomind-speech.js"></script>
+    <script src="../../js/mind-reader.js"></script>
+    <style>
+        body {
+            font-family: arial,sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
         }
-      }, 800);
-    }
-    
-    // Function to start speech recognition
-    function startSpeechRecognition() {
-      // Use the global permissions handler if available
-      if (window.permissionsHandler) {
-        window.permissionsHandler.requestMicrophonePermission()
-          .then(granted => {
-            if (granted) {
-              initializeSpeechRecognition();
-            } else {
-              updateSpeechStatus('not-listening', 'Microphone access denied');
-              document.getElementById('speechDebug').textContent = "Error: Microphone access denied. Please use manual entry.";
+
+        .fractal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(45deg, #1a1a1a, #2a1a2a);
+            opacity: 0.8;
+        }
+
+        .fractal-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(128, 0, 128, 0.1) 0%, transparent 50%),
+                repeating-linear-gradient(45deg, rgba(128, 0, 128, 0.1) 0px, rgba(128, 0, 128, 0.1) 1px, transparent 1px, transparent 10px),
+                repeating-linear-gradient(-45deg, rgba(128, 0, 128, 0.1) 0px, rgba(128, 0, 128, 0.1) 1px, transparent 1px, transparent 10px);
+            animation: fractalMove 20s infinite linear;
+        }
+
+        @keyframes fractalMove {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+
+        .setup-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .setup-content {
+            text-align: center;
+            padding: 30px;
+            background: rgba(26, 26, 26, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(128, 0, 128, 0.3);
+        }
+
+        .setup-content h2 {
+            color: #a96eff;
+            margin-bottom: 20px;
+        }
+
+        .setup-content p {
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        #setupBtn {
+            background: #a96eff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #setupBtn:hover {
+            background: #8a4dff;
+            transform: scale(1.05);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 6px;
+            height: 60px;
+            background: rgba(26, 26, 26, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .header a {
+            text-decoration: none;
+            color: #ffffff;
+            margin-right: 15px;
+            font-size: 13px;
+        }
+
+        .header a:hover {
+            text-decoration: underline;
+        }
+        
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: -120px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            margin-bottom: 25px;
+        }
+        
+        .logo img {
+            width: 272px;
+            height: 92px;
+            filter: brightness(0) invert(1);
+        }
+
+        .search-container {
+            width: 580px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            display: flex;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 8px 14px;
+            box-shadow: none;
+            height: 44px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .search-box:hover, .search-box:focus-within {
+            box-shadow: 0 1px 6px rgba(128, 0, 128, 0.3);
+            border-color: rgba(128, 0, 128, 0.5);
+        }
+        
+        .search-input {
+            border: none;
+            outline: none;
+            flex: 1;
+            height: 34px;
+            font-size: 16px;
+            margin-left: 10px;
+            background: transparent;
+            color: #ffffff;
+        }
+        
+        .search-icons {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-right: 8px;
+        }
+        
+        .search-icon, .mic-icon {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            filter: brightness(0) invert(1);
+        }
+
+        .search-icon:hover, .mic-icon:hover {
+            opacity: 1;
+        }
+        
+        .mic-icon.listening {
+            opacity: 1;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .buttons {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .buttons button {
+            background-color: rgba(128, 0, 128, 0.3);
+            border: 1px solid rgba(128, 0, 128, 0.5);
+            border-radius: 4px;
+            color: #ffffff;
+            font-family: arial,sans-serif;
+            font-size: 14px;
+            padding: 0 16px;
+            height: 36px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        
+        .buttons button:hover {
+            box-shadow: 0 1px 1px rgba(128, 0, 128, 0.3);
+            background-color: rgba(128, 0, 128, 0.4);
+            border: 1px solid rgba(128, 0, 128, 0.7);
+        }
+        
+        .footer {
+            background: rgba(26, 26, 26, 0.8);
+            margin-top: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-content a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 14px;
+            margin-right: 20px;
+        }
+        
+        .footer-content a:hover {
+            text-decoration: underline;
+            color: #ffffff;
+        }
+        
+        .left-footer, .right-footer {
+            display: flex;
+        }
+
+        .status-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(128, 0, 128, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-indicator.visible {
+            display: block;
+        }
+
+        .status-indicator.waiting {
+            background: rgba(251, 188, 5, 0.8);
+        }
+
+        .status-indicator.error {
+            background: rgba(234, 67, 53, 0.8);
+        }
+
+        .mind-reader-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 26, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(128, 0, 128, 0.3);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+        }
+
+        .mind-reader-container.visible {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .card-display {
+            max-width: 200px;
+            max-height: 300px;
+            margin: 0 auto;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(128, 0, 128, 0.5));
+        }
+
+        @media (max-width: 600px) {
+            .search-container {
+                width: 90%;
             }
-          });
-      } else {
-        // Fallback to direct initialization
-        initializeSpeechRecognition();
-      }
-    }
-    
-    // Initialize speech recognition
-    function initializeSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
-        updateSpeechStatus('not-listening', 'Speech recognition not supported in this browser');
-        document.getElementById('speechDebug').textContent = "ERROR: Speech recognition not supported in this browser.";
-        return;
-      }
-      
-      try {
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        
-        recognition.onstart = function() {
-          isListening = true;
-          updateSpeechStatus('listening', 'Listening for search term...');
-          document.getElementById('speechToggleButton').textContent = "Stop Listening";
-          document.getElementById('speechDebug').textContent = "Speech recognition active...";
-        };
-        
-        recognition.onresult = function(event) {
-          const transcript = Array.from(event.results)
-            .map(result => result[0])
-            .map(result => result.transcript)
-            .join('');
-          
-          document.getElementById('speechDebug').textContent = "Heard: " + transcript;
-          
-          // Check if we have a final result
-          if (event.results[event.results.length - 1].isFinal) {
-            updateSpeechStatus('processing', 'Processing what was heard...');
             
-            // Wait a moment and then process the transcript
-            setTimeout(() => {
-              spectatorSearchText = transcript.trim();
-              prepareFakeGoogleResults(spectatorSearchText);
-              goToStage(7);
-            }, 1500);
-          }
-        };
-        
-        recognition.onerror = function(event) {
-          updateSpeechStatus('not-listening', 'Error: ' + event.error);
-          document.getElementById('speechDebug').textContent = "Error: " + event.error;
-        };
-        
-        recognition.onend = function() {
-          if (isListening) {
-            // If we're still supposed to be listening, restart
-            recognition.start();
-          } else {
-            updateSpeechStatus('not-listening', 'Speech recognition stopped');
-            document.getElementById('speechToggleButton').textContent = "Start Listening";
-          }
-        };
-        
-        recognition.start();
-        
-      } catch (error) {
-        updateSpeechStatus('not-listening', 'Error initializing speech recognition');
-        document.getElementById('speechDebug').textContent = "Error: " + error.message;
-      }
-    }
-    
-    // Function to stop speech recognition
-    function stopSpeechRecognition() {
-      isListening = false;
-      if (recognition) {
-        recognition.stop();
-      }
-      updateSpeechStatus('not-listening', 'Speech recognition stopped');
-      document.getElementById('speechToggleButton').textContent = "Start Listening";
-    }
-    
-    // Function to toggle speech recognition
-    function toggleSpeechRecognition() {
-      if (isListening) {
-        stopSpeechRecognition();
-      } else {
-        startSpeechRecognition();
-      }
-    }
-    
-    // Function to update speech status display
-    function updateSpeechStatus(statusClass, statusText) {
-      const statusElement = document.getElementById('speechStatus');
-      statusElement.className = 'speech-status ' + statusClass;
-      statusElement.querySelector('div:last-child').textContent = statusText;
-    }
-    
-    // Function to reveal the search manually
-    function useManualSearch() {
-      const manualSearchInput = document.getElementById('manualSearch');
-      const searchText = manualSearchInput.value.trim();
-      
-      if (searchText.length > 0) {
-        spectatorSearchText = searchText;
-        prepareFakeGoogleResults(spectatorSearchText);
-        goToStage(7);
-      } else {
-        alert("Please enter a search term");
-      }
-    }
-    
-    // Prepare fake Google results based on the search term
-    function prepareFakeGoogleResults(searchTerm) {
-      // Display the search term in the reveal stage
-      document.getElementById('searchReveal').textContent = searchTerm;
-      
-      // Generate fake Google search results
-      const resultsContainer = document.getElementById('searchResultsContainer');
-      resultsContainer.innerHTML = '';
-      
-      // Generate 3-5 relevant results based on the search term
-      const numberOfResults = Math.floor(Math.random() * 3) + 3;
-      
-      for (let i = 0; i < numberOfResults; i++) {
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'search-result';
-        
-        const variant = i % 3;
-        let title, url, description;
-        
-        // Create variations of results based on the search term
-        switch (variant) {
-          case 0:
-            title = searchTerm + " - Top Results & Information";
-            url = "www.example.com/results/" + searchTerm.replace(/\s+/g, '-').toLowerCase();
-            description = "Find the best information about " + searchTerm + ". Our comprehensive guide covers everything you need to know about " + searchTerm + " including history, uses, and expert opinions.";
-            break;
-          case 1:
-            title = "Everything You Need to Know About " + searchTerm;
-            url = "www.infosite.org/" + searchTerm.replace(/\s+/g, '_').toLowerCase();
-            description = "Looking for information on " + searchTerm + "? We've compiled the most relevant and up-to-date resources on " + searchTerm + " to help you make informed decisions.";
-            break;
-          case 2:
-            title = searchTerm + " | Wikipedia";
-            url = "en.wikipedia.org/wiki/" + searchTerm.replace(/\s+/g, '_');
-            description = searchTerm + " refers to a concept with multiple meanings and applications. Learn about the origins, development, and modern understanding of " + searchTerm + " in various contexts.";
-            break;
+            .buttons button {
+                margin: 5px;
+            }
         }
-        
-        resultDiv.innerHTML = `
-          <h3 class="search-title">${title}</h3>
-          <div class="search-url">${url}</div>
-          <div class="search-description">${description}</div>
-        `;
-        
-        resultsContainer.appendChild(resultDiv);
-      }
-    }
+
+        /* Magician view styles */
+        .magician-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .magician-view.active {
+            display: flex;
+        }
+
+        .magician-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .magician-controls button {
+            background: #a96eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .spectator-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .spectator-view.active {
+            z-index: 2;
+        }
+
+        .code-word-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #a96eff;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .code-word-indicator.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="fractal-bg"></div>
     
-    // Reset the trick and start over
-    function resetTrick() {
-      spectatorSearchText = "";
-      if (connectionInterval) {
-        clearInterval(connectionInterval);
-      }
-      if (isListening && recognition) {
-        stopSpeechRecognition();
-      }
-      document.getElementById('manualSearch').value = "";
-      goToStage(1);
-    }
-    
-    // Initialize when the page loads
-    window.addEventListener('DOMContentLoaded', initTrick);
-  </script>
+    <div class="setup-screen" id="setupScreen">
+        <div class="setup-content">
+            <h2>Google Peek Setup</h2>
+            <p>Choose your role:</p>
+            <button id="magicianBtn">Magician</button>
+            <button id="spectatorBtn">Spectator</button>
+        </div>
+    </div>
+
+    <div class="spectator-view" id="spectatorView">
+        <div class="header">
+            <a href="https://www.google.com/gmail" target="_blank">Gmail</a>
+            <a href="https://www.google.com/imghp" target="_blank">Images</a>
+            <a href="https://accounts.google.com" target="_blank">Sign in</a>
+        </div>
+        
+        <div class="content">
+            <div class="logo">
+                <a href="https://www.google.com" target="_blank">
+                    <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+                </a>
+            </div>
+            
+            <div class="search-container">
+                <div class="search-box">
+                    <div class="search-icons">
+                        <img src="https://www.google.com/images/searchbox/desktop_search_icon.png" alt="Search" class="search-icon">
+                    </div>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search Google or type a URL">
+                    <div class="search-icons">
+                        <img src="https://www.google.com/images/searchbox/desktop_search_icon.png" alt="Voice Search" class="mic-icon" id="micIcon">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="buttons">
+                <button onclick="performSearch()">Google Search</button>
+                <button onclick="performLuckySearch()">I'm Feeling Lucky</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-content">
+                <div>© 2024 Google</div>
+                <div>
+                    <a href="https://policies.google.com/privacy" target="_blank">Privacy</a>
+                    <a href="https://policies.google.com/terms" target="_blank">Terms</a>
+                    <a href="https://www.google.com/preferences" target="_blank">Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="magician-view" id="magicianView">
+        <h2>Magician View</h2>
+        <div id="spectatorSearch" class="search-display"></div>
+        <div class="magician-controls">
+            <button id="startListening">Start Listening</button>
+            <button id="stopListening">Stop Listening</button>
+        </div>
+    </div>
+
+    <div class="code-word-indicator" id="codeWordIndicator">
+        Code Word Detected!
+    </div>
+
+    <script>
+        const setupScreen = document.getElementById('setupScreen');
+        const magicianView = document.getElementById('magicianView');
+        const spectatorView = document.getElementById('spectatorView');
+        const codeWordIndicator = document.getElementById('codeWordIndicator');
+        const searchInput = document.getElementById('searchInput');
+        const micIcon = document.getElementById('micIcon');
+        const spectatorSearch = document.getElementById('spectatorSearch');
+        const startListeningBtn = document.getElementById('startListening');
+        const stopListeningBtn = document.getElementById('stopListening');
+
+        const codeWords = ['about', 'specifically', 'finally'];
+        let isListening = false;
+        let speechHandler = null;
+
+        // Initialize speech handler
+        function initializeSpeechHandler() {
+            speechHandler = new SpeechHandler({
+                continuous: true,
+                onResult: handleSpeechResult,
+                onError: (error) => console.error('Speech error:', error)
+            });
+        }
+
+        function handleSpeechResult(transcript) {
+            // Check for code words
+            const hasCodeWord = codeWords.some(word => 
+                transcript.toLowerCase().includes(word)
+            );
+
+            if (hasCodeWord) {
+                codeWordIndicator.classList.add('active');
+                setTimeout(() => {
+                    codeWordIndicator.classList.remove('active');
+                }, 2000);
+            }
+
+            // Update search input for spectator
+            searchInput.value = transcript;
+            
+            // Update magician view
+            spectatorSearch.textContent = transcript;
+        }
+
+        // Setup buttons
+        document.getElementById('magicianBtn').addEventListener('click', () => {
+            setupScreen.style.display = 'none';
+            magicianView.classList.add('active');
+            spectatorView.classList.remove('active');
+            initializeSpeechHandler();
+        });
+
+        document.getElementById('spectatorBtn').addEventListener('click', () => {
+            setupScreen.style.display = 'none';
+            spectatorView.classList.add('active');
+            magicianView.classList.remove('active');
+            initializeSpeechHandler();
+        });
+
+        // Microphone button
+        micIcon.addEventListener('click', () => {
+            if (!isListening) {
+                speechHandler.start();
+                micIcon.classList.add('listening');
+                isListening = true;
+            } else {
+                speechHandler.stop();
+                micIcon.classList.remove('listening');
+                isListening = false;
+            }
+        });
+
+        // Magician controls
+        startListeningBtn.addEventListener('click', () => {
+            speechHandler.start();
+            isListening = true;
+        });
+
+        stopListeningBtn.addEventListener('click', () => {
+            speechHandler.stop();
+            isListening = false;
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (speechHandler) {
+                speechHandler.cleanup();
+            }
+        });
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            }
+        }
+
+        function performLuckySearch() {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}&btnI=I%27m+Feeling+Lucky`, '_blank');
+            }
+        }
+
+        // Add Enter key handler for search
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>

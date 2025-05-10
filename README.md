@@ -1,126 +1,112 @@
 # EchoMind 2.0 🎭
 
-<div align="center">
-  <img src="images/cards/ace_of_spades.png" width="100" alt="EchoMind Logo">
-  <h3>A Piece of Magic</h3>
-  <p>An innovative web-based mentalism application that creates immersive mind-reading experiences.</p>
-</div>
+A magical AI-powered magic trick platform that combines artificial intelligence with classic magic tricks to create unique, interactive performances.
 
-<div align="center">
-  <img src="images/cards/king_of_hearts.png" width="80" alt="Card 1">
-  <img src="images/cards/queen_of_spades.png" width="80" alt="Card 2">
-  <img src="images/cards/jack_of_diamonds.png" width="80" alt="Card 3">
-</div>
+## Features
 
-## ✨ Overview
+- 🎭 **AI Assistant**: Intelligent conversation interface with fractal visualization
+- 🔮 **Magic Tricks**: Collection of digital magic tricks
+- 🎪 **Interactive Performances**: Real-time interaction between magician and spectator
+- 🌈 **Beautiful UI**: Purple fractal Fibonacci theme with modern design
+- 🤖 **Speech Recognition**: Voice-controlled tricks and commands
+- 📱 **Responsive Design**: Works seamlessly on all devices
 
-EchoMind 2.0 is a sophisticated web application designed for performers, magicians, and mentalists. It combines modern web technologies with classic mentalism principles to create stunning performances that will leave your audience amazed.
-
-## 🌟 Features
-
-- 🎴 Interactive card-based mind reading experience
-- 🎙️ Voice recognition for hands-free operation
-- 📱 Touch gesture controls for smooth performance
-- 💫 Professional performance-ready interface
-- ⚡ Quick setup screen for seamless preparation
-- 📱 Fully responsive design for all devices
-
-## 🎬 Preview
-
-<div align="center">
-  <img src="images/cards/back.png" width="200" alt="Card Back">
-  <p><i>Experience the magic of mind reading</i></p>
-</div>
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Modern web browser (Chrome recommended)
-- Microphone access
-- Internet connection (for initial load only)
+- Node.js (v14 or higher)
+- npm or yarn
+- Modern web browser
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/joshua-harmon/EchoMind_2.0.git
-   ```
-
-2. Navigate to the project directory:
-   ```bash
+   git clone https://github.com/yourusername/EchoMind_2.0.git
    cd EchoMind_2.0
    ```
 
-3. Open `index.html` in your web browser or serve using a local web server.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-## 📖 Usage
+3. Start the development server:
+   ```bash
+   npm start
+   # or
+   yarn start
+   ```
 
-1. **Setup Phase**
-   - Click "Begin Performance" on the setup screen
-   - Grant microphone permissions when prompted
-   - Ensure your environment is quiet for optimal voice recognition
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-2. **Performance**
-   - Follow the on-screen instructions
-   - Use voice commands to navigate through the experience
-   - Swipe up to end the performance
+### Building for Production
 
-3. **Tips for Performers**
-   - Practice the routine before live performance
-   - Ensure good lighting for card visibility
-   - Test microphone sensitivity in your performance space
-   - Consider ambient noise levels
+```bash
+npm run build
+# or
+yarn build
+```
 
-## 🔧 Technical Details
+## Project Structure
 
-### Technologies Used
+```
+EchoMind_2.0/
+├── src/
+│   ├── core/
+│   │   ├── ai/
+│   │   ├── magic/
+│   │   ├── ui/
+│   │   └── utils/
+│   ├── components/
+│   │   ├── magic-tricks/
+│   │   ├── ai-assistant/
+│   │   └── settings/
+│   ├── styles/
+│   └── assets/
+├── public/
+│   ├── tricks/
+│   └── tools/
+├── tests/
+└── docs/
+```
 
-- HTML5
-- CSS3
-- JavaScript (ES6+)
-- Web Speech API
-- Touch Events API
+## Available Scripts
 
-### Browser Support
+- `npm start` - Runs the app in development mode
+- `npm test` - Launches the test runner
+- `npm run build` - Builds the app for production
+- `npm run lint` - Lints and fixes files
+- `npm run format` - Formats code with Prettier
 
-- Chrome (recommended)
-- Firefox
-- Safari
-- Edge
+## Contributing
 
-## 🤝 Contributing
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-We welcome contributions to EchoMind 2.0! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## 🔒 Security
-
-### Permissions
-
-- Microphone access is required for voice recognition
-- No data is stored or transmitted
-- All processing happens locally in the browser
-
-For more details, check our [Security Policy](SECURITY.md).
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## Acknowledgments
 
-- Create an issue for bug reports or feature requests
-- Check existing issues before creating new ones
-- Join our community discussions
+- Three.js for 3D graphics
+- React for UI components
+- Web Speech API for voice recognition
+- All contributors and users of EchoMind
 
-## 📞 Contact
+## Contact
 
-- GitHub Issues: [Project Issues](https://github.com/joshua-harmon/EchoMind_2.0/issues)
+Your Name - [@yourusername](https://twitter.com/yourusername)
 
----
+Project Link: [https://github.com/yourusername/EchoMind_2.0](https://github.com/yourusername/EchoMind_2.0)
 
 <div align="center">
-  Made with ❤️ by the EchoMind Team
-  <br>
   <img src="images/cards/ace_of_hearts.png" width="60" alt="Heart">
 </div>

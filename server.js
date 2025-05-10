@@ -1,38 +1,41 @@
-const express = require('express');
-const fetch = require('node-fetch');
+const http = require('http');
+const fs = require('fs');
 const path = require('path');
 
-const app = express();
-const port = 3000;
-
-app.use(express.static('public'));
-app.use(express.json());
-
-app.post('/api/chat', async (req, res) => {
-    const userMessage = req.body.message;
-
-    try {
-        const response = await fetch('http://localhost:11434/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'mistral',
-                messages: [{ role: 'user', content: userMessage }]
-            }),
-        });
-
-        const data = await response.json();
-        const aiMessage = data.message.content;
-
-        res.json({ reply: aiMessage });
-    } catch (error) {
-        console.error('Error contacting Mistral:', error);
-        res.status(500).json({ error: 'Failed to reach Mistral' });
+const server = http.createServer((req, res) => {
+    let filePath = '.' + req.url;
+    if (filePath === './') {
+        filePath = './index.html';
     }
+
+    const extname = path.extname(filePath);
+    let contentType = 'text/html';
+    switch (extname) {
+        case '.js':
+            contentType = 'text/javascript';
+            break;
+        case '.css':
+            contentType = 'text/css';
+            break;
+    }
+
+    fs.readFile(filePath, (error, content) => {
+        if (error) {
+            if(error.code === 'ENOENT') {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(500);
+                res.end('Server Error: ' + error.code);
+            }
+        } else {
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(content, 'utf-8');
+        }
+    });
 });
 
-app.listen(port, () => {
-    console.log(`EchoMind AI server running at http://localhost:${port}`);
-});
+const PORT = 3000;
+server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}/`);
+}); 
