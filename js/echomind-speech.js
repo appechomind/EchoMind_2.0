@@ -103,18 +103,7 @@ class SpeechHandler {
                 console.error('[SpeechHandler] onerror: Speech recognition error:', event.error, event);
             }
             this.options.onError(event);
-            // Only restart if continuous and not already restarting
-            if (this.options.continuous && !this._isRestarting) {
-                this._isRestarting = true;
-                clearTimeout(this._restartTimeout);
-                this._restartTimeout = setTimeout(() => {
-                    if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Restarting after error (with 1 minute cooldown)...');
-                    }
-                    this._isRestarting = false;
-                    this.start();
-                }, 60000); // 1 minute cooldown
-            }
+            // No auto-restart
         };
 
         this.recognition.onend = () => {
@@ -123,18 +112,7 @@ class SpeechHandler {
                 console.log('[SpeechHandler] onend: Speech recognition ended');
             }
             this.options.onEnd();
-            // Only restart if continuous and not already restarting
-            if (this.options.continuous && !this._isRestarting) {
-                this._isRestarting = true;
-                clearTimeout(this._restartTimeout);
-                this._restartTimeout = setTimeout(() => {
-                    if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Auto-restarting recognition after end (with 1 minute cooldown)...');
-                    }
-                    this._isRestarting = false;
-                    this.start();
-                }, 60000); // 1 minute cooldown
-            }
+            // No auto-restart
         };
 
         this.initialized = true;
