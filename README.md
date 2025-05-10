@@ -14,6 +14,7 @@ A magical AI-powered magic trick platform that combines artificial intelligence 
 - Advanced AI integration
 - Interactive user interface
 - Cross-platform compatibility
+- Continuous speech recognition for voice commands
 
 ## Getting Started
 
