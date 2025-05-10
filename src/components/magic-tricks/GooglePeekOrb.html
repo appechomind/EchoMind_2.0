@@ -182,140 +182,159 @@
         const permissions = new PermissionsHandler();
         permissions.init({ debugMode: true });
 
-        let recognition = null;
-        let isListening = false;
-        let listeningForAbout = false;
-        let listeningTimeout = null;
-        let searchQuery = '';
-        let recognitionActive = false;
-
-        function initializeSpeechRecognition() {
-            if (recognition) {
-                console.log('Recognition already initialized');
-                return;
+        class SpeechRecognizer {
+            constructor() {
+                this.recognition = null;
+                this.isListening = false;
+                this.isRecording = false;
+                this.searchQuery = '';
+                this.recordingTimeout = null;
+                this.initialize();
             }
 
-            console.log('Initializing speech recognition...');
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.error('Speech recognition not supported');
-                return;
+            initialize() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    console.error('Speech recognition not supported');
+                    return;
+                }
+
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                this.recognition.lang = 'en-US';
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+
+                this.setupEventHandlers();
             }
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
+            setupEventHandlers() {
+                this.recognition.onstart = () => {
+                    console.log('Speech recognition started');
+                    this.isListening = true;
+                    document.getElementById('mic-button').classList.add('listening');
+                };
 
-            recognition.onstart = () => {
-                console.log('Speech recognition started');
-                isListening = true;
-                recognitionActive = true;
-                document.getElementById('mic-button').classList.add('listening');
-            };
+                this.recognition.onresult = (event) => {
+                    const last = event.results.length - 1;
+                    const transcript = event.results[last][0].transcript.toLowerCase().trim();
+                    console.log('Speech recognized:', transcript);
 
-            recognition.onresult = (event) => {
-                if (!recognitionActive) return;
-                
-                const last = event.results.length - 1;
-                const transcript = event.results[last][0].transcript.toLowerCase().trim();
-                console.log('Speech recognized:', transcript);
-                
-                if (transcript.includes('about') && !listeningForAbout) {
-                    console.log('About keyword detected, starting 3-second recording');
-                    listeningForAbout = true;
-                    document.getElementById('mic-button').classList.add('recording');
-                    
-                    if (listeningTimeout) {
-                        clearTimeout(listeningTimeout);
+                    if (transcript.includes('about') && !this.isRecording) {
+                        this.startRecording();
+                    } else if (this.isRecording) {
+                        this.updateSearchQuery(transcript);
                     }
-                    
-                    listeningTimeout = setTimeout(() => {
-                        if (searchQuery) {
-                            document.getElementById('search-input').value = searchQuery;
-                            performSearch();
-                        }
-                        listeningForAbout = false;
-                        searchQuery = '';
-                        document.getElementById('mic-button').classList.remove('recording');
-                    }, 3000);
-                } else if (listeningForAbout) {
-                    const aboutIndex = transcript.indexOf('about');
-                    if (aboutIndex !== -1) {
-                        searchQuery = transcript.substring(aboutIndex + 5).trim();
+                };
+
+                this.recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'not-allowed') {
+                        this.handlePermissionError();
                     } else {
-                        searchQuery = transcript;
+                        this.restart();
                     }
-                    console.log('Updated search query:', searchQuery);
+                };
+
+                this.recognition.onend = () => {
+                    console.log('Speech recognition ended');
+                    this.isListening = false;
+                    document.getElementById('mic-button').classList.remove('listening');
+                    this.restart();
+                };
+            }
+
+            startRecording() {
+                console.log('Starting recording');
+                this.isRecording = true;
+                this.searchQuery = '';
+                document.getElementById('mic-button').classList.add('recording');
+
+                if (this.recordingTimeout) {
+                    clearTimeout(this.recordingTimeout);
                 }
-            };
 
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                isListening = false;
-                if (event.error === 'not-allowed') {
-                    permissions.requestMicrophonePermission().then(granted => {
-                        if (granted) {
-                            startSpeechRecognition();
-                        }
-                    });
+                this.recordingTimeout = setTimeout(() => {
+                    this.stopRecording();
+                }, 5000);
+            }
+
+            stopRecording() {
+                console.log('Stopping recording');
+                this.isRecording = false;
+                document.getElementById('mic-button').classList.remove('recording');
+
+                if (this.searchQuery) {
+                    document.getElementById('search-input').value = this.searchQuery;
+                    this.performSearch();
                 }
-            };
 
-            recognition.onend = () => {
-                console.log('Speech recognition ended');
-                isListening = false;
-                if (recognitionActive) {
-                    setTimeout(() => {
-                        if (recognition && recognitionActive) {
-                            try {
-                                recognition.start();
-                            } catch (error) {
-                                console.error('Error restarting recognition:', error);
-                            }
-                        }
-                    }, 1000);
+                if (this.recordingTimeout) {
+                    clearTimeout(this.recordingTimeout);
+                    this.recordingTimeout = null;
                 }
-            };
-        }
+            }
 
-        function stopSpeechRecognition() {
-            console.log('Stopping speech recognition');
-            recognitionActive = false;
-            if (recognition) {
-                recognition.stop();
+            updateSearchQuery(transcript) {
+                const aboutIndex = transcript.indexOf('about');
+                if (aboutIndex !== -1) {
+                    this.searchQuery = transcript.substring(aboutIndex + 5).trim();
+                } else {
+                    this.searchQuery = transcript;
+                }
+                console.log('Updated search query:', this.searchQuery);
             }
-            isListening = false;
-            listeningForAbout = false;
-            searchQuery = '';
-            if (listeningTimeout) {
-                clearTimeout(listeningTimeout);
-                listeningTimeout = null;
-            }
-            document.getElementById('mic-button').classList.remove('listening', 'recording');
-        }
 
-        function startSpeechRecognition() {
-            console.log('Starting speech recognition');
-            if (!recognition) {
-                console.log('Recognition not initialized');
-                return;
+            async handlePermissionError() {
+                const granted = await permissions.requestMicrophonePermission();
+                if (granted) {
+                    this.start();
+                }
             }
-            
-            recognitionActive = true;
-            try {
-                recognition.start();
-            } catch (error) {
-                console.error('Error starting recognition:', error);
-            }
-        }
 
-        function performSearch() {
-            const query = document.getElementById('search-input').value;
-            console.log('Performing search with query:', query);
-            if (query) {
-                window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            restart() {
+                if (this.isListening) return;
+                
+                setTimeout(() => {
+                    try {
+                        this.recognition.start();
+                    } catch (error) {
+                        console.error('Error restarting recognition:', error);
+                    }
+                }, 1000);
+            }
+
+            start() {
+                if (!this.recognition) {
+                    this.initialize();
+                }
+                
+                try {
+                    this.recognition.start();
+                } catch (error) {
+                    console.error('Error starting recognition:', error);
+                }
+            }
+
+            stop() {
+                if (this.recordingTimeout) {
+                    clearTimeout(this.recordingTimeout);
+                }
+                
+                if (this.recognition) {
+                    this.recognition.stop();
+                }
+                
+                this.isListening = false;
+                this.isRecording = false;
+                this.searchQuery = '';
+                document.getElementById('mic-button').classList.remove('listening', 'recording');
+            }
+
+            performSearch() {
+                const query = document.getElementById('search-input').value;
+                if (query) {
+                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                }
             }
         }
 
@@ -324,10 +343,12 @@
             console.log('Page loaded, initializing...');
             try {
                 const permissionGranted = await permissions.requestMicrophonePermission();
-                console.log('Permission granted:', permissionGranted);
                 if (permissionGranted) {
-                    initializeSpeechRecognition();
-                    startSpeechRecognition();
+                    const recognizer = new SpeechRecognizer();
+                    recognizer.start();
+                    
+                    // Make recognizer available globally
+                    window.speechRecognizer = recognizer;
                 }
             } catch (error) {
                 console.error('Error initializing speech recognition:', error);
@@ -336,8 +357,9 @@
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
-            console.log('Page unloading, cleaning up...');
-            stopSpeechRecognition();
+            if (window.speechRecognizer) {
+                window.speechRecognizer.stop();
+            }
         });
     </script>
 </head>
