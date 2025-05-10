@@ -6,6 +6,17 @@
     <title>Gizmo - AI Assistant</title>
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="js/gizmo/gizmo-local-ai.css">
+    <style>
+        /* Add your styles here */
+    </style>
+    <!-- Scripts -->
+    <script type="module">
+        import { permissions } from '../js/permissions-handler.js';
+        window.permissions = permissions;
+        permissions.init({ debugMode: true });
+    </script>
+    <script src="../js/echomind-speech.js" defer></script>
+    <script src="../js/echomind-commands.js" defer></script>
 </head>
 <body>
     <div class="gizmo-container">

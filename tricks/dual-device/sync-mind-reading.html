@@ -68,6 +68,14 @@
             color: #FFC107;
         }
     </style>
+    <!-- Scripts -->
+    <script type="module">
+        import { permissions } from '../../js/permissions-handler.js';
+        window.permissions = permissions;
+        permissions.init({ debugMode: true });
+    </script>
+    <script src="../../js/echomind-speech.js" defer></script>
+    <script src="../../js/echomind-commands.js" defer></script>
 </head>
 <body>
     <div class="status-indicator" id="statusIndicator"></div>
@@ -75,8 +83,6 @@
         <img src="" alt="Your card will appear here">
     </div>
 
-    <script src="../../js/permissions-handler.js"></script>
-    <script src="../../js/echomind-speech.js"></script>
     <script>
         const statusIndicator = document.getElementById('statusIndicator');
         const cardDisplay = document.getElementById('cardDisplay');
