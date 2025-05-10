@@ -142,7 +142,11 @@
     }
   </style>
   <!-- Scripts -->
-  <script src="js/permissions-handler.js" defer></script>
+  <script type="module">
+    import { permissions } from './js/permissions-handler.js';
+    window.permissions = permissions;
+    permissions.init({ debugMode: true });
+  </script>
   <script src="js/echomind-speech.js" defer></script>
   <script src="js/echomind-commands.js" defer></script>
 </head>
