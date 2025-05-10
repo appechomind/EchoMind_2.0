@@ -20,12 +20,12 @@ export class PermissionsHandler {
         };
         this.permissionStatus = document.getElementById('permissionStatus');
         this.loadSavedStates();
-        this.checkMicrophonePermission();
     }
 
     init(options = {}) {
         this.debugMode = options.debugMode || false;
         this.debug('PermissionsHandler initialized');
+        this.checkMicrophonePermission();
     }
 
     debug(message) {
@@ -157,10 +157,11 @@ export class PermissionsHandler {
     }
 }
 
-// Initialize the permissions handler
-const permissions = new PermissionsHandler();
-permissions.init({ debugMode: true });
-
-// Make it available globally for non-module scripts
-window.PermissionsHandler = PermissionsHandler;
-window.permissions = permissions; 
+// Initialize the permissions handler when the DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const permissions = new PermissionsHandler();
+    permissions.init({ debugMode: true });
+    
+    // Make it available globally for non-module scripts
+    window.permissions = permissions;
+}); 
