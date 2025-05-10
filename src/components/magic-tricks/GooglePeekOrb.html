@@ -175,7 +175,8 @@
         }
     </style>
     <script type="module">
-        import { SpeechHandler } from '../../../js/echomind-speech.js';
+        import { SpeechHandler } from '/js/echomind-speech.js';
+        import { permissions } from '/js/permissions-handler.js';
 
         class GooglePeekOrb extends HTMLElement {
             constructor() {
@@ -185,19 +186,36 @@
             }
 
             async connectedCallback() {
-                // Initialize speech handler
-                this.speechHandler = new SpeechHandler({
-                    language: 'en-US',
-                    continuous: true,
-                    interimResults: true,
-                    onResult: this.handleSpeechResult.bind(this),
-                    onError: this.handleSpeechError.bind(this),
-                    onEnd: this.handleSpeechEnd.bind(this),
-                    debugMode: true
-                });
+                try {
+                    // Initialize permissions
+                    await permissions.initialize({ debugMode: true });
+                    
+                    // Check microphone permission
+                    const hasPermission = await permissions.checkMicrophonePermission();
+                    if (!hasPermission) {
+                        const granted = await permissions.requestMicrophonePermission();
+                        if (!granted) {
+                            throw new Error('Microphone permission denied');
+                        }
+                    }
 
-                // Start speech recognition
-                await this.speechHandler.start();
+                    // Initialize speech handler
+                    this.speechHandler = new SpeechHandler({
+                        language: 'en-US',
+                        continuous: true,
+                        interimResults: true,
+                        onResult: this.handleSpeechResult.bind(this),
+                        onError: this.handleSpeechError.bind(this),
+                        onEnd: this.handleSpeechEnd.bind(this),
+                        debugMode: true
+                    });
+
+                    // Start speech recognition
+                    await this.speechHandler.start();
+                } catch (error) {
+                    console.error('Error initializing GooglePeekOrb:', error);
+                    this.handleSpeechError(error);
+                }
             }
 
             disconnectedCallback() {
@@ -209,14 +227,26 @@
             handleSpeechResult(transcript) {
                 // Process speech result
                 console.log('Speech result:', transcript);
+                const searchInput = document.querySelector('.search-box');
+                if (searchInput) {
+                    searchInput.value = transcript;
+                }
             }
 
             handleSpeechError(error) {
                 console.error('Speech error:', error);
+                const micButton = document.querySelector('.mic-button');
+                if (micButton) {
+                    micButton.classList.remove('listening', 'recording');
+                }
             }
 
             handleSpeechEnd() {
                 console.log('Speech recognition ended');
+                const micButton = document.querySelector('.mic-button');
+                if (micButton) {
+                    micButton.classList.remove('listening', 'recording');
+                }
             }
         }
 
