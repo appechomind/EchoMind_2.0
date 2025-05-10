@@ -11,7 +11,7 @@ if (typeof window.EchoMind === 'undefined') {
 }
 
 // Permissions Handler Module
-export class PermissionsHandler {
+class PermissionsHandler {
     constructor() {
         this.debugMode = false;
         this.permissionStates = {
@@ -156,6 +156,12 @@ export class PermissionsHandler {
         }
     }
 }
+
+// Create a singleton instance
+const permissions = new PermissionsHandler();
+
+// Export the singleton instance
+export { permissions };
 
 // Initialize the permissions handler when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
