@@ -154,7 +154,44 @@
     }
   </style>
   <!-- Scripts -->
-  <script src="js/permissions-handler.js" defer></script>
+  <script type="module">
+    import { permissions } from './js/permissions-handler.js';
+
+    // Initialize permissions once when the app starts
+    async function initializeApp() {
+        try {
+            // Initialize permissions handler
+            await permissions.initialize({ debugMode: true });
+            
+            // Make permissions available globally
+            window.permissions = permissions;
+            
+            // Check if we need to request permissions
+            const hasMicPermission = await permissions.checkMicrophonePermission();
+            if (!hasMicPermission) {
+                const granted = await permissions.requestMicrophonePermission();
+                if (!granted) {
+                    console.warn('Microphone permission denied');
+                }
+            }
+            
+            // Check camera permission
+            const hasCameraPermission = await permissions.checkCameraPermission();
+            if (!hasCameraPermission) {
+                const granted = await permissions.requestCameraPermission();
+                if (!granted) {
+                    console.warn('Camera permission denied');
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing app:', error);
+        }
+    }
+
+    // Initialize when the page loads
+    window.permissions = permissions;
+    permissions.init({ debugMode: true });
+  </script>
   <script src="js/echomind-speech.js" defer></script>
   <script src="js/echomind-commands.js" defer></script>
 </head>
@@ -328,14 +365,6 @@
         permissionStatusElement.className = "denied";
       }
     });
-  </script>
-  <script type="module">
-    import { PermissionsHandler } from './js/permissions-handler.js';
-    
-    // Initialize permissions handler
-    window.EchoMind = window.EchoMind || {};
-    window.EchoMind.PermissionsHandler = PermissionsHandler;
-    window.EchoMind.PermissionsHandler.init({ debugMode: true });
   </script>
   <script src="src/core/index.js"></script>
 </body>

@@ -175,182 +175,59 @@
         }
     </style>
     <script type="module">
-        // Import the permissions handler singleton
-        import { permissions } from '../../../js/permissions-handler.js';
+        import { SpeechHandler } from '../../../js/echomind-speech.js';
 
-        // Initialize permissions handler
-        permissions.init({ debugMode: true });
-
-        class SpeechRecognizer {
+        class GooglePeekOrb extends HTMLElement {
             constructor() {
-                this.recognition = null;
-                this.isListening = false;
-                this.isRecording = false;
-                this.searchQuery = '';
-                this.recordingTimeout = null;
-                this.initialize();
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.speechHandler = null;
             }
 
-            async initialize() {
-                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                    console.error('Speech recognition not supported');
-                    return;
-                }
+            async connectedCallback() {
+                // Initialize speech handler
+                this.speechHandler = new SpeechHandler({
+                    language: 'en-US',
+                    continuous: true,
+                    interimResults: true,
+                    onResult: this.handleSpeechResult.bind(this),
+                    onError: this.handleSpeechError.bind(this),
+                    onEnd: this.handleSpeechEnd.bind(this),
+                    debugMode: true
+                });
 
-                // Check microphone permission first
-                const hasPermission = await permissions.checkMicrophonePermission();
-                if (!hasPermission) {
-                    console.log('Requesting microphone permission...');
-                    const granted = await permissions.requestMicrophonePermission();
-                    if (!granted) {
-                        console.error('Microphone permission denied');
-                        return;
-                    }
-                }
-
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                this.recognition = new SpeechRecognition();
-                this.recognition.lang = 'en-US';
-                this.recognition.continuous = true;
-                this.recognition.interimResults = true;
-
-                this.setupEventHandlers();
+                // Start speech recognition
+                await this.speechHandler.start();
             }
 
-            setupEventHandlers() {
-                this.recognition.onstart = () => {
-                    console.log('Speech recognition started');
-                    this.isListening = true;
-                    document.getElementById('mic-button').classList.add('listening');
-                };
-
-                this.recognition.onresult = (event) => {
-                    const last = event.results.length - 1;
-                    const transcript = event.results[last][0].transcript.toLowerCase().trim();
-                    console.log('Speech recognized:', transcript);
-
-                    if (transcript.includes('about') && !this.isRecording) {
-                        this.startRecording();
-                    } else if (this.isRecording) {
-                        this.updateSearchQuery(transcript);
-                    }
-                };
-
-                this.recognition.onerror = async (event) => {
-                    console.error('Speech recognition error:', event.error);
-                    if (event.error === 'not-allowed') {
-                        const granted = await permissions.requestMicrophonePermission();
-                        if (granted) {
-                            this.start();
-                        }
-                    } else {
-                        this.restart();
-                    }
-                };
-
-                this.recognition.onend = () => {
-                    console.log('Speech recognition ended');
-                    this.isListening = false;
-                    document.getElementById('mic-button').classList.remove('listening');
-                    this.restart();
-                };
-            }
-
-            startRecording() {
-                console.log('Starting recording');
-                this.isRecording = true;
-                this.searchQuery = '';
-                document.getElementById('mic-button').classList.add('recording');
-
-                if (this.recordingTimeout) {
-                    clearTimeout(this.recordingTimeout);
-                }
-
-                this.recordingTimeout = setTimeout(() => {
-                    this.stopRecording();
-                }, 5000);
-            }
-
-            stopRecording() {
-                console.log('Stopping recording');
-                this.isRecording = false;
-                document.getElementById('mic-button').classList.remove('recording');
-
-                if (this.searchQuery) {
-                    document.getElementById('search-input').value = this.searchQuery;
-                    this.performSearch();
-                }
-
-                if (this.recordingTimeout) {
-                    clearTimeout(this.recordingTimeout);
-                    this.recordingTimeout = null;
+            disconnectedCallback() {
+                if (this.speechHandler) {
+                    this.speechHandler.cleanup();
                 }
             }
 
-            updateSearchQuery(transcript) {
-                const aboutIndex = transcript.indexOf('about');
-                if (aboutIndex !== -1) {
-                    this.searchQuery = transcript.substring(aboutIndex + 5).trim();
-                } else {
-                    this.searchQuery = transcript;
-                }
-                console.log('Updated search query:', this.searchQuery);
+            handleSpeechResult(transcript) {
+                // Process speech result
+                console.log('Speech result:', transcript);
             }
 
-            restart() {
-                if (this.isListening) return;
-                
-                setTimeout(() => {
-                    try {
-                        this.recognition.start();
-                    } catch (error) {
-                        console.error('Error restarting recognition:', error);
-                    }
-                }, 1000);
+            handleSpeechError(error) {
+                console.error('Speech error:', error);
             }
 
-            async start() {
-                if (!this.recognition) {
-                    await this.initialize();
-                }
-                
-                try {
-                    this.recognition.start();
-                } catch (error) {
-                    console.error('Error starting recognition:', error);
-                }
-            }
-
-            stop() {
-                if (this.recordingTimeout) {
-                    clearTimeout(this.recordingTimeout);
-                }
-                
-                if (this.recognition) {
-                    this.recognition.stop();
-                }
-                
-                this.isListening = false;
-                this.isRecording = false;
-                this.searchQuery = '';
-                document.getElementById('mic-button').classList.remove('listening', 'recording');
-            }
-
-            performSearch() {
-                const query = document.getElementById('search-input').value;
-                if (query) {
-                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-                }
+            handleSpeechEnd() {
+                console.log('Speech recognition ended');
             }
         }
+
+        customElements.define('google-peek-orb', GooglePeekOrb);
 
         // Initialize speech recognition when the page loads
         window.addEventListener('load', async () => {
             console.log('Page loaded, initializing...');
             try {
-                const recognizer = new SpeechRecognizer();
-                await recognizer.initialize();
-                await recognizer.start();
+                const recognizer = new GooglePeekOrb();
+                await recognizer.connectedCallback();
                 
                 // Make recognizer available globally
                 window.speechRecognizer = recognizer;
@@ -362,7 +239,7 @@
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
             if (window.speechRecognizer) {
-                window.speechRecognizer.stop();
+                window.speechRecognizer.disconnectedCallback();
             }
         });
     </script>
