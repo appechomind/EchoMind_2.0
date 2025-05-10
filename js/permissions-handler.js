@@ -11,133 +11,120 @@ if (typeof window.EchoMind === 'undefined') {
 }
 
 // Permissions Handler Module
-export const PermissionsHandler = {
-    debugMode: false,
-    permissionStates: {},
-
-    init: function(options = {}) {
-        this.debugMode = options.debugMode || false;
+export class PermissionsHandler {
+    constructor() {
+        this.debugMode = false;
+        this.permissionStates = {
+            microphone: null,
+            camera: null
+        };
         this.loadSavedStates();
-    },
+    }
 
-    debug: function(message) {
+    init(options = {}) {
+        this.debugMode = options.debugMode || false;
+        this.debug('PermissionsHandler initialized');
+    }
+
+    debug(message) {
         if (this.debugMode) {
-            console.log('[EchoMind Permissions] ' + message);
+            console.log(`[PermissionsHandler] ${message}`);
         }
-    },
+    }
 
-    loadSavedStates: function() {
+    loadSavedStates() {
         try {
-            const savedStates = localStorage.getItem('echomind_permissions');
-            if (savedStates) {
-                this.permissionStates = JSON.parse(savedStates);
+            const saved = localStorage.getItem('permissionStates');
+            if (saved) {
+                this.permissionStates = JSON.parse(saved);
+                this.debug('Loaded saved permission states');
             }
-        } catch (e) {
-            console.error('Error loading saved permission states:', e);
+        } catch (error) {
+            console.error('Error loading saved permission states:', error);
         }
-    },
+    }
 
-    saveStates: function() {
+    saveStates() {
         try {
-            localStorage.setItem('echomind_permissions', JSON.stringify(this.permissionStates));
-        } catch (e) {
-            console.error('Error saving permission states:', e);
+            localStorage.setItem('permissionStates', JSON.stringify(this.permissionStates));
+            this.debug('Saved permission states');
+        } catch (error) {
+            console.error('Error saving permission states:', error);
         }
-    },
+    }
 
-    requestMicrophonePermission: async function() {
+    async requestMicrophonePermission() {
+        this.debug('Requesting microphone permission');
         try {
-            this.debug('Requesting microphone permission');
-            
-            // Check if we already have permission
-            if (this.permissionStates.microphone === 'granted') {
-                this.debug('Microphone permission already granted');
-                return true;
-            }
-
-            // Request permission
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
-            
-            this.debug('Microphone permission granted');
             this.permissionStates.microphone = 'granted';
             this.saveStates();
+            this.debug('Microphone permission granted');
             return true;
         } catch (error) {
-            this.debug('Microphone permission denied: ' + error.message);
+            this.debug(`Microphone permission denied: ${error.message}`);
             this.permissionStates.microphone = 'denied';
             this.saveStates();
             return false;
         }
-    },
+    }
 
-    checkMicrophonePermission: async function() {
-        try {
-            if (this.permissionStates.microphone) {
-                return this.permissionStates.microphone;
-            }
-
-            if ('permissions' in navigator) {
-                const status = await navigator.permissions.query({ name: 'microphone' });
-                this.permissionStates.microphone = status.state;
-                this.saveStates();
-                return status.state;
-            }
-            return 'unknown';
-        } catch (error) {
-            console.error('Error checking microphone permission:', error);
-            return 'unknown';
+    async checkMicrophonePermission() {
+        this.debug('Checking microphone permission');
+        if (this.permissionStates.microphone === 'granted') {
+            this.debug('Microphone permission already granted');
+            return true;
         }
-    },
 
-    requestCameraPermission: async function() {
         try {
-            this.debug('Requesting camera permission');
-            
-            // Check permission status if supported
-            if ('permissions' in navigator) {
-                const status = await navigator.permissions.query({ name: 'camera' });
-                
-                if (status.state === 'granted') {
-                    this.debug('Camera permission already granted');
-                    return true;
-                }
-            }
-            
-            // Request permission by accessing the camera
+            const result = await navigator.permissions.query({ name: 'microphone' });
+            this.permissionStates.microphone = result.state;
+            this.saveStates();
+            this.debug(`Microphone permission state: ${result.state}`);
+            return result.state === 'granted';
+        } catch (error) {
+            this.debug(`Error checking microphone permission: ${error.message}`);
+            return false;
+        }
+    }
+
+    async requestCameraPermission() {
+        this.debug('Requesting camera permission');
+        try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            
-            // Release tracks
             stream.getTracks().forEach(track => track.stop());
-            
-            this.debug('Camera permission granted');
             this.permissionStates.camera = 'granted';
             this.saveStates();
+            this.debug('Camera permission granted');
             return true;
         } catch (error) {
-            this.debug('Camera permission denied: ' + error.message);
+            this.debug(`Camera permission denied: ${error.message}`);
             this.permissionStates.camera = 'denied';
             this.saveStates();
             return false;
         }
-    },
-
-    on: function(eventName, handler) {
-        if (this._eventHandlers[eventName] && typeof handler === 'function') {
-            this._eventHandlers[eventName].push(handler);
-            return true;
-        }
-        return false;
-    },
-
-    off: function(eventName, handler) {
-        if (this._eventHandlers[eventName] && typeof handler === 'function') {
-            this._eventHandlers[eventName] = this._eventHandlers[eventName].filter(h => h !== handler);
-            return true;
-        }
-        return false;
     }
-};
+
+    async checkCameraPermission() {
+        this.debug('Checking camera permission');
+        if (this.permissionStates.camera === 'granted') {
+            this.debug('Camera permission already granted');
+            return true;
+        }
+
+        try {
+            const result = await navigator.permissions.query({ name: 'camera' });
+            this.permissionStates.camera = result.state;
+            this.saveStates();
+            this.debug(`Camera permission state: ${result.state}`);
+            return result.state === 'granted';
+        } catch (error) {
+            this.debug(`Error checking camera permission: ${error.message}`);
+            return false;
+        }
+    }
+}
 
 // Auto-initialize on DOMContentLoaded to make it available globally
 document.addEventListener('DOMContentLoaded', function() {
@@ -200,3 +187,11 @@ class PermissionsHandler {
 
 // Initialize permissions handler
 const permissionsHandler = new PermissionsHandler(); 
+
+// Initialize the permissions handler
+const permissions = new PermissionsHandler();
+permissions.init({ debugMode: true });
+
+// Make it available globally for non-module scripts
+window.PermissionsHandler = PermissionsHandler;
+window.permissions = permissions; 
