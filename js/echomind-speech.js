@@ -109,11 +109,11 @@ class SpeechHandler {
                 clearTimeout(this._restartTimeout);
                 this._restartTimeout = setTimeout(() => {
                     if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Restarting after error (with cooldown)...');
+                        console.log('[SpeechHandler] Restarting after error (with 1 minute cooldown)...');
                     }
                     this._isRestarting = false;
                     this.start();
-                }, 1000); // 1 second cooldown
+                }, 60000); // 1 minute cooldown
             }
         };
 
@@ -129,11 +129,11 @@ class SpeechHandler {
                 clearTimeout(this._restartTimeout);
                 this._restartTimeout = setTimeout(() => {
                     if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Auto-restarting recognition after end (with cooldown)...');
+                        console.log('[SpeechHandler] Auto-restarting recognition after end (with 1 minute cooldown)...');
                     }
                     this._isRestarting = false;
                     this.start();
-                }, 1000); // 1 second cooldown
+                }, 60000); // 1 minute cooldown
             }
         };
 
