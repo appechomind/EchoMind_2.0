@@ -1,146 +1,255 @@
-const SpeechRecognitionModule = (function() {
-    let recognition = null;
-    let isListening = false;
-    let isInitialized = false;
-    let eventHandlers = {};
-    let options = {
-        continuous: true,
-        interimResults: true,
-        lang: 'en-US',
-        maxAlternatives: 1,
-        autoRestart: true,
-        restartDelay: 100
-    };
-
-    function _debug(message) {
-        console.log('[SpeechRecognition]', message);
+export class SpeechRecognitionManager {
+    constructor(options = {}) {
+        this.recognition = null;
+        this.isListening = false;
+        this.lastTranscript = '';
+        this.transcriptHistory = [];
+        this.currentTranscript = '';
+        this.onResult = options.onResult || (() => {});
+        this.onError = options.onError || (() => {});
+        this.onEnd = options.onEnd || (() => {});
+        this.onInterimResult = options.onInterimResult || (() => {});
+        this.lang = options.lang || 'en-US';
+        this.continuous = options.continuous !== false;
+        this.interimResults = options.interimResults !== false;
+        this.maxRetries = 3;
+        this.retryCount = 0;
+        this.retryTimeout = null;
+        this.isSupported = this.checkSupport();
+        this.errorHandlers = {
+            'no-speech': () => this.handleNoSpeech(),
+            'aborted': () => this.handleAborted(),
+            'audio-capture': () => this.handleAudioCapture(),
+            'network': () => this.handleNetwork(),
+            'not-allowed': () => this.handleNotAllowed(),
+            'service-not-allowed': () => this.handleServiceNotAllowed(),
+            'bad-grammar': () => this.handleBadGrammar(),
+            'language-not-supported': () => this.handleLanguageNotSupported()
+        };
     }
 
-    function _triggerEvent(eventName, data) {
-        if (eventHandlers[eventName]) {
-            eventHandlers[eventName].forEach(handler => handler(data));
+    checkSupport() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            console.warn('Speech Recognition not supported in this browser');
+            return false;
+        }
+        return true;
+    }
+
+    initialize() {
+        if (!this.isSupported) {
+            throw new Error('Speech Recognition not supported in this browser');
+        }
+
+        if (this.recognition) return;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = this.continuous;
+        this.recognition.interimResults = this.interimResults;
+        this.recognition.lang = this.lang;
+
+        // Debounce transcript updates
+        let debounceTimeout;
+        this.recognition.onresult = (event) => {
+            const results = Array.from(event.results);
+            const isFinal = results[results.length - 1].isFinal;
+            
+            // Get current transcript
+            const transcript = results
+                .map(result => result[0].transcript)
+                .join('');
+
+            // Handle interim results
+            if (!isFinal) {
+                this.currentTranscript = transcript;
+                this.onInterimResult(transcript);
+                return;
+            }
+
+            // Handle final result
+            if (transcript !== this.lastTranscript) {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(() => {
+                    this.lastTranscript = transcript;
+                    this.currentTranscript = '';
+                    this.transcriptHistory.push(transcript);
+                    this.onResult(transcript);
+                }, 100);
+            }
+        };
+
+        this.recognition.onerror = (event) => {
+            const handler = this.errorHandlers[event.error];
+            if (handler) {
+                handler();
+            } else {
+                this.onError(event.error);
+            }
+        };
+
+        this.recognition.onend = () => {
+            this.onEnd();
+            if (this.isListening) {
+                this.handleRecognitionEnd();
+            }
+        };
+    }
+
+    handleNoSpeech() {
+        console.warn('No speech detected');
+        this.onError('no-speech');
+        this.retryIfListening();
+    }
+
+    handleAborted() {
+        console.warn('Speech recognition aborted');
+        this.onError('aborted');
+        this.retryIfListening();
+    }
+
+    handleAudioCapture() {
+        console.error('Audio capture failed');
+        this.onError('audio-capture');
+        this.stop();
+    }
+
+    handleNetwork() {
+        console.error('Network error occurred');
+        this.onError('network');
+        this.retryIfListening();
+    }
+
+    handleNotAllowed() {
+        console.error('Microphone access not allowed');
+        this.onError('not-allowed');
+        this.stop();
+    }
+
+    handleServiceNotAllowed() {
+        console.error('Speech recognition service not allowed');
+        this.onError('service-not-allowed');
+        this.stop();
+    }
+
+    handleBadGrammar() {
+        console.warn('Bad grammar in speech');
+        this.onError('bad-grammar');
+        this.retryIfListening();
+    }
+
+    handleLanguageNotSupported() {
+        console.error('Language not supported');
+        this.onError('language-not-supported');
+        this.stop();
+    }
+
+    retryIfListening() {
+        if (this.isListening && this.retryCount < this.maxRetries) {
+            this.retryCount++;
+            this.retryTimeout = setTimeout(() => {
+                this.recognition.start();
+            }, 1000);
+        } else {
+            this.retryCount = 0;
+            this.stop();
         }
     }
 
-    function _initRecognition() {
+    handleRecognitionEnd() {
+        if (this.retryTimeout) {
+            clearTimeout(this.retryTimeout);
+        }
+        this.recognition.start();
+    }
+
+    start() {
+        if (!this.isSupported) {
+            this.onError('not-supported');
+            return;
+        }
+
+        if (!this.recognition) {
+            this.initialize();
+        }
+
         try {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                throw new Error('Speech recognition not supported in this browser');
-            }
-
-            recognition = new SpeechRecognition();
-            recognition.continuous = options.continuous;
-            recognition.interimResults = options.interimResults;
-            recognition.lang = options.lang;
-            recognition.maxAlternatives = options.maxAlternatives;
-
-            recognition.onstart = () => {
-                isListening = true;
-                _debug('Recognition started');
-                _triggerEvent('start');
-            };
-
-            recognition.onend = () => {
-                isListening = false;
-                _debug('Recognition ended');
-                _triggerEvent('end');
-                
-                if (options.autoRestart) {
-                    setTimeout(() => {
-                        try {
-                            recognition.start();
-                            _debug('Auto-restarting recognition...');
-                        } catch (e) {
-                            _debug('Error auto-restarting: ' + e.message);
-                        }
-                    }, options.restartDelay);
-                }
-            };
-
-            recognition.onresult = (event) => {
-                const transcript = Array.from(event.results)
-                    .map(result => result[0].transcript)
-                    .join('');
-                _triggerEvent('result', { transcript, event });
-            };
-
-            recognition.onerror = (event) => {
-                _debug('Error: ' + event.error);
-                _triggerEvent('error', { error: event.error });
-            };
-
-            isInitialized = true;
-            return true;
-        } catch (error) {
-            _debug('Failed to initialize: ' + error.message);
-            return false;
+            this.recognition.start();
+            this.isListening = true;
+            this.retryCount = 0;
+        } catch (e) {
+            this.onError(e);
         }
     }
 
-    return {
-        init: function(customOptions = {}) {
-            if (isInitialized) {
-                _debug('Already initialized');
-                return true;
+    stop() {
+        if (this.recognition) {
+            this.isListening = false;
+            if (this.retryTimeout) {
+                clearTimeout(this.retryTimeout);
             }
-
-            options = { ...options, ...customOptions };
-            return _initRecognition();
-        },
-
-        start: function() {
-            if (!isInitialized) {
-                _debug('Not initialized');
-                return false;
-            }
-
-            if (isListening) {
-                _debug('Already listening');
-                return true;
-            }
-
-            try {
-                recognition.start();
-                return true;
-            } catch (error) {
-                _debug('Error starting: ' + error.message);
-                return false;
-            }
-        },
-
-        stop: function() {
-            if (isInitialized && isListening) {
-                try {
-                    recognition.stop();
-                    return true;
-                } catch (error) {
-                    _debug('Error stopping: ' + error.message);
-                    return false;
-                }
-            }
-            return false;
-        },
-
-        on: function(eventName, handler) {
-            if (!eventHandlers[eventName]) {
-                eventHandlers[eventName] = [];
-            }
-            eventHandlers[eventName].push(handler);
-        },
-
-        off: function(eventName, handler) {
-            if (eventHandlers[eventName]) {
-                eventHandlers[eventName] = eventHandlers[eventName].filter(h => h !== handler);
-            }
-        },
-
-        isSupported: function() {
-            return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-        },
-
-        isListening: function() {
-            return isListening;
+            this.recognition.stop();
         }
-    };
-})(); 
+    }
+
+    toggle() {
+        if (this.isListening) {
+            this.stop();
+        } else {
+            this.start();
+        }
+    }
+
+    setLanguage(lang) {
+        this.lang = lang;
+        if (this.recognition) {
+            this.recognition.lang = lang;
+        }
+    }
+
+    setContinuous(continuous) {
+        this.continuous = continuous;
+        if (this.recognition) {
+            this.recognition.continuous = continuous;
+        }
+    }
+
+    setInterimResults(interimResults) {
+        this.interimResults = interimResults;
+        if (this.recognition) {
+            this.recognition.interimResults = interimResults;
+        }
+    }
+
+    getTranscriptHistory() {
+        return [...this.transcriptHistory];
+    }
+
+    getCurrentTranscript() {
+        return this.currentTranscript;
+    }
+
+    getLastTranscript() {
+        return this.lastTranscript;
+    }
+
+    clearTranscriptHistory() {
+        this.transcriptHistory = [];
+        this.lastTranscript = '';
+        this.currentTranscript = '';
+    }
+
+    cleanup() {
+        this.stop();
+        if (this.retryTimeout) {
+            clearTimeout(this.retryTimeout);
+        }
+        this.recognition = null;
+        this.isListening = false;
+        this.lastTranscript = '';
+        this.currentTranscript = '';
+        this.transcriptHistory = [];
+        this.retryCount = 0;
+    }
+} 

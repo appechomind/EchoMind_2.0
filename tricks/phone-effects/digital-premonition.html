@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Premonition - EchoMind 2.0</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/tricks.css">
+    <style>
+        .prediction-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .prediction-input {
+            width: 100%;
+            padding: 1rem;
+            margin: 1rem 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .prediction-input:focus {
+            border-color: #2c3e50;
+            outline: none;
+        }
+
+        .prediction-display {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .prediction-display h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .prediction-display p {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+
+        .button:hover {
+            background: #34495e;
+        }
+
+        .button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .steps {
+            margin: 2rem 0;
+            padding: 0;
+            list-style-position: inside;
+        }
+
+        .steps li {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .steps li.active {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .steps li.completed {
+            background: #27ae60;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Digital Premonition</h1>
+        
+        <div class="message" id="message">
+            Follow the steps below to experience this incredible prediction.
+        </div>
+        
+        <ol class="steps" id="steps">
+            <li class="active">Write down your prediction and seal it</li>
+            <li>Ask your spectator to open their phone's calculator</li>
+            <li>Have them enter their birth year (e.g., 1990)</li>
+            <li>Add their age this year</li>
+            <li>Subtract their birth year</li>
+            <li>Add the number of letters in their first name</li>
+            <li>Add 7</li>
+            <li>Multiply by 2</li>
+        </ol>
+        
+        <div class="prediction-container">
+            <div id="predictionInput" style="display: block;">
+                <label for="prediction">Enter your prediction:</label>
+                <input type="number" id="prediction" class="prediction-input" placeholder="Enter the number you predict">
+                <div class="controls">
+                    <button class="button" id="sealButton">Seal Prediction</button>
+                </div>
+            </div>
+            
+            <div id="predictionDisplay" class="prediction-display">
+                <h2>Your Sealed Prediction</h2>
+                <p>Your prediction has been sealed. Continue with the steps above.</p>
+                <div class="controls">
+                    <button class="button" id="revealButton">Reveal Prediction</button>
+                </div>
+            </div>
+        </div>
+        
+        <a href="../index.html" class="back-button">Back to Tricks</a>
+    </div>
+
+    <script>
+        let prediction = null;
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.steps li');
+        
+        function updateSteps() {
+            steps.forEach((step, index) => {
+                if (index < currentStep) {
+                    step.className = 'completed';
+                } else if (index === currentStep) {
+                    step.className = 'active';
+                } else {
+                    step.className = '';
+                }
+            });
+        }
+        
+        function handleSealPrediction() {
+            const input = document.getElementById('prediction');
+            prediction = parseInt(input.value);
+            
+            if (isNaN(prediction)) {
+                alert('Please enter a valid number.');
+                return;
+            }
+            
+            document.getElementById('predictionInput').style.display = 'none';
+            document.getElementById('predictionDisplay').style.display = 'block';
+            currentStep++;
+            updateSteps();
+        }
+        
+        function handleReveal() {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = `Your prediction of ${prediction} matches their result! Their mind has been read!`;
+            
+            steps.forEach(step => step.className = 'completed');
+            document.getElementById('revealButton').disabled = true;
+        }
+        
+        // Add event listeners
+        document.getElementById('sealButton').addEventListener('click', handleSealPrediction);
+        document.getElementById('revealButton').addEventListener('click', handleReveal);
+        
+        // Initialize
+        updateSteps();
+    </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoMind - Tools Directory</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f0f1a;
+      color: #e0e0ff;
+      margin: 0;
+      padding: 0;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #4a2080 0%, #33104a 100%);
+      padding: 40px 20px;
+      text-align: center;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 2.5em;
+      text-shadow: 0 0 10px #a96eff;
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      margin-top: 10px;
+      color: #b88eff;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .tool-section {
+      background-color: rgba(30, 20, 50, 0.6);
+      border-radius: 10px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+      border: 1px solid #6032a8;
+    }
+    
+    h2 {
+      color: #c09aff;
+      border-bottom: 2px solid #6032a8;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    
+    .tool-card {
+      background-color: rgba(40, 30, 70, 0.6);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      border: 1px solid #7944d4;
+    }
+    
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(122, 68, 212, 0.3);
+    }
+    
+    .tool-title {
+      color: #d4b8ff;
+      font-size: 1.3em;
+      margin-bottom: 10px;
+    }
+    
+    .tool-description {
+      line-height: 1.6;
+    }
+    
+    .features {
+      background-color: rgba(60, 40, 100, 0.4);
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+      border-left: 4px solid #9966ff;
+    }
+    
+    ul {
+      padding-left: 25px;
+    }
+    
+    li {
+      margin-bottom: 10px;
+    }
+    
+    .back-button {
+      display: inline-block;
+      background-color: #6032a8;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: background-color 0.3s;
+    }
+    
+    .back-button:hover {
+      background-color: #7944d4;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>EchoMind Tools</h1>
+    <div class="subtitle">Powerful tools to enhance your magic</div>
+  </header>
+  
+  <div class="container">
+    <div class="tool-section">
+      <h2>AI Tools</h2>
+      <div class="tool-card" onclick="window.location.href='gizmo.html'">
+        <div class="tool-title">Gizmo AI</div>
+        <div class="tool-description">
+          Your intelligent assistant for magic effects, script writing, and performance enhancement.
+        </div>
+        <div class="features">
+          <h3>Features:</h3>
+          <ul>
+            <li>AI-powered script writing and refinement</li>
+            <li>Performance analysis and feedback</li>
+            <li>Magic effect brainstorming and development</li>
+            <li>Image analysis and processing</li>
+            <li>Natural language understanding</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tool-section">
+      <h2>Coming Soon</h2>
+      <div class="tool-card">
+        <div class="tool-title">Settings</div>
+        <div class="tool-description">
+          Customize your EchoMind experience with personalized settings and preferences.
+        </div>
+        <div class="features">
+          <h3>Features:</h3>
+          <ul>
+            <li>Customize app appearance</li>
+            <li>Manage permissions and privacy</li>
+            <li>Configure voice and speech settings</li>
+            <li>Set up device synchronization</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <a href="../index.html" class="back-button">← Back to Main Menu</a>
+  </div>
+</body>
+</html> 

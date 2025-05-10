@@ -1,0 +1,149 @@
+/* Global styles */
+:root {
+  --primary-color: #a96eff;
+  --primary-glow: #b076ff;
+  --text-color: white;
+  --background-color: black;
+}
+
+/* Base styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-color);
+  font-family: 'Segoe UI', sans-serif;
+  color: var(--text-color);
+}
+
+/* Canvas styles */
+#fractalCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+}
+
+/* Title styles */
+.title {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3em;
+  color: var(--text-color);
+  text-shadow: 0 0 20px var(--primary-glow);
+  z-index: 1;
+}
+
+.subtitle {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5em;
+  color: var(--primary-color);
+  text-shadow: 0 0 10px var(--primary-glow);
+  z-index: 1;
+}
+
+/* Orb container styles */
+.orb-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  margin: -300px 0 0 -300px;
+  z-index: 2;
+  transform: none;
+}
+
+/* Orb styles */
+.orb {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  font-weight: bold;
+  color: var(--text-color);
+  text-shadow: 0 0 5px black;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 0 25px var(--primary-glow);
+  z-index: 3;
+  transition: transform 0.3s;
+  backdrop-filter: blur(3px);
+  transform: translate(-50%, -50%);
+}
+
+.orb:hover {
+  transform: translate(-50%, -50%) scale(1.1) !important;
+}
+
+.orb canvas {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.orb span {
+  z-index: 2;
+  padding: 10px;
+}
+
+/* Permission status styles */
+#permissionStatus {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: var(--text-color);
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 0.8em;
+  z-index: 100;
+  pointer-events: none;
+}
+
+#permissionStatus.granted {
+  background-color: rgba(0, 128, 0, 0.6);
+}
+
+#permissionStatus.denied {
+  background-color: rgba(255, 0, 0, 0.6);
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .orb-container {
+    width: 300px;
+    height: 300px;
+    margin: -150px 0 0 -150px;
+  }
+  
+  .orb {
+    width: 80px;
+    height: 80px;
+    font-size: 0.8em;
+  }
+
+  .title {
+    font-size: 2em;
+  }
+
+  .subtitle {
+    font-size: 1em;
+  }
+} 

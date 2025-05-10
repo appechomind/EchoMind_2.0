@@ -458,68 +458,48 @@ class ContextManager {
 
 class ResponseGenerator {
     constructor() {
-        this.templates = new Map();
-        this.initializeTemplates();
-    }
-
-    initializeTemplates() {
-        this.templates.set('error', [
-            'I encountered an error while {action}. {solution}',
-            'There seems to be an issue with {problem}. Let me help you fix it.',
-            'I noticed a problem: {description}. Here\'s what we can do: {solution}'
-        ]);
-
-        this.templates.set('success', [
-            'Great! I\'ve successfully {action}. Would you like to {nextStep}?',
-            'Done! {result}. What would you like to do next?',
-            'Perfect! {achievement}. Should we continue with {suggestion}?'
-        ]);
-
-        this.templates.set('clarification', [
-            'Could you clarify what you mean by {topic}?',
-            'I\'m not sure I understand {concept}. Could you explain it differently?',
-            'Let me make sure I understand: are you saying {interpretation}?'
-        ]);
-
-        this.templates.set('suggestion', [
-            'Have you considered {alternative}?',
-            'You might want to try {suggestion}.',
-            'Based on {context}, I recommend {recommendation}.'
-        ]);
+        this.templates = {
+            question: [
+                "*adjusts magical spectacles* Let me ponder that question about {topic}...",
+                "*taps wand thoughtfully* That's an interesting question about {topic}...",
+                "*nods with curiosity* I'd love to explore that question about {topic}..."
+            ],
+            command: [
+                "*waves wand enthusiastically* I'll help you with that {action}...",
+                "*adjusts hat* Let me assist you with that {action}...",
+                "*sparkles appear* I'm on it! Let's handle that {action}..."
+            ],
+            statement: [
+                "*nods with understanding* Ah, I see what you mean about {topic}...",
+                "*adjusts spectacles* That's fascinating about {topic}...",
+                "*smiles warmly* I understand your point about {topic}..."
+            ],
+            default: [
+                "*taps wand thoughtfully* I'm intrigued by what you're saying...",
+                "*adjusts hat* That's quite interesting...",
+                "*nods with curiosity* Tell me more about that..."
+            ]
+        };
     }
 
     generateResponse(type, context) {
-        const templates = this.templates.get(type) || this.templates.get('general');
+        const templates = this.templates[type] || this.templates.default;
         const template = this.selectTemplate(templates, context);
         return this.fillTemplate(template, context);
     }
 
     selectTemplate(templates, context) {
-        // Select most appropriate template based on context
-        if (!templates || templates.length === 0) {
-            return 'I understand your request about {topic}.';
-        }
-
-        // Use context to select the most appropriate template
-        const index = Math.floor(Math.random() * templates.length);
-        return templates[index];
+        // Add some randomness to template selection
+        const randomIndex = Math.floor(Math.random() * templates.length);
+        return templates[randomIndex];
     }
 
     fillTemplate(template, context) {
-        let filledTemplate = template;
-        
-        // Replace all placeholders with context values
-        Object.entries(context).forEach(([key, value]) => {
-            const placeholder = `{${key}}`;
-            if (filledTemplate.includes(placeholder)) {
-                filledTemplate = filledTemplate.replace(
-                    placeholder,
-                    typeof value === 'object' ? JSON.stringify(value) : value
-                );
-            }
-        });
-
-        return filledTemplate;
+        let response = template;
+        for (const [key, value] of Object.entries(context)) {
+            response = response.replace(`{${key}}`, value || 'that');
+        }
+        return response;
     }
 
     enhanceResponse(response, context) {

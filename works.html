@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="EchoMind - A collection of magical experiences and mind-reading tricks" />
   <title>EchoMind - A Piece of Magic</title>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -147,110 +146,41 @@
   <script src="js/echomind-commands.js" defer></script>
 </head>
 <body>
-  <canvas id="fractalCanvas" aria-hidden="true"></canvas>
-  
-  <main>
-    <h1 class="title" id="mainTitle">EchoMind</h1>
-    <p class="subtitle" id="mainSubtitle">A Piece of Magic</p>
-    
-    <nav class="orb-container" role="navigation" aria-label="Main navigation">
-      <a href="tricks/mentalism/mind-reader.html" class="orb" data-position="top-center" style="top: 0%; left: 50%;" aria-label="Go to Mentalism">
-        <canvas aria-hidden="true"></canvas>
-        <span>Mentalism</span>
-      </a>
-      
-      <a href="tricks/dual-device.html" class="orb" data-position="top-right" style="top: 20%; left: 85%;" aria-label="Go to Dual-Device Tricks">
-        <canvas aria-hidden="true"></canvas>
-        <span>Dual-Device<br>Tricks</span>
-      </a>
-      
-      <button class="orb" data-position="right" style="top: 50%; left: 100%;" aria-label="Phone Effects - Coming Soon" disabled>
-        <canvas aria-hidden="true"></canvas>
-        <span>Phone Effects</span>
-      </button>
-      
-      <button class="orb" data-position="bottom-right" style="top: 80%; left: 85%;" aria-label="Puzzles - Coming Soon" disabled>
-        <canvas aria-hidden="true"></canvas>
-        <span>Puzzles</span>
-      </button>
-      
-      <button class="orb" data-position="bottom-center" style="top: 100%; left: 50%;" aria-label="Community - Coming Soon" disabled>
-        <canvas aria-hidden="true"></canvas>
-        <span>Community</span>
-      </button>
-      
-      <a href="tricks/index.html" class="orb" data-position="bottom-left" style="top: 80%; left: 15%;" aria-label="Go to Tricks">
-        <canvas aria-hidden="true"></canvas>
-        <span>Tricks</span>
-      </a>
-      
-      <button class="orb" data-position="left" style="top: 50%; left: 0%;" aria-label="Settings - Coming Soon" disabled>
-        <canvas aria-hidden="true"></canvas>
-        <span>Settings</span>
-      </button>
-      
-      <a href="mind reader offical/index.html" class="orb" data-position="top-left" style="top: 20%; left: 15%;" aria-label="Go to Mind Reader">
-        <canvas aria-hidden="true"></canvas>
-        <span>Mind Reader</span>
-      </a>
-    </nav>
-  </main>
+  <canvas id="fractalCanvas"></canvas>
+  <div class="title">EchoMind</div>
+  <div class="subtitle">A Piece of Magic</div>
+  <div class="orb-container">
+    <!-- Each orb will share the same fractal animation drawn independently -->
+    <!-- Fixed position for each orb, ensuring proper links -->
+    <div class="orb" style="top: 0%; left: 50%;" onclick="window.location.href='tricks/mentalism/mind-reader.html'"><canvas></canvas><span>Mentalism</span></div>
+    <div class="orb" style="top: 20%; left: 85%;" onclick="window.location.href='tricks/dual-device.html'"><canvas></canvas><span>Dual-Device<br>Tricks</span></div>
+    <div class="orb" style="top: 50%; left: 100%;" onclick="alert('Phone Effects coming soon!')"><canvas></canvas><span>Phone Effects</span></div>
+    <div class="orb" style="top: 80%; left: 85%;" onclick="alert('Puzzles coming soon!')"><canvas></canvas><span>Puzzles</span></div>
+    <div class="orb" style="top: 100%; left: 50%;" onclick="alert('Community features coming soon!')"><canvas></canvas><span>Community</span></div>
+    <div class="orb" style="top: 80%; left: 15%;" onclick="window.location.href='tricks/index.html'"><canvas></canvas><span>Tricks</span></div>
+    <div class="orb" style="top: 50%; left: 0%;" onclick="alert('Settings coming soon!')"><canvas></canvas><span>Settings</span></div>
+    <div class="orb" style="top: 20%; left: 15%;" onclick="window.location.href='mind reader offical/index.html'"><canvas></canvas><span>Mind Reader</span></div>
+  </div>
 
-  <div id="permissionStatus" role="status" aria-live="polite">Checking microphone access...</div>
+  <!-- Permission status display -->
+  <div id="permissionStatus">Checking microphone access...</div>
 
   <script>
+    // Add animation code
     const canvas = document.getElementById('fractalCanvas');
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    let isVisible = true;
     
     function resizeCanvas() {
-      const scale = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * scale;
-      canvas.height = window.innerHeight * scale;
-      canvas.style.width = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.scale(scale, scale);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
     
-    window.addEventListener('resize', throttle(resizeCanvas, 100));
-    document.addEventListener('visibilitychange', () => {
-      isVisible = document.visibilityState === 'visible';
-      if (isVisible) {
-        animate();
-      } else {
-        cancelAnimationFrame(animationFrameId);
-      }
-    });
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-    function throttle(func, limit) {
-      let inThrottle;
-      return function(...args) {
-        if (!inThrottle) {
-          func.apply(this, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      }
-    }
-
-    let lastTime = 0;
-    const fps = 30;
-    const frameInterval = 1000 / fps;
     let time = 0;
-
-    function animate(currentTime = 0) {
-      if (!isVisible) return;
-      
-      const deltaTime = currentTime - lastTime;
-      if (deltaTime < frameInterval) {
-        animationFrameId = requestAnimationFrame(animate);
-        return;
-      }
-      
-      lastTime = currentTime - (deltaTime % frameInterval);
+    function animate() {
       time += 0.01;
-
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
@@ -282,10 +212,8 @@
         }
       }
       
-      animationFrameId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     }
-
-    resizeCanvas();
     animate();
 
     const orbCanvases = document.querySelectorAll('.orb canvas');
@@ -385,25 +313,6 @@
         permissionStatusElement.textContent = "Error: Permissions system not available";
         permissionStatusElement.className = "denied";
       }
-    });
-
-    // Initialize orb positions
-    document.querySelectorAll('.orb').forEach(orb => {
-      orb.addEventListener('click', (e) => {
-        if (orb.hasAttribute('disabled')) {
-          e.preventDefault();
-          const feature = orb.querySelector('span').textContent;
-          alert(`${feature} is coming soon!`);
-        }
-      });
-
-      // Add keyboard navigation
-      orb.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          orb.click();
-        }
-      });
     });
   </script>
 </body>

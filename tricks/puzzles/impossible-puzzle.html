@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impossible Puzzle - EchoMind 2.0</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/tricks.css">
+    <style>
+        .puzzle-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .puzzle-cell {
+            aspect-ratio: 1;
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .puzzle-cell:hover {
+            background: #e9ecef;
+        }
+
+        .puzzle-cell.selected {
+            background: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+
+        .button:hover {
+            background: #34495e;
+        }
+
+        .button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .hint {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .hint.visible {
+            display: block;
+        }
+
+        .solution {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #2c3e50;
+            color: white;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .solution.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Impossible Puzzle</h1>
+        
+        <div class="message" id="message">
+            Can you make all numbers equal by moving just one line?
+        </div>
+        
+        <div class="puzzle-container">
+            <div class="puzzle-grid" id="puzzleGrid">
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+                <div class="puzzle-cell">5</div>
+            </div>
+            
+            <div class="controls">
+                <button class="button" id="hintButton">Get Hint</button>
+                <button class="button" id="solutionButton">Show Solution</button>
+                <button class="button" id="resetButton">Reset Puzzle</button>
+            </div>
+            
+            <div class="hint" id="hint">
+                Think outside the box! Sometimes the solution is simpler than it seems.
+            </div>
+            
+            <div class="solution" id="solution">
+                <h2>Solution</h2>
+                <p>Move the bottom line of the second "5" to make it a "6". Now all numbers are equal (to six)!</p>
+            </div>
+        </div>
+        
+        <a href="../index.html" class="back-button">Back to Tricks</a>
+    </div>
+
+    <script>
+        let hintShown = false;
+        let solutionShown = false;
+        
+        function handleHint() {
+            if (!hintShown) {
+                document.getElementById('hint').classList.add('visible');
+                hintShown = true;
+            }
+        }
+        
+        function handleSolution() {
+            if (!solutionShown) {
+                document.getElementById('solution').classList.add('visible');
+                solutionShown = true;
+                
+                // Update the puzzle grid to show the solution
+                const cells = document.querySelectorAll('.puzzle-cell');
+                cells[1].textContent = '6';
+            }
+        }
+        
+        function handleReset() {
+            const cells = document.querySelectorAll('.puzzle-cell');
+            cells.forEach(cell => {
+                cell.textContent = '5';
+                cell.classList.remove('selected');
+            });
+            
+            document.getElementById('hint').classList.remove('visible');
+            document.getElementById('solution').classList.remove('visible');
+            hintShown = false;
+            solutionShown = false;
+        }
+        
+        // Add event listeners
+        document.getElementById('hintButton').addEventListener('click', handleHint);
+        document.getElementById('solutionButton').addEventListener('click', handleSolution);
+        document.getElementById('resetButton').addEventListener('click', handleReset);
+        
+        // Make cells interactive
+        document.querySelectorAll('.puzzle-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                if (!solutionShown) {
+                    cell.classList.toggle('selected');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
