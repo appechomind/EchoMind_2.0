@@ -234,8 +234,8 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.continuous = false;
-            recognition.interimResults = false;
+            recognition.continuous = true;
+            recognition.interimResults = true;
             recognition.maxAlternatives = 1;
 
             recognition.onstart = () => {
@@ -248,10 +248,11 @@
             recognition.onresult = (event) => {
                 if (!recognitionActive) return;
                 
-                const transcript = event.results[0][0].transcript.toLowerCase().trim();
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript.toLowerCase().trim();
                 console.log('Speech recognized:', transcript);
                 
-                if (transcript.includes('about')) {
+                if (transcript.includes('about') && !listeningForAbout) {
                     console.log('About keyword detected, starting 3-second recording');
                     listeningForAbout = true;
                     document.getElementById('mic-button').classList.add('recording');
@@ -265,7 +266,9 @@
                             document.getElementById('search-input').value = searchQuery;
                             performSearch();
                         }
-                        resetRecognition();
+                        listeningForAbout = false;
+                        searchQuery = '';
+                        document.getElementById('mic-button').classList.remove('recording');
                     }, 3000);
                 } else if (listeningForAbout) {
                     const aboutIndex = transcript.indexOf('about');
@@ -280,19 +283,43 @@
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                resetRecognition();
+                if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') {
+                    console.log('Restarting recognition after error:', event.error);
+                    setTimeout(() => {
+                        if (recognition && recognitionActive) {
+                            try {
+                                recognition.start();
+                            } catch (error) {
+                                console.error('Error restarting recognition:', error);
+                            }
+                        }
+                    }, 1000);
+                }
             };
 
             recognition.onend = () => {
                 console.log('Speech recognition ended');
                 if (recognitionActive) {
-                    resetRecognition();
+                    console.log('Restarting recognition');
+                    setTimeout(() => {
+                        if (recognition && recognitionActive) {
+                            try {
+                                recognition.start();
+                            } catch (error) {
+                                console.error('Error restarting recognition:', error);
+                            }
+                        }
+                    }, 1000);
                 }
             };
         }
 
-        function resetRecognition() {
-            console.log('Resetting recognition state');
+        function stopSpeechRecognition() {
+            console.log('Stopping speech recognition');
+            recognitionActive = false;
+            if (recognition) {
+                recognition.stop();
+            }
             isListening = false;
             listeningForAbout = false;
             searchQuery = '';
@@ -303,29 +330,18 @@
             document.getElementById('mic-button').classList.remove('listening', 'recording');
         }
 
-        function stopSpeechRecognition() {
-            console.log('Stopping speech recognition');
-            recognitionActive = false;
-            if (recognition) {
-                recognition.stop();
-            }
-            resetRecognition();
-        }
-
         function startSpeechRecognition() {
             console.log('Starting speech recognition');
-            if (!recognition || isListening) {
-                console.log('Recognition already active or not initialized');
+            if (!recognition) {
+                console.log('Recognition not initialized');
                 return;
             }
             
             recognitionActive = true;
-            resetRecognition();
             try {
                 recognition.start();
             } catch (error) {
                 console.error('Error starting recognition:', error);
-                resetRecognition();
             }
         }
 
