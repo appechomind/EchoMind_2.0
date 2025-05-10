@@ -12,15 +12,36 @@ class SpeechHandler {
 
         this.recognition = null;
         this.isListening = false;
-        this.initializeSpeechRecognition();
+        this.initialized = false;
     }
 
-    initializeSpeechRecognition() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            console.error('Speech recognition not supported');
-            return;
+    async initialize() {
+        if (this.initialized) {
+            console.warn('Speech handler already initialized');
+            return true;
         }
 
+        // Check if speech recognition is supported
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            const error = new Error('Speech recognition not supported in this browser');
+            this.options.onError(error);
+            return false;
+        }
+
+        // Check microphone permission
+        if (window.permissions) {
+            const hasPermission = await window.permissions.checkMicrophonePermission();
+            if (!hasPermission) {
+                const granted = await window.permissions.requestMicrophonePermission();
+                if (!granted) {
+                    const error = new Error('Microphone permission denied');
+                    this.options.onError(error);
+                    return false;
+                }
+            }
+        }
+
+        // Initialize speech recognition
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         this.recognition = new SpeechRecognition();
 
@@ -58,12 +79,22 @@ class SpeechHandler {
                 this.start();
             }
         };
+
+        this.initialized = true;
+        return true;
     }
 
-    start() {
+    async start() {
+        if (!this.initialized) {
+            const initialized = await this.initialize();
+            if (!initialized) {
+                return false;
+            }
+        }
+
         if (!this.recognition) {
             console.error('Speech recognition not initialized');
-            return;
+            return false;
         }
 
         try {
@@ -72,13 +103,16 @@ class SpeechHandler {
             if (this.options.debugMode) {
                 console.log('Speech recognition started');
             }
+            return true;
         } catch (error) {
             console.error('Error starting speech recognition:', error);
+            this.options.onError(error);
+            return false;
         }
     }
 
     stop() {
-        if (!this.recognition) return;
+        if (!this.recognition) return false;
         
         try {
             this.recognition.stop();
@@ -86,16 +120,19 @@ class SpeechHandler {
             if (this.options.debugMode) {
                 console.log('Speech recognition stopped');
             }
+            return true;
         } catch (error) {
             console.error('Error stopping speech recognition:', error);
+            this.options.onError(error);
+            return false;
         }
     }
 
     toggle() {
         if (this.isListening) {
-            this.stop();
+            return this.stop();
         } else {
-            this.start();
+            return this.start();
         }
     }
 
@@ -103,15 +140,10 @@ class SpeechHandler {
         if (this.recognition) {
             this.stop();
             this.recognition = null;
+            this.initialized = false;
         }
     }
 }
 
-// Initialize speech handler
-const speechHandler = new SpeechHandler({
-    debugMode: false,
-    onResult: (transcript) => {
-        // Handle speech results
-        console.log('Speech result:', transcript);
-    }
-}); 
+// Export the SpeechHandler class
+export { SpeechHandler }; 
