@@ -242,6 +242,12 @@
                     searchInput.value = transcript;
                     console.log('[GooglePeekOrb] Updated search input value');
                 }
+                // Never stop listening, regardless of keyword
+                // If you want to trigger a search, do it here, but do NOT stop recognition
+                // Example:
+                // if (transcript.toLowerCase().includes('about')) {
+                //     // Perform search, but do not stop recognition
+                // }
             }
 
             handleSpeechError(error) {
