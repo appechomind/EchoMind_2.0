@@ -183,8 +183,10 @@
                 if (!this.microphoneRequested) {
                     this.microphoneRequested = true;
                     try {
+                        console.log('Requesting microphone permission...');
                         // First check if we already have permission
                         const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                        console.log('Permission status:', permissionStatus.state);
                         if (permissionStatus.state === 'granted') {
                             this.microphoneGranted = true;
                             return true;
@@ -193,9 +195,11 @@
                         // If not granted, request it
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         this.microphoneGranted = true;
+                        console.log('Microphone permission granted');
                         
                         // Listen for permission changes
                         permissionStatus.onchange = () => {
+                            console.log('Permission changed to:', permissionStatus.state);
                             this.microphoneGranted = permissionStatus.state === 'granted';
                         };
                     } catch (error) {
@@ -215,6 +219,7 @@
         let searchQuery = '';
 
         function initializeSpeechRecognition() {
+            console.log('Initializing speech recognition...');
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 console.error('Speech recognition not supported');
                 return;
@@ -226,11 +231,18 @@
             recognition.continuous = true;
             recognition.interimResults = true;
 
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                document.getElementById('mic-button').classList.add('listening');
+            };
+
             recognition.onresult = (event) => {
                 const last = event.results.length - 1;
                 const transcript = event.results[last][0].transcript.toLowerCase().trim();
+                console.log('Speech recognized:', transcript);
                 
                 if (transcript.includes('about') && !listeningForAbout) {
+                    console.log('About keyword detected, starting 3-second recording');
                     listeningForAbout = true;
                     document.getElementById('mic-button').classList.add('recording');
                     
@@ -241,6 +253,7 @@
                     
                     // Set timeout for 3 seconds
                     listeningTimeout = setTimeout(() => {
+                        console.log('Recording timeout reached, search query:', searchQuery);
                         if (searchQuery) {
                             document.getElementById('search-input').value = searchQuery;
                             performSearch();
@@ -257,6 +270,7 @@
                     } else {
                         searchQuery = transcript;
                     }
+                    console.log('Updated search query:', searchQuery);
                 }
             };
 
@@ -271,12 +285,14 @@
                 // Restart recognition
                 setTimeout(() => {
                     if (recognition) {
+                        console.log('Restarting speech recognition after error');
                         recognition.start();
                     }
                 }, 1000);
             };
 
             recognition.onend = () => {
+                console.log('Speech recognition ended, restarting...');
                 // Always restart recognition
                 if (recognition) {
                     recognition.start();
@@ -286,6 +302,7 @@
 
         function performSearch() {
             const query = document.getElementById('search-input').value;
+            console.log('Performing search with query:', query);
             if (query) {
                 window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
             }
@@ -293,10 +310,14 @@
 
         // Initialize speech recognition when the page loads
         window.addEventListener('load', async () => {
+            console.log('Page loaded, initializing...');
             try {
-                await window.echoMindPermissions.requestPermission();
-                initializeSpeechRecognition();
-                recognition.start();
+                const permissionGranted = await window.echoMindPermissions.requestPermission();
+                console.log('Permission granted:', permissionGranted);
+                if (permissionGranted) {
+                    initializeSpeechRecognition();
+                    recognition.start();
+                }
             } catch (error) {
                 console.error('Error initializing speech recognition:', error);
             }
@@ -304,6 +325,7 @@
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
+            console.log('Page unloading, cleaning up...');
             if (recognition) {
                 recognition.stop();
             }
