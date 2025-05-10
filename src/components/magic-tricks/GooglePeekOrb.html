@@ -192,10 +192,21 @@
                 this.initialize();
             }
 
-            initialize() {
+            async initialize() {
                 if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                     console.error('Speech recognition not supported');
                     return;
+                }
+
+                // Check microphone permission first
+                const hasPermission = await permissions.checkMicrophonePermission();
+                if (!hasPermission) {
+                    console.log('Requesting microphone permission...');
+                    const granted = await permissions.requestMicrophonePermission();
+                    if (!granted) {
+                        console.error('Microphone permission denied');
+                        return;
+                    }
                 }
 
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -226,10 +237,13 @@
                     }
                 };
 
-                this.recognition.onerror = (event) => {
+                this.recognition.onerror = async (event) => {
                     console.error('Speech recognition error:', event.error);
                     if (event.error === 'not-allowed') {
-                        this.handlePermissionError();
+                        const granted = await permissions.requestMicrophonePermission();
+                        if (granted) {
+                            this.start();
+                        }
                     } else {
                         this.restart();
                     }
@@ -284,13 +298,6 @@
                 console.log('Updated search query:', this.searchQuery);
             }
 
-            async handlePermissionError() {
-                const granted = await permissions.requestMicrophonePermission();
-                if (granted) {
-                    this.start();
-                }
-            }
-
             restart() {
                 if (this.isListening) return;
                 
@@ -303,9 +310,9 @@
                 }, 1000);
             }
 
-            start() {
+            async start() {
                 if (!this.recognition) {
-                    this.initialize();
+                    await this.initialize();
                 }
                 
                 try {
@@ -342,14 +349,12 @@
         window.addEventListener('load', async () => {
             console.log('Page loaded, initializing...');
             try {
-                const permissionGranted = await permissions.requestMicrophonePermission();
-                if (permissionGranted) {
-                    const recognizer = new SpeechRecognizer();
-                    recognizer.start();
-                    
-                    // Make recognizer available globally
-                    window.speechRecognizer = recognizer;
-                }
+                const recognizer = new SpeechRecognizer();
+                await recognizer.initialize();
+                await recognizer.start();
+                
+                // Make recognizer available globally
+                window.speechRecognizer = recognizer;
             } catch (error) {
                 console.error('Error initializing speech recognition:', error);
             }
