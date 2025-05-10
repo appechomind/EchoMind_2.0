@@ -217,7 +217,9 @@
         let listeningForAbout = false;
         let listeningTimeout = null;
         let searchQuery = '';
-        let shouldRestart = true;  // Flag to control restart behavior
+        let shouldRestart = true;
+        let lastRestartTime = 0;
+        const RESTART_COOLDOWN = 2000; // 2 seconds cooldown between restarts
 
         function initializeSpeechRecognition() {
             console.log('Initializing speech recognition...');
@@ -229,7 +231,7 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.continuous = true;
+            recognition.continuous = false; // Changed to false to prevent continuous recognition
             recognition.interimResults = true;
 
             recognition.onstart = () => {
@@ -263,6 +265,8 @@
                         listeningForAbout = false;
                         searchQuery = '';
                         document.getElementById('mic-button').classList.remove('recording');
+                        // Restart recognition after search
+                        safeRestartRecognition();
                     }, 3000);
                 } else if (listeningForAbout) {
                     // Only capture what comes after "about"
@@ -286,14 +290,9 @@
                     clearTimeout(listeningTimeout);
                 }
 
-                // Only restart on certain errors
-                if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') {
-                    console.log('Restarting speech recognition after error:', event.error);
-                    setTimeout(() => {
-                        if (recognition && shouldRestart) {
-                            recognition.start();
-                        }
-                    }, 1000);
+                // Only restart on certain errors and respect cooldown
+                if ((event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') && shouldRestart) {
+                    safeRestartRecognition();
                 }
             };
 
@@ -304,14 +303,26 @@
                 
                 // Only restart if we should and we're not already listening
                 if (shouldRestart && !isListening) {
-                    console.log('Restarting speech recognition');
-                    setTimeout(() => {
-                        if (recognition) {
-                            recognition.start();
-                        }
-                    }, 1000);
+                    safeRestartRecognition();
                 }
             };
+        }
+
+        function safeRestartRecognition() {
+            const now = Date.now();
+            if (now - lastRestartTime < RESTART_COOLDOWN) {
+                console.log('Skipping restart - too soon since last restart');
+                return;
+            }
+            
+            console.log('Scheduling recognition restart');
+            lastRestartTime = now;
+            setTimeout(() => {
+                if (recognition && shouldRestart && !isListening) {
+                    console.log('Restarting speech recognition');
+                    recognition.start();
+                }
+            }, RESTART_COOLDOWN);
         }
 
         function stopSpeechRecognition() {
@@ -325,6 +336,7 @@
         function startSpeechRecognition() {
             console.log('Starting speech recognition');
             shouldRestart = true;
+            lastRestartTime = 0; // Reset the cooldown timer
             if (recognition && !isListening) {
                 recognition.start();
             }
