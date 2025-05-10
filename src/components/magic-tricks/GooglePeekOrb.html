@@ -242,12 +242,21 @@
                     searchInput.value = transcript;
                     console.log('[GooglePeekOrb] Updated search input value');
                 }
-                // Never stop listening, regardless of keyword
-                // If you want to trigger a search, do it here, but do NOT stop recognition
-                // Example:
-                // if (transcript.toLowerCase().includes('about')) {
-                //     // Perform search, but do not stop recognition
-                // }
+                // If transcript contains 'about', trigger a search for the words after 'about'
+                const match = transcript.toLowerCase().match(/about\s+(.+)/);
+                if (match && match[1]) {
+                    const query = match[1].trim();
+                    console.log('[GooglePeekOrb] Triggering search for:', query);
+                    if (typeof performSearch === 'function') {
+                        performSearch(query);
+                    } else {
+                        // Fallback: update the input and simulate pressing Enter
+                        if (searchInput) {
+                            searchInput.value = query;
+                            searchInput.form && searchInput.form.submit && searchInput.form.submit();
+                        }
+                    }
+                }
             }
 
             handleSpeechError(error) {
