@@ -218,6 +218,9 @@
         let listeningTimeout = null;
         let searchQuery = '';
         let recognitionActive = false;
+        let restartAttempts = 0;
+        const MAX_RESTART_ATTEMPTS = 5;
+        const RESTART_DELAY = 100;
 
         function initializeSpeechRecognition() {
             if (recognition) {
@@ -242,6 +245,7 @@
                 console.log('Speech recognition started');
                 isListening = true;
                 recognitionActive = true;
+                restartAttempts = 0;
                 document.getElementById('mic-button').classList.add('listening');
             };
 
@@ -283,35 +287,41 @@
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') {
-                    console.log('Restarting recognition after error:', event.error);
-                    setTimeout(() => {
-                        if (recognition && recognitionActive) {
-                            try {
-                                recognition.start();
-                            } catch (error) {
-                                console.error('Error restarting recognition:', error);
-                            }
-                        }
-                    }, 1000);
-                }
+                isListening = false;
+                forceRestartRecognition();
             };
 
             recognition.onend = () => {
                 console.log('Speech recognition ended');
+                isListening = false;
                 if (recognitionActive) {
-                    console.log('Restarting recognition');
-                    setTimeout(() => {
-                        if (recognition && recognitionActive) {
-                            try {
-                                recognition.start();
-                            } catch (error) {
-                                console.error('Error restarting recognition:', error);
-                            }
-                        }
-                    }, 1000);
+                    forceRestartRecognition();
                 }
             };
+        }
+
+        function forceRestartRecognition() {
+            if (!recognitionActive) return;
+            
+            if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+                console.log('Max restart attempts reached, stopping recognition');
+                stopSpeechRecognition();
+                return;
+            }
+
+            restartAttempts++;
+            console.log(`Attempting restart ${restartAttempts}/${MAX_RESTART_ATTEMPTS}`);
+            
+            setTimeout(() => {
+                if (recognition && recognitionActive) {
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Error restarting recognition:', error);
+                        forceRestartRecognition();
+                    }
+                }
+            }, RESTART_DELAY);
         }
 
         function stopSpeechRecognition() {
@@ -323,6 +333,7 @@
             isListening = false;
             listeningForAbout = false;
             searchQuery = '';
+            restartAttempts = 0;
             if (listeningTimeout) {
                 clearTimeout(listeningTimeout);
                 listeningTimeout = null;
@@ -338,10 +349,12 @@
             }
             
             recognitionActive = true;
+            restartAttempts = 0;
             try {
                 recognition.start();
             } catch (error) {
                 console.error('Error starting recognition:', error);
+                forceRestartRecognition();
             }
         }
 
