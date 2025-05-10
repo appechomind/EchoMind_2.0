@@ -13,6 +13,8 @@ class SpeechHandler {
         this.recognition = null;
         this.isListening = false;
         this.initialized = false;
+        this._restartTimeout = null;
+        this._isRestarting = false;
     }
 
     async initialize() {
@@ -101,15 +103,18 @@ class SpeechHandler {
                 console.error('[SpeechHandler] onerror: Speech recognition error:', event.error, event);
             }
             this.options.onError(event);
-            // Aggressively restart on error
-            setTimeout(() => {
-                if (this.isListening) {
+            // Only restart if continuous and not already restarting
+            if (this.options.continuous && !this._isRestarting) {
+                this._isRestarting = true;
+                clearTimeout(this._restartTimeout);
+                this._restartTimeout = setTimeout(() => {
                     if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Restarting after error...');
+                        console.log('[SpeechHandler] Restarting after error (with cooldown)...');
                     }
+                    this._isRestarting = false;
                     this.start();
-                }
-            }, 250);
+                }, 1000); // 1 second cooldown
+            }
         };
 
         this.recognition.onend = () => {
@@ -118,15 +123,18 @@ class SpeechHandler {
                 console.log('[SpeechHandler] onend: Speech recognition ended');
             }
             this.options.onEnd();
-            // Aggressively auto-restart
-            setTimeout(() => {
-                if (this.options.continuous) {
+            // Only restart if continuous and not already restarting
+            if (this.options.continuous && !this._isRestarting) {
+                this._isRestarting = true;
+                clearTimeout(this._restartTimeout);
+                this._restartTimeout = setTimeout(() => {
                     if (this.options.debugMode) {
-                        console.log('[SpeechHandler] Auto-restarting recognition after end...');
+                        console.log('[SpeechHandler] Auto-restarting recognition after end (with cooldown)...');
                     }
+                    this._isRestarting = false;
                     this.start();
-                }
-            }, 250);
+                }, 1000); // 1 second cooldown
+            }
         };
 
         this.initialized = true;
