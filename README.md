@@ -10,6 +10,10 @@ A magical AI-powered magic trick platform that combines artificial intelligence 
 - 🌈 **Beautiful UI**: Purple fractal Fibonacci theme with modern design
 - 🤖 **Speech Recognition**: Voice-controlled tricks and commands
 - 📱 **Responsive Design**: Works seamlessly on all devices
+- Real-time mind reading capabilities
+- Advanced AI integration
+- Interactive user interface
+- Cross-platform compatibility
 
 ## Getting Started
 
@@ -110,3 +114,5 @@ Project Link: [https://github.com/yourusername/EchoMind_2.0](https://github.com/
 <div align="center">
   <img src="images/cards/ace_of_hearts.png" width="60" alt="Heart">
 </div>
+
+Visit our live demo at: https://appechomind.github.io/EchoMind_2.0/
