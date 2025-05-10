@@ -18,7 +18,9 @@ export class PermissionsHandler {
             microphone: null,
             camera: null
         };
+        this.permissionStatus = document.getElementById('permissionStatus');
         this.loadSavedStates();
+        this.checkMicrophonePermission();
     }
 
     init(options = {}) {
@@ -60,12 +62,14 @@ export class PermissionsHandler {
             stream.getTracks().forEach(track => track.stop());
             this.permissionStates.microphone = 'granted';
             this.saveStates();
+            this.updatePermissionStatus('granted');
             this.debug('Microphone permission granted');
             return true;
         } catch (error) {
             this.debug(`Microphone permission denied: ${error.message}`);
             this.permissionStates.microphone = 'denied';
             this.saveStates();
+            this.updatePermissionStatus('denied');
             return false;
         }
     }
@@ -74,6 +78,7 @@ export class PermissionsHandler {
         this.debug('Checking microphone permission');
         if (this.permissionStates.microphone === 'granted') {
             this.debug('Microphone permission already granted');
+            this.updatePermissionStatus('granted');
             return true;
         }
 
@@ -81,11 +86,37 @@ export class PermissionsHandler {
             const result = await navigator.permissions.query({ name: 'microphone' });
             this.permissionStates.microphone = result.state;
             this.saveStates();
+            this.updatePermissionStatus(result.state);
             this.debug(`Microphone permission state: ${result.state}`);
+            
+            result.onchange = () => {
+                this.updatePermissionStatus(result.state);
+            };
+            
             return result.state === 'granted';
         } catch (error) {
             this.debug(`Error checking microphone permission: ${error.message}`);
+            this.updatePermissionStatus('error');
             return false;
+        }
+    }
+
+    updatePermissionStatus(state) {
+        if (!this.permissionStatus) return;
+
+        this.permissionStatus.className = state;
+        switch (state) {
+            case 'granted':
+                this.permissionStatus.textContent = 'Microphone access granted';
+                break;
+            case 'denied':
+                this.permissionStatus.textContent = 'Microphone access denied';
+                break;
+            case 'prompt':
+                this.permissionStatus.textContent = 'Microphone permission needed';
+                break;
+            default:
+                this.permissionStatus.textContent = 'Could not check microphone permission';
         }
     }
 
@@ -125,68 +156,6 @@ export class PermissionsHandler {
         }
     }
 }
-
-// Auto-initialize on DOMContentLoaded to make it available globally
-document.addEventListener('DOMContentLoaded', function() {
-    window.permissionsHandler = EchoMind.PermissionsHandler;
-    EchoMind.PermissionsHandler.init({ debugMode: false });
-});
-
-class PermissionsHandler {
-    constructor() {
-        this.permissionStatus = document.getElementById('permissionStatus');
-        this.checkMicrophonePermission();
-    }
-
-    async checkMicrophonePermission() {
-        try {
-            const result = await navigator.permissions.query({ name: 'microphone' });
-            this.updatePermissionStatus(result.state);
-            
-            result.onchange = () => {
-                this.updatePermissionStatus(result.state);
-            };
-        } catch (error) {
-            console.error('Error checking microphone permission:', error);
-            this.updatePermissionStatus('error');
-        }
-    }
-
-    updatePermissionStatus(state) {
-        if (!this.permissionStatus) return;
-
-        this.permissionStatus.className = state;
-        switch (state) {
-            case 'granted':
-                this.permissionStatus.textContent = 'Microphone access granted';
-                break;
-            case 'denied':
-                this.permissionStatus.textContent = 'Microphone access denied';
-                break;
-            case 'prompt':
-                this.permissionStatus.textContent = 'Microphone permission needed';
-                break;
-            default:
-                this.permissionStatus.textContent = 'Could not check microphone permission';
-        }
-    }
-
-    async requestMicrophonePermission() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            this.updatePermissionStatus('granted');
-            return true;
-        } catch (error) {
-            console.error('Error requesting microphone permission:', error);
-            this.updatePermissionStatus('denied');
-            return false;
-        }
-    }
-}
-
-// Initialize permissions handler
-const permissionsHandler = new PermissionsHandler(); 
 
 // Initialize the permissions handler
 const permissions = new PermissionsHandler();
