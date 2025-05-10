@@ -329,6 +329,14 @@
       }
     });
   </script>
+  <script type="module">
+    import { PermissionsHandler } from './js/permissions-handler.js';
+    
+    // Initialize permissions handler
+    window.EchoMind = window.EchoMind || {};
+    window.EchoMind.PermissionsHandler = PermissionsHandler;
+    window.EchoMind.PermissionsHandler.init({ debugMode: true });
+  </script>
   <script src="src/core/index.js"></script>
 </body>
 </html>
