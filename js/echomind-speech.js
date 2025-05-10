@@ -49,35 +49,84 @@ class SpeechHandler {
         this.recognition.continuous = this.options.continuous;
         this.recognition.interimResults = this.options.interimResults;
 
+        // Add detailed event logging
+        this.recognition.onstart = () => {
+            this.isListening = true;
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onstart: Speech recognition started');
+            }
+        };
+        this.recognition.onaudiostart = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onaudiostart', e);
+            }
+        };
+        this.recognition.onsoundstart = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onsoundstart', e);
+            }
+        };
+        this.recognition.onspeechstart = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onspeechstart', e);
+            }
+        };
+        this.recognition.onaudioend = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onaudioend', e);
+            }
+        };
+        this.recognition.onsoundend = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onsoundend', e);
+            }
+        };
+        this.recognition.onspeechend = (e) => {
+            if (this.options.debugMode) {
+                console.log('[SpeechHandler] onspeechend', e);
+            }
+        };
+
         this.recognition.onresult = (event) => {
             const last = event.results.length - 1;
             const transcript = event.results[last][0].transcript;
-            
             if (this.options.debugMode) {
-                console.log('Speech recognized:', transcript);
+                console.log('[SpeechHandler] onresult: Speech recognized:', transcript, event);
             }
-            
             this.options.onResult(transcript.trim());
         };
 
         this.recognition.onerror = (event) => {
             if (this.options.debugMode) {
-                console.error('Speech recognition error:', event.error);
+                console.error('[SpeechHandler] onerror: Speech recognition error:', event.error, event);
             }
             this.options.onError(event);
+            // Aggressively restart on error
+            setTimeout(() => {
+                if (this.isListening) {
+                    if (this.options.debugMode) {
+                        console.log('[SpeechHandler] Restarting after error...');
+                    }
+                    this.start();
+                }
+            }, 250);
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
             if (this.options.debugMode) {
-                console.log('Speech recognition ended');
+                console.log('[SpeechHandler] onend: Speech recognition ended');
             }
             this.options.onEnd();
-            
-            // Restart if continuous mode is enabled
-            if (this.options.continuous && this.isListening) {
-                this.start();
-            }
+            // Aggressively auto-restart
+            setTimeout(() => {
+                if (this.options.continuous) {
+                    if (this.options.debugMode) {
+                        console.log('[SpeechHandler] Auto-restarting recognition after end...');
+                    }
+                    this.start();
+                }
+            }, 250);
         };
 
         this.initialized = true;
