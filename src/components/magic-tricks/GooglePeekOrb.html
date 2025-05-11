@@ -106,9 +106,8 @@
                         var input = getSearchInput();
                         if (!input) return;
 
-                        // If already in about mode, buffer everything for 3 seconds
+                        // If already in about mode, buffer everything for 3 seconds (do not update search bar)
                         if (window.aboutMode) {
-                            // Only buffer new words (not repeated)
                             if (isFinal) {
                                 window.aboutBuffer += ' ' + transcript;
                             }
@@ -124,11 +123,11 @@
                             return;
                         }
 
-                        // If transcript is exactly 'about' (at the start), enter about mode and start buffering
-                        var match = transcript.toLowerCase().match(/^about\b/);
+                        // If transcript starts with 'about' (and possibly more), enter about mode and start buffering ONLY what comes after 'about'
+                        var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
-                            window.aboutBuffer = '';
+                            window.aboutBuffer = match[1] ? match[1].trim() : '';
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 var query = window.aboutBuffer.trim();
