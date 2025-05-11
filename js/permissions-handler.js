@@ -15,14 +15,23 @@ class PermissionsHandler {
         this.debugMode = false;
         this.initialized = false;
         this.permissionPromises = new Map();
+        
+        // Enhanced platform detection
         this.platform = {
             isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
             isAndroid: /Android/.test(navigator.userAgent),
-            isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+            isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
+            isChrome: /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent),
+            isFirefox: /Firefox/.test(navigator.userAgent),
+            isEdge: /Edge/.test(navigator.userAgent),
+            isNative: window.Capacitor && window.Capacitor.isNativePlatform
         };
+        
         this.eventHandlers = {
             onPermissionChange: [],
-            onError: []
+            onError: [],
+            onPlatformChange: []
         };
     }
 
@@ -31,6 +40,23 @@ class PermissionsHandler {
             PermissionsHandler.instance = new PermissionsHandler();
         }
         return PermissionsHandler.instance;
+    }
+
+    getPlatform() {
+        if (this.platform.isNative) {
+            return window.Capacitor.getPlatform();
+        }
+        if (this.platform.isIOS) return 'ios';
+        if (this.platform.isAndroid) return 'android';
+        return 'desktop';
+    }
+
+    getBrowser() {
+        if (this.platform.isSafari) return 'safari';
+        if (this.platform.isChrome) return 'chrome';
+        if (this.platform.isFirefox) return 'firefox';
+        if (this.platform.isEdge) return 'edge';
+        return 'unknown';
     }
 
     async initialize(options = {}) {
@@ -54,6 +80,8 @@ class PermissionsHandler {
             
             if (this.debugMode) {
                 console.log('[EchoMind Permissions] Handler initialized');
+                console.log('[EchoMind Permissions] Platform:', this.getPlatform());
+                console.log('[EchoMind Permissions] Browser:', this.getBrowser());
                 console.log('[EchoMind Permissions] Microphone permission:', this.micPermission);
                 console.log('[EchoMind Permissions] Camera permission:', this.cameraPermission);
             }
@@ -65,6 +93,21 @@ class PermissionsHandler {
     }
 
     async checkMicrophonePermission() {
+        // Handle native platforms differently
+        if (this.platform.isNative) {
+            try {
+                const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+                const permission = await SpeechRecognition.requestPermission();
+                this.micPermission = permission ? 'granted' : 'denied';
+                this.emit('permissionChange', { type: 'microphone', state: this.micPermission });
+                return permission;
+            } catch (error) {
+                console.error('[EchoMind Permissions] Error checking native microphone permission:', error);
+                return false;
+            }
+        }
+
+        // Web platform
         if (!navigator.permissions) {
             return false;
         }
@@ -80,6 +123,23 @@ class PermissionsHandler {
     }
 
     async requestMicrophonePermission() {
+        // Handle native platforms differently
+        if (this.platform.isNative) {
+            try {
+                const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+                const permission = await SpeechRecognition.requestPermission();
+                this.micPermission = permission ? 'granted' : 'denied';
+                localStorage.setItem('micPermission', this.micPermission);
+                this.emit('permissionChange', { type: 'microphone', state: this.micPermission });
+                return permission;
+            } catch (error) {
+                console.error('[EchoMind Permissions] Error requesting native microphone permission:', error);
+                this.emit('error', error);
+                return false;
+            }
+        }
+
+        // Web platform
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
