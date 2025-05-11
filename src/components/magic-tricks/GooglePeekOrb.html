@@ -266,11 +266,11 @@
             display: none;
         }
     </style>
-    <script type="module">
-        import { SpeechHandler } from '../../js/echomind-speech.js';
-        import PermissionsHandler from '../../js/permissions-handler.js';
-        import { Browser } from '@capacitor/browser';
-        // No top-level import of @capacitor-community/speech-recognition
+    <script src="../../js/echomind-speech.js"></script>
+    <script src="../../js/permissions-handler.js"></script>
+    <script>
+        const SpeechHandler = window.SpeechHandler;
+        const PermissionsHandler = window.PermissionsHandler;
 
         class GooglePeekOrb extends HTMLElement {
             constructor() {
