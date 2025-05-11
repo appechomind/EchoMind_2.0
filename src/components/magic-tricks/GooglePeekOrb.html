@@ -299,13 +299,18 @@
                     document.body.classList.add(`platform-${this.platform}`);
                     document.body.classList.add(`browser-${this.browser}`);
                     
-                    // Check browser support
+                    // Check and request microphone permission only if not already granted
                     const hasMic = await this.permissionsHandler.checkMicrophonePermission();
                     if (!hasMic) {
                         const granted = await this.permissionsHandler.requestMicrophonePermission();
                         if (!granted) {
-                            throw new Error('Microphone permission denied');
+                            console.error('[GooglePeekOrb] Microphone permission denied');
+                            alert('Microphone permission is required for speech recognition.');
+                            return;
                         }
+                        console.log('[GooglePeekOrb] Microphone permission granted after request');
+                    } else {
+                        console.log('[GooglePeekOrb] Microphone permission already granted');
                     }
 
                     // Robust platform detection and fallback
