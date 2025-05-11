@@ -176,7 +176,8 @@
     </style>
     <script type="module">
         import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
-        import { permissions } from '/EchoMind_2.0/js/permissions-handler.js';
+        import PermissionsHandler from './js/permissions-handler.js';
+        import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
         class GooglePeekOrb extends HTMLElement {
             constructor() {
@@ -186,44 +187,58 @@
                 this.aboutMode = false;
                 this.aboutBuffer = '';
                 this.aboutTimeout = null;
+                this.permissionsHandler = null;
             }
 
             async connectedCallback() {
-                console.log('[GooglePeekOrb] connectedCallback called');
                 try {
-                    // Initialize permissions
-                    console.log('[GooglePeekOrb] Initializing permissions...');
-                    await permissions.initialize({ debugMode: true });
+                    // Initialize permissions handler
+                    this.permissionsHandler = PermissionsHandler.getInstance();
+                    await this.permissionsHandler.initialize({ debugMode: true });
                     
-                    // Check microphone permission
-                    console.log('[GooglePeekOrb] Checking microphone permission...');
-                    const hasPermission = await permissions.checkMicrophonePermission();
-                    console.log('[GooglePeekOrb] Microphone permission:', hasPermission);
-                    if (!hasPermission) {
-                        console.log('[GooglePeekOrb] Requesting microphone permission...');
-                        const granted = await permissions.requestMicrophonePermission();
-                        console.log('[GooglePeekOrb] Microphone permission granted:', granted);
+                    // Check browser support
+                    const hasMic = await this.permissionsHandler.checkMicrophonePermission();
+                    if (!hasMic) {
+                        const granted = await this.permissionsHandler.requestMicrophonePermission();
                         if (!granted) {
                             throw new Error('Microphone permission denied');
                         }
                     }
-
-                    // Initialize speech handler
-                    console.log('[GooglePeekOrb] Initializing SpeechHandler...');
-                    this.speechHandler = new SpeechHandler({
-                        language: 'en-US',
-                        continuous: true,
-                        interimResults: true,
-                        onResult: this.handleSpeechResult.bind(this),
-                        onError: this.handleSpeechError.bind(this),
-                        onEnd: this.handleSpeechEnd.bind(this),
-                        debugMode: true
-                    });
-
-                    // Start speech recognition
-                    console.log('[GooglePeekOrb] Starting speech recognition...');
-                    await this.speechHandler.start();
-                    console.log('[GooglePeekOrb] Speech recognition started');
+                    // Use native speech recognition if on a native platform
+                    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.getPlatform() !== 'web') {
+                        const nativePerm = await SpeechRecognition.requestPermission();
+                        if (nativePerm) {
+                            SpeechRecognition.start({
+                                language: 'en-US',
+                                partialResults: true
+                            })
+                            .addListener('partialResults', (result) => {
+                                if (result.matches && result.matches[0]) {
+                                    this.handleSpeechResult(result.matches[0]);
+                                }
+                            })
+                            .addListener('result', (result) => {
+                                if (result.matches && result.matches[0]) {
+                                    this.handleSpeechResult(result.matches[0]);
+                                }
+                            });
+                        }
+                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        // Use browser speech recognition
+                        this.speechHandler = new SpeechHandler({
+                            language: 'en-US',
+                            continuous: true,
+                            interimResults: true,
+                            onResult: this.handleSpeechResult.bind(this),
+                            onError: this.handleSpeechError.bind(this),
+                            onEnd: this.handleSpeechEnd.bind(this),
+                            debugMode: true
+                        });
+                        await this.speechHandler.start();
+                    } else {
+                        alert('Your browser does not support speech recognition. Please use Chrome or Edge on desktop or Android.');
+                        return;
+                    }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing:', error);
                     this.handleSpeechError(error);
@@ -231,10 +246,8 @@
             }
 
             disconnectedCallback() {
-                console.log('[GooglePeekOrb] disconnectedCallback called');
                 if (this.speechHandler) {
                     this.speechHandler.cleanup();
-                    console.log('[GooglePeekOrb] SpeechHandler cleaned up');
                 }
             }
 
@@ -247,9 +260,12 @@
                 }
                 // If already in about mode, buffer the transcript
                 if (this.aboutMode) {
+                    console.log('[GooglePeekOrb] In about mode. Buffer before:', this.aboutBuffer);
                     this.aboutBuffer += ' ' + transcript;
+                    console.log('[GooglePeekOrb] Buffer after:', this.aboutBuffer);
                     if (this.aboutTimeout) {
                         clearTimeout(this.aboutTimeout);
+                        console.log('[GooglePeekOrb] Cleared previous about timer');
                     }
                     // Restart the 3-second timer on each new result
                     this.aboutTimeout = setTimeout(() => {
@@ -257,31 +273,40 @@
                         console.log('[GooglePeekOrb] 3s after about: Google search for', query);
                         if (query) {
                             window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                        } else {
+                            console.log('[GooglePeekOrb] No query to search after about.');
                         }
                         this.aboutMode = false;
                         this.aboutBuffer = '';
                         this.aboutTimeout = null;
                     }, 3000);
+                    console.log('[GooglePeekOrb] Set new about timer for 3s');
                     return;
                 }
                 // If transcript contains 'about', enter about mode and start buffering
                 const match = transcript.toLowerCase().match(/about\s*(.*)/);
                 if (match) {
+                    console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
                     this.aboutMode = true;
                     this.aboutBuffer = match[1] ? match[1].trim() : '';
+                    console.log('[GooglePeekOrb] Initial about buffer:', this.aboutBuffer);
                     if (this.aboutTimeout) {
                         clearTimeout(this.aboutTimeout);
+                        console.log('[GooglePeekOrb] Cleared previous about timer');
                     }
                     this.aboutTimeout = setTimeout(() => {
                         const query = this.aboutBuffer.trim();
                         console.log('[GooglePeekOrb] 3s after about: Google search for', query);
                         if (query) {
                             window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                        } else {
+                            console.log('[GooglePeekOrb] No query to search after about.');
                         }
                         this.aboutMode = false;
                         this.aboutBuffer = '';
                         this.aboutTimeout = null;
                     }, 3000);
+                    console.log('[GooglePeekOrb] Set new about timer for 3s');
                 }
             }
 
@@ -290,7 +315,6 @@
                 const micButton = document.querySelector('.mic-button');
                 if (micButton) {
                     micButton.classList.remove('listening', 'recording');
-                    console.log('[GooglePeekOrb] Mic button classes reset');
                 }
             }
 
@@ -299,33 +323,25 @@
                 const micButton = document.querySelector('.mic-button');
                 if (micButton) {
                     micButton.classList.remove('listening', 'recording');
-                    console.log('[GooglePeekOrb] Mic button classes reset (on end)');
                 }
             }
         }
 
         customElements.define('google-peek-orb', GooglePeekOrb);
 
-        // Initialize speech recognition when the page loads
         window.addEventListener('load', async () => {
-            console.log('[GooglePeekOrb] Page loaded, initializing...');
             try {
                 const recognizer = new GooglePeekOrb();
                 await recognizer.connectedCallback();
-                
-                // Make recognizer available globally
                 window.speechRecognizer = recognizer;
-                console.log('[GooglePeekOrb] Recognizer available globally');
             } catch (error) {
                 console.error('[GooglePeekOrb] Error initializing speech recognition:', error);
             }
         });
 
-        // Clean up on page unload
         window.addEventListener('beforeunload', () => {
             if (window.speechRecognizer) {
                 window.speechRecognizer.disconnectedCallback();
-                console.log('[GooglePeekOrb] Recognizer cleaned up on unload');
             }
         });
     </script>
