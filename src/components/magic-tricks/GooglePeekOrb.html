@@ -380,9 +380,9 @@
             handleSpeechResult(transcript) {
                 console.log('[GooglePeekOrb] Speech result:', transcript);
                 const searchInput = document.querySelector('.search-box');
-                // If already in about mode, do not update the search bar again
+                // If already in about mode, buffer all speech after 'about'
                 if (this.aboutMode) {
-                    // Only buffer, do not update the search bar
+                    this.aboutBuffer += ' ' + transcript;
                     if (this.aboutTimeout) {
                         clearTimeout(this.aboutTimeout);
                         console.log('[GooglePeekOrb] Cleared previous about timer');
@@ -391,6 +391,10 @@
                     this.aboutTimeout = setTimeout(() => {
                         const query = this.aboutBuffer.trim();
                         console.log('[GooglePeekOrb] 3s after about: Google search for', query);
+                        if (searchInput) {
+                            searchInput.value = query;
+                            console.log('[GooglePeekOrb] Set search input value to about buffer');
+                        }
                         if (query) {
                             window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
                         } else {
@@ -403,17 +407,12 @@
                     console.log('[GooglePeekOrb] Set new about timer for 3s');
                     return;
                 }
-                // If transcript contains 'about', enter about mode and set the search bar ONCE
+                // If transcript contains 'about', enter about mode and start buffering
                 const match = transcript.toLowerCase().match(/about\s*(.*)/);
                 if (match) {
                     console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
                     this.aboutMode = true;
                     this.aboutBuffer = match[1] ? match[1].trim() : '';
-                    console.log('[GooglePeekOrb] Initial about buffer:', this.aboutBuffer);
-                    if (searchInput) {
-                        searchInput.value = this.aboutBuffer; // Only set the statement after 'about'
-                        console.log('[GooglePeekOrb] Set search input value to about buffer');
-                    }
                     if (this.aboutTimeout) {
                         clearTimeout(this.aboutTimeout);
                         console.log('[GooglePeekOrb] Cleared previous about timer');
@@ -421,6 +420,10 @@
                     this.aboutTimeout = setTimeout(() => {
                         const query = this.aboutBuffer.trim();
                         console.log('[GooglePeekOrb] 3s after about: Google search for', query);
+                        if (searchInput) {
+                            searchInput.value = query;
+                            console.log('[GooglePeekOrb] Set search input value to about buffer');
+                        }
                         if (query) {
                             window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
                         } else {
