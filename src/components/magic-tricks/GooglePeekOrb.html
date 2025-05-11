@@ -269,7 +269,7 @@
     <script type="module">
         import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
         import PermissionsHandler from '/EchoMind_2.0/js/permissions-handler.js';
-        import { SpeechRecognition } from '@capacitor-community/speech-recognition';
+        // No top-level import of @capacitor-community/speech-recognition
 
         class GooglePeekOrb extends HTMLElement {
             constructor() {
@@ -323,24 +323,28 @@
 
             async initializeNativeSpeech() {
                 try {
-                    const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
-                    await SpeechRecognition.start({
-                        language: 'en-US',
-                        partialResults: true,
-                        prompt: 'Say "about" followed by your search query'
-                    });
+                    if (window.Capacitor && window.Capacitor.isNativePlatform) {
+                        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+                        await SpeechRecognition.start({
+                            language: 'en-US',
+                            partialResults: true,
+                            prompt: 'Say "about" followed by your search query'
+                        });
 
-                    SpeechRecognition.addListener('partialResults', (result) => {
-                        if (result.matches && result.matches[0]) {
-                            this.handleSpeechResult(result.matches[0]);
-                        }
-                    });
+                        SpeechRecognition.addListener('partialResults', (result) => {
+                            if (result.matches && result.matches[0]) {
+                                this.handleSpeechResult(result.matches[0]);
+                            }
+                        });
 
-                    SpeechRecognition.addListener('result', (result) => {
-                        if (result.matches && result.matches[0]) {
-                            this.handleSpeechResult(result.matches[0]);
-                        }
-                    });
+                        SpeechRecognition.addListener('result', (result) => {
+                            if (result.matches && result.matches[0]) {
+                                this.handleSpeechResult(result.matches[0]);
+                            }
+                        });
+                        // Save reference for cleanup
+                        this.nativeSpeechRecognition = SpeechRecognition;
+                    }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing native speech:', error);
                     throw error;
@@ -368,8 +372,8 @@
                 if (this.speechHandler) {
                     this.speechHandler.cleanup();
                 }
-                if (this.platform === 'ios' || this.platform === 'android') {
-                    SpeechRecognition.stop();
+                if ((this.platform === 'ios' || this.platform === 'android') && this.nativeSpeechRecognition) {
+                    this.nativeSpeechRecognition.stop();
                 }
             }
 
