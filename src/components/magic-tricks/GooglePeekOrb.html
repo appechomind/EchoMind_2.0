@@ -282,6 +282,7 @@
                 this.permissionsHandler = null;
                 this.platform = null;
                 this.browser = null;
+                this.nativeSpeechRecognition = null;
             }
 
             async connectedCallback() {
@@ -307,13 +308,16 @@
                         }
                     }
 
-                    // Initialize speech recognition based on platform
-                    if (this.platform === 'ios' || this.platform === 'android') {
-                        // Use native speech recognition on mobile
+                    // Robust platform detection and fallback
+                    if (window.Capacitor && window.Capacitor.isNativePlatform) {
+                        console.log('[GooglePeekOrb] Using Capacitor native speech recognition');
                         await this.initializeNativeSpeech();
-                    } else {
-                        // Use browser speech recognition on desktop
+                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        console.log('[GooglePeekOrb] Using Web Speech API for browser speech recognition');
                         await this.initializeBrowserSpeech();
+                    } else {
+                        alert('Speech recognition is not supported on this device or browser. Please use Chrome, Edge, or Safari, or install the native app.');
+                        console.error('[GooglePeekOrb] No supported speech recognition API found.');
                     }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing:', error);
@@ -330,13 +334,13 @@
                             partialResults: true,
                             prompt: 'Say "about" followed by your search query'
                         });
-
                         // Only buffer on the 'result' event (final result)
                         SpeechRecognition.addListener('result', (result) => {
                             if (result.matches && result.matches[0]) {
                                 this.handleSpeechResult(result.matches[0], true);
                             }
                         });
+                        this.nativeSpeechRecognition = SpeechRecognition;
                     }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing native speech:', error);
@@ -365,7 +369,7 @@
                 if (this.speechHandler) {
                     this.speechHandler.cleanup();
                 }
-                if ((this.platform === 'ios' || this.platform === 'android') && this.nativeSpeechRecognition) {
+                if (this.nativeSpeechRecognition) {
                     this.nativeSpeechRecognition.stop();
                 }
             }
