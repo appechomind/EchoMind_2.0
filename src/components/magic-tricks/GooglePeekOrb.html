@@ -125,7 +125,7 @@
                             return;
                         }
 
-                        // If transcript starts with 'about', enter about mode and start buffering ONLY what comes after 'about'
+                        // Only trigger about mode if "about" is the first word (ignore everything before)
                         var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
@@ -144,8 +144,7 @@
                             return;
                         }
 
-                        // For all other input, do NOT update the search bar or trigger a search
-                        // (No action here)
+                        // For all other input, do nothing (no search bar update, no search)
                     }
                 }
             }
