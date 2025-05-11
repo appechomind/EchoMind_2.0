@@ -3,20 +3,18 @@
  * Centralized system for managing permissions across all pages
  */
 
-class PermissionsHandler {
-    constructor() {
+// EchoMind Permissions Handler (Classic JS, cross-platform)
+(function() {
+    function PermissionsHandler() {
         if (PermissionsHandler.instance) {
             return PermissionsHandler.instance;
         }
         PermissionsHandler.instance = this;
-        
         this.micPermission = null;
         this.cameraPermission = null;
         this.debugMode = false;
         this.initialized = false;
         this.permissionPromises = new Map();
-        
-        // Enhanced platform detection
         this.platform = {
             isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
             isAndroid: /Android/.test(navigator.userAgent),
@@ -27,7 +25,6 @@ class PermissionsHandler {
             isEdge: /Edge/.test(navigator.userAgent),
             isNative: window.Capacitor && window.Capacitor.isNativePlatform
         };
-        
         this.eventHandlers = {
             onPermissionChange: [],
             onError: [],
@@ -35,241 +32,178 @@ class PermissionsHandler {
         };
     }
 
-    static getInstance() {
+    PermissionsHandler.getInstance = function() {
         if (!PermissionsHandler.instance) {
             PermissionsHandler.instance = new PermissionsHandler();
         }
         return PermissionsHandler.instance;
-    }
+    };
 
-    getPlatform() {
-        if (this.platform.isNative) {
+    PermissionsHandler.prototype.getPlatform = function() {
+        if (this.platform.isNative && window.Capacitor && window.Capacitor.getPlatform) {
             return window.Capacitor.getPlatform();
         }
         if (this.platform.isIOS) return 'ios';
         if (this.platform.isAndroid) return 'android';
         return 'desktop';
-    }
+    };
 
-    getBrowser() {
+    PermissionsHandler.prototype.getBrowser = function() {
         if (this.platform.isSafari) return 'safari';
         if (this.platform.isChrome) return 'chrome';
         if (this.platform.isFirefox) return 'firefox';
         if (this.platform.isEdge) return 'edge';
         return 'unknown';
-    }
+    };
 
-    async initialize(options = {}) {
-        if (this.initialized) {
-            return;
-        }
-
+    PermissionsHandler.prototype.initialize = function(options) {
+        var self = this;
+        options = options || {};
+        if (this.initialized) return Promise.resolve();
         this.debugMode = options.debugMode || false;
-        
-        try {
-            // Load saved permissions from localStorage or Capacitor Storage
-            await this.loadPermissionStates();
-            
-            // Check current permissions if not already granted
-            if (this.micPermission !== 'granted') {
-                await this.checkMicrophonePermission();
-            }
-            if (this.cameraPermission !== 'granted') {
-                await this.checkCameraPermission();
-            }
-            
-            this.initialized = true;
-            
-            if (this.debugMode) {
-                console.log('[EchoMind Permissions] Handler initialized');
-                console.log('[EchoMind Permissions] Platform:', this.getPlatform());
-                console.log('[EchoMind Permissions] Browser:', this.getBrowser());
-                console.log('[EchoMind Permissions] Microphone permission:', this.micPermission);
-                console.log('[EchoMind Permissions] Camera permission:', this.cameraPermission);
-            }
-        } catch (error) {
+        return this.loadPermissionStates().then(function() {
+            var micPromise = (self.micPermission !== 'granted') ? self.checkMicrophonePermission() : Promise.resolve();
+            var camPromise = (self.cameraPermission !== 'granted') ? self.checkCameraPermission() : Promise.resolve();
+            return Promise.all([micPromise, camPromise]).then(function() {
+                self.initialized = true;
+                if (self.debugMode) {
+                    console.log('[EchoMind Permissions] Handler initialized');
+                    console.log('[EchoMind Permissions] Platform:', self.getPlatform());
+                    console.log('[EchoMind Permissions] Browser:', self.getBrowser());
+                    console.log('[EchoMind Permissions] Microphone permission:', self.micPermission);
+                    console.log('[EchoMind Permissions] Camera permission:', self.cameraPermission);
+                }
+            });
+        }).catch(function(error) {
             console.error('[EchoMind Permissions] Error initializing:', error);
-            this.emit('error', error);
+            self.emit('error', error);
             throw error;
-        }
-    }
+        });
+    };
 
-    async checkMicrophonePermission() {
-        // Use stored permission if available
+    PermissionsHandler.prototype.checkMicrophonePermission = function() {
+        var self = this;
         if (this.micPermission === 'granted') {
             if (this.debugMode) console.log('[EchoMind Permissions] Microphone permission already granted (cached)');
-            return true;
+            return Promise.resolve(true);
         }
-        // Native platform
         if (this.platform.isNative) {
-            try {
-                const { Storage } = await import('@capacitor/storage');
-                const stored = await Storage.get({ key: 'micPermission' });
-                if (stored.value === 'granted') {
-                    this.micPermission = 'granted';
-                    if (this.debugMode) console.log('[EchoMind Permissions] Microphone permission already granted (Capacitor Storage)');
-                    return true;
-                }
-                const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
-                const permission = await SpeechRecognition.requestPermission();
-                this.micPermission = permission ? 'granted' : 'denied';
-                await Storage.set({ key: 'micPermission', value: this.micPermission });
-                this.emit('permissionChange', { type: 'microphone', state: this.micPermission });
-                if (this.debugMode) console.log('[EchoMind Permissions] Native permission result:', this.micPermission);
-                return permission;
-            } catch (error) {
-                console.error('[EchoMind Permissions] Error checking native microphone permission:', error);
-                return false;
-            }
+            // Native: skip for now, or implement with Capacitor if needed
+            return Promise.resolve(true);
         }
-        // Web platform
         if (!navigator.permissions) {
-            return false;
+            return Promise.resolve(false);
         }
-        try {
-            const result = await navigator.permissions.query({ name: 'microphone' });
-            this.micPermission = result.state;
-            localStorage.setItem('micPermission', this.micPermission);
-            this.emit('permissionChange', { type: 'microphone', state: result.state });
-            if (this.debugMode) console.log('[EchoMind Permissions] Web permission result:', this.micPermission);
+        return navigator.permissions.query({ name: 'microphone' }).then(function(result) {
+            self.micPermission = result.state;
+            localStorage.setItem('micPermission', self.micPermission);
+            self.emit('permissionChange', { type: 'microphone', state: result.state });
+            if (self.debugMode) console.log('[EchoMind Permissions] Web permission result:', self.micPermission);
             return result.state === 'granted';
-        } catch (error) {
+        }).catch(function(error) {
             console.error('[EchoMind Permissions] Error checking microphone permission:', error);
             return false;
-        }
-    }
+        });
+    };
 
-    async requestMicrophonePermission() {
-        // Use stored permission if available
+    PermissionsHandler.prototype.requestMicrophonePermission = function() {
+        var self = this;
         if (this.micPermission === 'granted') {
             if (this.debugMode) console.log('[EchoMind Permissions] Microphone permission already granted (cached)');
-            return true;
+            return Promise.resolve(true);
         }
-        // Native platform
         if (this.platform.isNative) {
-            try {
-                const { Storage } = await import('@capacitor/storage');
-                const stored = await Storage.get({ key: 'micPermission' });
-                if (stored.value === 'granted') {
-                    this.micPermission = 'granted';
-                    if (this.debugMode) console.log('[EchoMind Permissions] Microphone permission already granted (Capacitor Storage)');
-                    return true;
-                }
-                const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
-                const permission = await SpeechRecognition.requestPermission();
-                this.micPermission = permission ? 'granted' : 'denied';
-                await Storage.set({ key: 'micPermission', value: this.micPermission });
-                this.emit('permissionChange', { type: 'microphone', state: this.micPermission });
-                if (this.debugMode) console.log('[EchoMind Permissions] Native permission result:', this.micPermission);
-                return permission;
-            } catch (error) {
-                console.error('[EchoMind Permissions] Error requesting native microphone permission:', error);
-                this.emit('error', error);
-                return false;
-            }
+            // Native: skip for now, or implement with Capacitor if needed
+            return Promise.resolve(true);
         }
-        // Web platform
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            this.micPermission = 'granted';
+        return navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+            stream.getTracks().forEach(function(track) { track.stop(); });
+            self.micPermission = 'granted';
             localStorage.setItem('micPermission', 'granted');
-            this.emit('permissionChange', { type: 'microphone', state: 'granted' });
-            if (this.debugMode) console.log('[EchoMind Permissions] Web permission result: granted');
+            self.emit('permissionChange', { type: 'microphone', state: 'granted' });
+            if (self.debugMode) console.log('[EchoMind Permissions] Web permission result: granted');
             return true;
-        } catch (error) {
+        }).catch(function(error) {
             console.error('[EchoMind Permissions] Error requesting microphone permission:', error);
-            this.emit('error', error);
+            self.emit('error', error);
             return false;
-        }
-    }
+        });
+    };
 
-    async checkCameraPermission() {
+    PermissionsHandler.prototype.checkCameraPermission = function() {
+        var self = this;
         if (!navigator.permissions) {
-            return false;
+            return Promise.resolve(false);
         }
-        try {
-            const result = await navigator.permissions.query({ name: 'camera' });
-            this.cameraPermission = result.state;
-            this.emit('permissionChange', { type: 'camera', state: result.state });
+        return navigator.permissions.query({ name: 'camera' }).then(function(result) {
+            self.cameraPermission = result.state;
+            self.emit('permissionChange', { type: 'camera', state: result.state });
             return result.state === 'granted';
-        } catch (error) {
+        }).catch(function(error) {
             console.error('[EchoMind Permissions] Error checking camera permission:', error);
             return false;
-        }
-    }
+        });
+    };
 
-    async requestCameraPermission() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop());
-            this.cameraPermission = 'granted';
+    PermissionsHandler.prototype.requestCameraPermission = function() {
+        var self = this;
+        return navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+            stream.getTracks().forEach(function(track) { track.stop(); });
+            self.cameraPermission = 'granted';
             localStorage.setItem('cameraPermission', 'granted');
-            this.emit('permissionChange', { type: 'camera', state: 'granted' });
+            self.emit('permissionChange', { type: 'camera', state: 'granted' });
             return true;
-        } catch (error) {
+        }).catch(function(error) {
             console.error('[EchoMind Permissions] Error requesting camera permission:', error);
-            this.emit('error', error);
+            self.emit('error', error);
             return false;
-        }
-    }
+        });
+    };
 
-    async loadPermissionStates() {
-        try {
-            // Native: check Capacitor Storage
-            if (this.platform && this.platform.isNative) {
-                const { Storage } = await import('@capacitor/storage');
-                const mic = await Storage.get({ key: 'micPermission' });
-                const cam = await Storage.get({ key: 'cameraPermission' });
-                this.micPermission = mic.value || null;
-                this.cameraPermission = cam.value || null;
-                if (this.debugMode) {
-                    console.log('[EchoMind Permissions] Loaded from Capacitor Storage:', {
-                        mic: this.micPermission,
-                        camera: this.cameraPermission
-                    });
-                }
-            } else {
-                // Web: use localStorage
-                this.micPermission = localStorage.getItem('micPermission');
-                this.cameraPermission = localStorage.getItem('cameraPermission');
-                if (this.debugMode) {
+    PermissionsHandler.prototype.loadPermissionStates = function() {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            try {
+                self.micPermission = localStorage.getItem('micPermission');
+                self.cameraPermission = localStorage.getItem('cameraPermission');
+                if (self.debugMode) {
                     console.log('[EchoMind Permissions] Loaded from localStorage:', {
-                        mic: this.micPermission,
-                        camera: this.cameraPermission
+                        mic: self.micPermission,
+                        camera: self.cameraPermission
                     });
                 }
+                resolve();
+            } catch (error) {
+                console.error('[EchoMind Permissions] Error loading states:', error);
+                reject(error);
             }
-        } catch (error) {
-            console.error('[EchoMind Permissions] Error loading states:', error);
-        }
-    }
+        });
+    };
 
-    on(event, handler) {
+    PermissionsHandler.prototype.on = function(event, handler) {
         if (this.eventHandlers[event]) {
             this.eventHandlers[event].push(handler);
         }
-    }
+    };
 
-    off(event, handler) {
+    PermissionsHandler.prototype.off = function(event, handler) {
         if (this.eventHandlers[event]) {
-            this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
+            this.eventHandlers[event] = this.eventHandlers[event].filter(function(h) { return h !== handler; });
         }
-    }
+    };
 
-    emit(event, data) {
+    PermissionsHandler.prototype.emit = function(event, data) {
         if (this.eventHandlers[event]) {
-            this.eventHandlers[event].forEach(handler => {
+            this.eventHandlers[event].forEach(function(handler) {
                 try {
                     handler(data);
                 } catch (e) {
-                    console.error(`[EchoMind Permissions] Error in ${event} handler:`, e);
+                    console.error('[EchoMind Permissions] Error in ' + event + ' handler:', e);
                 }
             });
         }
-    }
-}
+    };
 
-// Create and export a single instance
-const permissions = PermissionsHandler.getInstance();
-window.PermissionsHandler = PermissionsHandler; 
+    // Attach to window
+    window.PermissionsHandler = PermissionsHandler;
+})(); 

@@ -266,8 +266,8 @@
             display: none;
         }
     </style>
-    <script src="../../js/echomind-speech.js"></script>
     <script src="../../js/permissions-handler.js"></script>
+    <script src="../../js/echomind-speech.js"></script>
     <script>
         const SpeechHandler = window.SpeechHandler;
         const PermissionsHandler = window.PermissionsHandler;
@@ -542,8 +542,34 @@
     </div>
     <script>
         window.addEventListener('DOMContentLoaded', function() {
-            // Paste the contents of hybrid-speech.js here, or call your init function if you modularize it.
+            // Create a SpeechHandler instance
+            var speech = new window.SpeechHandler({
+                language: 'en-US',
+                continuous: true,
+                interimResults: true,
+                debugMode: true,
+                onResult: function(transcript) {
+                    console.log('[Test] Recognized:', transcript);
+                    // Update the search bar if present
+                    var input = document.getElementById('searchInput');
+                    if (input) input.value = transcript;
+                },
+                onError: function(error) {
+                    console.error('[Test] Speech error:', error);
+                },
+                onEnd: function() {
+                    console.log('[Test] Speech ended');
+                }
+            });
+
+            // Start listening automatically
+            speech.start();
+            window.speechTest = speech; // for manual control in console
         });
+    </script>
+    <script>
+        window.speechTest.stop();   // to stop listening
+        window.speechTest.start();  // to start listening again
     </script>
 </body>
 </html> 
