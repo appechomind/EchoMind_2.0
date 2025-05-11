@@ -118,7 +118,8 @@
                             }
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
-                                var query = window.aboutBuffer.trim();
+                                // Remove all instances of 'about' from the buffer
+                                var query = window.aboutBuffer.replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
                                 if (query) {
                                     input.value = query;
                                     triggerSearch(query);
@@ -139,7 +140,8 @@
                             window.lastBufferedPhrase = window.aboutBuffer;
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
-                                var query = window.aboutBuffer.trim();
+                                // Remove all instances of 'about' from the buffer
+                                var query = window.aboutBuffer.replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
                                 if (query) {
                                     input.value = query;
                                     triggerSearch(query);
