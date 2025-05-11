@@ -75,7 +75,7 @@
                             });
                         });
                     } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                        var speech = new window.SpeechHandler({
+                        window.speech = new window.SpeechHandler({
                             language: 'en-US',
                             continuous: true,
                             interimResults: true,
@@ -88,9 +88,12 @@
                             },
                             onEnd: function() {
                                 console.log('[GooglePeek] Speech ended');
+                                if (window.speech) {
+                                    setTimeout(function() { window.speech.start(); }, 1000);
+                                }
                             }
                         });
-                        speech.start();
+                        window.speech.start();
                     } else {
                         alert('Speech recognition is not supported on this device or browser.');
                     }
