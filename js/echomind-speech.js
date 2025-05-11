@@ -181,4 +181,4 @@ class SpeechHandler {
 }
 
 // Export the SpeechHandler class
-export { SpeechHandler }; 
+window.SpeechHandler = SpeechHandler; 
