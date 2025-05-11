@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>Google Peek</title>
     <style>
-        /* Base styles */
         body {
             margin: 0;
             padding: 0;
@@ -15,485 +14,125 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* Platform-specific styles */
-        .platform-ios .search-box,
-        .platform-android .search-box {
-            font-size: 16px; /* Prevent zoom on focus in iOS */
-            padding: 12px 20px;
-            height: 48px; /* Larger touch target for mobile */
-        }
-
-        .platform-ios .search-button,
-        .platform-android .search-button {
-            min-height: 44px; /* iOS minimum touch target size */
-            padding: 0 20px;
-            font-size: 16px;
-        }
-
-        .platform-ios .mic-button,
-        .platform-android .mic-button {
-            width: 44px;
-            height: 44px;
-            padding: 10px;
-        }
-
-        /* Browser-specific styles */
-        .browser-safari .search-box {
-            -webkit-appearance: none;
-            border-radius: 24px;
-        }
-
-        .browser-firefox .search-box {
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        /* Responsive styles */
-        @media (max-width: 768px) {
-            .main {
-                margin-top: 50px;
-                padding: 0 16px;
-            }
-
-            .search-container {
-                width: 100%;
-                max-width: 100%;
-            }
-
-            .buttons {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 12px;
-            }
-
-            .search-button {
-                width: 100%;
-                margin: 0;
-            }
-
-            .footer-bottom {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-                gap: 12px;
-            }
-        }
-
-        /* High-DPI screen support */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .logo img {
-                image-rendering: -webkit-optimize-contrast;
-            }
-        }
-
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #202124;
-                color: #fff;
-            }
-
-            .search-box {
-                background: #303134;
-                border-color: #5f6368;
-                color: #fff;
-            }
-
-            .search-box:hover,
-            .search-box:focus {
-                background: #303134;
-                border-color: #8ab4f8;
-            }
-
-            .search-button {
-                background: #303134;
-                border-color: #5f6368;
-                color: #e8eaed;
-            }
-
-            .search-button:hover {
-                background: #3c4043;
-                border-color: #8ab4f8;
-            }
-
-            .footer {
-                background: #171717;
-                color: #9aa0a6;
-            }
-
-            .footer a {
-                color: #9aa0a6;
-            }
-
-            .footer a:hover {
-                color: #e8eaed;
-            }
-        }
-
-        .header {
-            display: flex;
-            justify-content: flex-end;
-            padding: 15px;
-            font-size: 13px;
-            align-items: center;
-        }
-        .header a {
-            color: #000;
-            text-decoration: none;
-            margin: 0 10px;
-            white-space: nowrap;
-        }
-        .header a:hover {
-            text-decoration: underline;
-        }
-        .main {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 100px;
-            flex: 1;
-            padding: 0 20px;
-        }
-        .logo {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .logo img {
-            max-width: 100%;
-            height: auto;
-        }
-        .search-container {
-            width: 100%;
-            max-width: 584px;
-            position: relative;
-            margin: 0 auto;
-        }
-        .search-box {
-            width: 100%;
-            height: 44px;
-            border: 1px solid #dfe1e5;
-            border-radius: 24px;
-            padding: 0 20px;
-            font-size: 16px;
-            outline: none;
-            box-sizing: border-box;
-        }
-        .search-box:hover, .search-box:focus {
-            box-shadow: 0 1px 6px rgba(32,33,36,0.28);
-            border-color: rgba(223,225,229,0);
-        }
-        .buttons {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .search-button {
-            background-color: #f8f9fa;
-            border: 1px solid #f8f9fa;
-            border-radius: 4px;
-            color: #3c4043;
-            font-size: 14px;
-            margin: 11px 4px;
-            padding: 0 16px;
-            height: 36px;
-            cursor: pointer;
-            min-width: 120px;
-        }
-        .search-button:hover {
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-            border: 1px solid #dadce0;
-            color: #202124;
-        }
-        .footer {
-            background: #f2f2f2;
-            color: #70757a;
-            font-size: 14px;
-            padding: 15px 0;
-            margin-top: auto;
-        }
-        .footer a {
-            color: #70757a;
-            text-decoration: none;
-            margin: 0 10px;
-            white-space: nowrap;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        .footer-content {
-            padding: 0 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .footer-top {
-            border-bottom: 1px solid #dadce0;
-            padding-bottom: 10px;
-        }
-        .footer-bottom {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-        .mic-button {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .mic-button img {
-            width: 24px;
-            height: 24px;
-            transition: all 0.3s ease;
-        }
-        .mic-button.listening img {
-            opacity: 0.7;
-        }
-        .mic-button.recording img {
-            opacity: 0.7;
-            filter: hue-rotate(120deg);
-        }
-        .status-text {
-            display: none;
-        }
+        .main { display: flex; flex-direction: column; align-items: center; margin-top: 100px; flex: 1; padding: 0 20px; }
+        .logo { margin-bottom: 20px; text-align: center; }
+        .logo img { max-width: 100%; height: auto; }
+        .search-container { width: 100%; max-width: 584px; position: relative; margin: 0 auto; }
+        .search-box { width: 100%; height: 44px; border: 1px solid #dfe1e5; border-radius: 24px; padding: 0 20px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .buttons { margin-top: 20px; display: flex; justify-content: center; flex-wrap: wrap; }
+        .search-button { background-color: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px; color: #3c4043; font-size: 14px; margin: 11px 4px; padding: 0 16px; height: 36px; cursor: pointer; min-width: 120px; }
+        .footer { background: #f2f2f2; color: #70757a; font-size: 14px; padding: 15px 0; margin-top: auto; }
+        .footer-content { padding: 0 20px; max-width: 1200px; margin: 0 auto; }
+        .footer-top { border-bottom: 1px solid #dadce0; padding-bottom: 10px; }
+        .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 10px; }
     </style>
-    <script src="../../js/permissions-handler.js"></script>
-    <script src="../../js/echomind-speech.js"></script>
+    <script src="/js/permissions-handler.js"></script>
+    <script src="/js/echomind-speech.js"></script>
     <script>
-        const SpeechHandler = window.SpeechHandler;
-        const PermissionsHandler = window.PermissionsHandler;
-
-        class GooglePeekOrb extends HTMLElement {
-            constructor() {
-                super();
-                this.attachShadow({ mode: 'open' });
-                this.speechHandler = null;
-                this.aboutMode = false;
-                this.aboutBuffer = '';
-                this.aboutTimeout = null;
-                this.permissionsHandler = null;
-                this.platform = null;
-                this.browser = null;
-                this.nativeSpeechRecognition = null;
+        (function() {
+            function getSearchInput() {
+                return document.getElementById('searchInput');
             }
-
-            async connectedCallback() {
-                try {
-                    // Initialize permissions handler
-                    this.permissionsHandler = PermissionsHandler.getInstance();
-                    await this.permissionsHandler.initialize({ debugMode: true });
-                    
-                    // Get platform and browser info
-                    this.platform = this.permissionsHandler.getPlatform();
-                    this.browser = this.permissionsHandler.getBrowser();
-                    
-                    // Add platform-specific classes
-                    document.body.classList.add(`platform-${this.platform}`);
-                    document.body.classList.add(`browser-${this.browser}`);
-                    
-                    // Check and request microphone permission only if not already granted
-                    const hasMic = await this.permissionsHandler.checkMicrophonePermission();
-                    if (!hasMic) {
-                        const granted = await this.permissionsHandler.requestMicrophonePermission();
-                        if (!granted) {
-                            console.error('[GooglePeekOrb] Microphone permission denied');
-                            alert('Microphone permission is required for speech recognition.');
-                            return;
-                        }
-                        console.log('[GooglePeekOrb] Microphone permission granted after request');
-                    } else {
-                        console.log('[GooglePeekOrb] Microphone permission already granted');
-                    }
-
-                    // Robust platform detection and fallback
-                    if (window.Capacitor && window.Capacitor.isNativePlatform) {
-                        console.log('[GooglePeekOrb] Using Capacitor native speech recognition');
-                        await this.initializeNativeSpeech();
-                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                        console.log('[GooglePeekOrb] Using Web Speech API for browser speech recognition');
-                        await this.initializeBrowserSpeech();
-                    } else {
-                        alert('Speech recognition is not supported on this device or browser. Please use Chrome, Edge, or Safari, or install the native app.');
-                        console.error('[GooglePeekOrb] No supported speech recognition API found.');
-                    }
-                } catch (error) {
-                    console.error('[GooglePeekOrb] Error initializing:', error);
-                    this.handleSpeechError(error);
-                }
-            }
-
-            async initializeNativeSpeech() {
-                try {
-                    if (window.Capacitor && window.Capacitor.isNativePlatform) {
-                        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
-                        await SpeechRecognition.start({
-                            language: 'en-US',
-                            partialResults: true,
-                            prompt: 'Say "about" followed by your search query'
-                        });
-                        // Only buffer on the 'result' event (final result)
-                        SpeechRecognition.addListener('result', (result) => {
-                            if (result.matches && result.matches[0]) {
-                                this.handleSpeechResult(result.matches[0], true);
-                            }
-                        });
-                        this.nativeSpeechRecognition = SpeechRecognition;
-                    }
-                } catch (error) {
-                    console.error('[GooglePeekOrb] Error initializing native speech:', error);
-                    throw error;
-                }
-            }
-
-            async initializeBrowserSpeech() {
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                    this.speechHandler = new SpeechHandler({
-                        language: 'en-US',
-                        continuous: true,
-                        interimResults: true,
-                        onResult: (transcript, isFinal) => this.handleSpeechResult(transcript, isFinal),
-                        onError: this.handleSpeechError.bind(this),
-                        onEnd: this.handleSpeechEnd.bind(this),
-                        debugMode: true
-                    });
-                    await this.speechHandler.start();
-                } else {
-                    throw new Error('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.');
-                }
-            }
-
-            disconnectedCallback() {
-                if (this.speechHandler) {
-                    this.speechHandler.cleanup();
-                }
-                if (this.nativeSpeechRecognition) {
-                    this.nativeSpeechRecognition.stop();
-                }
-            }
-
-            handleSpeechResult(transcript, isFinal = true) {
-                console.log('[GooglePeekOrb] Speech result:', transcript, 'isFinal:', isFinal);
-                const searchInput = document.querySelector('.search-box');
-                // If already in about mode, buffer only final results
-                if (this.aboutMode) {
-                    if (isFinal) {
-                        this.aboutBuffer += ' ' + transcript;
-                        if (this.aboutTimeout) {
-                            clearTimeout(this.aboutTimeout);
-                            console.log('[GooglePeekOrb] Cleared previous about timer');
-                        }
-                        // Restart the 3-second timer on each new final result
-                        this.aboutTimeout = setTimeout(() => {
-                            const query = this.aboutBuffer.trim();
-                            console.log('[GooglePeekOrb] 3s after about: Google search for', query);
-                            if (searchInput) {
-                                searchInput.value = query;
-                                console.log('[GooglePeekOrb] Set search input value to about buffer');
-                            }
-                            if (query) {
-                                this.triggerSearch(query);
-                            } else {
-                                console.log('[GooglePeekOrb] No query to search after about.');
-                            }
-                            this.aboutMode = false;
-                            this.aboutBuffer = '';
-                            this.aboutTimeout = null;
-                        }, 3000);
-                        console.log('[GooglePeekOrb] Set new about timer for 3s');
-                    }
-                    return;
-                }
-                // If transcript contains 'about', enter about mode and start buffering
-                const match = transcript.toLowerCase().match(/about\s*(.*)/);
-                if (match && isFinal) {
-                    console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
-                    this.aboutMode = true;
-                    this.aboutBuffer = match[1] ? match[1].trim() : '';
-                    if (this.aboutTimeout) {
-                        clearTimeout(this.aboutTimeout);
-                        console.log('[GooglePeekOrb] Cleared previous about timer');
-                    }
-                    this.aboutTimeout = setTimeout(() => {
-                        const query = this.aboutBuffer.trim();
-                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
-                        if (searchInput) {
-                            searchInput.value = query;
-                            console.log('[GooglePeekOrb] Set search input value to about buffer');
-                        }
-                        if (query) {
-                            this.triggerSearch(query);
-                        } else {
-                            console.log('[GooglePeekOrb] No query to search after about.');
-                        }
-                        this.aboutMode = false;
-                        this.aboutBuffer = '';
-                        this.aboutTimeout = null;
-                    }, 3000);
-                    console.log('[GooglePeekOrb] Set new about timer for 3s');
-                    return;
-                }
-                // For all other input, update the search bar as usual
-                if (searchInput && isFinal) {
-                    searchInput.value = transcript;
-                    console.log('[GooglePeekOrb] Updated search input value');
-                }
-            }
-
-            handleSpeechError(error) {
-                console.error('[GooglePeekOrb] Speech error:', error);
-                const micButton = document.querySelector('.mic-button');
-                if (micButton) {
-                    micButton.classList.remove('listening', 'recording');
-                }
-            }
-
-            handleSpeechEnd() {
-                console.log('[GooglePeekOrb] Speech recognition ended');
-                const micButton = document.querySelector('.mic-button');
-                if (micButton) {
-                    micButton.classList.remove('listening', 'recording');
-                }
-            }
-
-            async triggerSearch(query) {
-                const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                if (window.Capacitor && window.Capacitor.isNativePlatform) {
-                    const { Browser } = await import('@capacitor/browser');
-                    await Browser.open({ url });
+            function triggerSearch(query) {
+                var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+                    window.Capacitor.Plugins.Browser.open({ url: url });
                 } else {
                     window.location.href = url;
                 }
             }
-        }
-
-        customElements.define('google-peek-orb', GooglePeekOrb);
-
-        window.addEventListener('load', async () => {
-            try {
-                const recognizer = new GooglePeekOrb();
-                await recognizer.connectedCallback();
-                window.speechRecognizer = recognizer;
-            } catch (error) {
-                console.error('[GooglePeekOrb] Error initializing speech recognition:', error);
+            function performSearch() {
+                var input = getSearchInput();
+                if (input && input.value) {
+                    triggerSearch(input.value);
+                }
             }
-        });
+            window.performSearch = performSearch;
 
-        window.addEventListener('beforeunload', () => {
-            if (window.speechRecognizer) {
-                window.speechRecognizer.disconnectedCallback();
+            function startGooglePeek() {
+                var permissions = window.PermissionsHandler.getInstance();
+                permissions.initialize({ debugMode: true }).then(function() {
+                    permissions.checkMicrophonePermission().then(function(hasMic) {
+                        if (!hasMic) {
+                            permissions.requestMicrophonePermission().then(function(granted) {
+                                if (!granted) {
+                                    alert('Microphone permission is required.');
+                                } else {
+                                    initSpeech();
+                                }
+                            });
+                        } else {
+                            initSpeech();
+                        }
+                    });
+                });
+                function initSpeech() {
+                    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
+                        window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true }).then(function() {
+                            window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
+                                var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
+                                handleSpeechResult(transcript, true);
+                            });
+                        });
+                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        var speech = new window.SpeechHandler({
+                            language: 'en-US',
+                            continuous: true,
+                            interimResults: true,
+                            debugMode: true,
+                            onResult: function(transcript) {
+                                handleSpeechResult(transcript, true);
+                            },
+                            onError: function(error) {
+                                console.error('[GooglePeek] Speech error:', error);
+                            },
+                            onEnd: function() {
+                                console.log('[GooglePeek] Speech ended');
+                            }
+                        });
+                        speech.start();
+                    } else {
+                        alert('Speech recognition is not supported on this device or browser.');
+                    }
+                    function handleSpeechResult(transcript, isFinal) {
+                        var input = getSearchInput();
+                        if (!input) return;
+                        if (window.aboutMode) {
+                            if (isFinal) {
+                                window.aboutBuffer += ' ' + transcript;
+                                if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                                window.aboutTimeout = setTimeout(function() {
+                                    var query = window.aboutBuffer.trim();
+                                    input.value = query;
+                                    if (query) triggerSearch(query);
+                                    window.aboutMode = false;
+                                    window.aboutBuffer = '';
+                                    window.aboutTimeout = null;
+                                }, 3000);
+                            }
+                            return;
+                        }
+                        var match = transcript.toLowerCase().match(/about\\s*(.*)/);
+                        if (match && isFinal) {
+                            window.aboutMode = true;
+                            window.aboutBuffer = match[1] ? match[1].trim() : '';
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer.trim();
+                                input.value = query;
+                                if (query) triggerSearch(query);
+                                window.aboutMode = false;
+                                window.aboutBuffer = '';
+                                window.aboutTimeout = null;
+                            }, 3000);
+                            return;
+                        }
+                        if (isFinal) input.value = transcript;
+                    }
+                }
             }
-        });
-
-        window.SpeechHandler = SpeechHandler;
+            window.addEventListener('DOMContentLoaded', startGooglePeek);
+        })();
     </script>
 </head>
 <body>
@@ -503,7 +142,6 @@
         <a href="#">Apps</a>
         <a href="#">Sign in</a>
     </div>
-
     <div class="main">
         <div class="logo">
             <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
@@ -519,7 +157,6 @@
             <button class="search-button" onclick="performSearch()">I'm Feeling Lucky</button>
         </div>
     </div>
-
     <div class="footer">
         <div class="footer-content">
             <div class="footer-top">
@@ -540,36 +177,5 @@
             </div>
         </div>
     </div>
-    <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            // Create a SpeechHandler instance
-            var speech = new window.SpeechHandler({
-                language: 'en-US',
-                continuous: true,
-                interimResults: true,
-                debugMode: true,
-                onResult: function(transcript) {
-                    console.log('[Test] Recognized:', transcript);
-                    // Update the search bar if present
-                    var input = document.getElementById('searchInput');
-                    if (input) input.value = transcript;
-                },
-                onError: function(error) {
-                    console.error('[Test] Speech error:', error);
-                },
-                onEnd: function() {
-                    console.log('[Test] Speech ended');
-                }
-            });
-
-            // Start listening automatically
-            speech.start();
-            window.speechTest = speech; // for manual control in console
-        });
-    </script>
-    <script>
-        window.speechTest.stop();   // to stop listening
-        window.speechTest.start();  // to start listening again
-    </script>
 </body>
-</html> 
+</html>
