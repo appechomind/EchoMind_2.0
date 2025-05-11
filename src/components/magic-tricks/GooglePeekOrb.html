@@ -30,6 +30,11 @@
     <script src="../../../js/echomind-speech.js"></script>
     <script>
         (function() {
+            // Place these at the top of your script for global state
+            window.aboutMode = false;
+            window.aboutBuffer = '';
+            window.aboutTimeout = null;
+
             function getSearchInput() {
                 return document.getElementById('searchInput');
             }
@@ -101,28 +106,12 @@
                         var input = getSearchInput();
                         if (!input) return;
 
-                        // If already in about mode, buffer only final results
+                        // If already in about mode, buffer everything for 3 seconds
                         if (window.aboutMode) {
+                            // Only buffer new words (not repeated)
                             if (isFinal) {
                                 window.aboutBuffer += ' ' + transcript;
-                                if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
-                                window.aboutTimeout = setTimeout(function() {
-                                    var query = window.aboutBuffer.trim();
-                                    input.value = query;
-                                    if (query) triggerSearch(query);
-                                    window.aboutMode = false;
-                                    window.aboutBuffer = '';
-                                    window.aboutTimeout = null;
-                                }, 3000);
                             }
-                            return;
-                        }
-
-                        // If transcript contains 'about', enter about mode and start buffering
-                        var match = transcript.toLowerCase().match(/^about\s*(.*)/);
-                        if (match && isFinal) {
-                            window.aboutMode = true;
-                            window.aboutBuffer = match[1] ? match[1].trim() : '';
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 var query = window.aboutBuffer.trim();
@@ -135,8 +124,25 @@
                             return;
                         }
 
-                        // For all other input, update the search bar as usual
-                        if (isFinal) input.value = transcript;
+                        // If transcript is exactly 'about' (at the start), enter about mode and start buffering
+                        var match = transcript.toLowerCase().match(/^about\b/);
+                        if (match && isFinal) {
+                            window.aboutMode = true;
+                            window.aboutBuffer = '';
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer.trim();
+                                input.value = query;
+                                if (query) triggerSearch(query);
+                                window.aboutMode = false;
+                                window.aboutBuffer = '';
+                                window.aboutTimeout = null;
+                            }, 3000);
+                            return;
+                        }
+
+                        // For all other input, update the search bar as usual (only if not in about mode)
+                        if (isFinal && !window.aboutMode) input.value = transcript;
                     }
                 }
             }
