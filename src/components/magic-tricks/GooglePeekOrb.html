@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google</title>
     <style>
+        /* Base styles */
         body {
             margin: 0;
             padding: 0;
@@ -14,6 +15,121 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Platform-specific styles */
+        .platform-ios .search-box,
+        .platform-android .search-box {
+            font-size: 16px; /* Prevent zoom on focus in iOS */
+            padding: 12px 20px;
+            height: 48px; /* Larger touch target for mobile */
+        }
+
+        .platform-ios .search-button,
+        .platform-android .search-button {
+            min-height: 44px; /* iOS minimum touch target size */
+            padding: 0 20px;
+            font-size: 16px;
+        }
+
+        .platform-ios .mic-button,
+        .platform-android .mic-button {
+            width: 44px;
+            height: 44px;
+            padding: 10px;
+        }
+
+        /* Browser-specific styles */
+        .browser-safari .search-box {
+            -webkit-appearance: none;
+            border-radius: 24px;
+        }
+
+        .browser-firefox .search-box {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .main {
+                margin-top: 50px;
+                padding: 0 16px;
+            }
+
+            .search-container {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .buttons {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .search-button {
+                width: 100%;
+                margin: 0;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 12px;
+            }
+        }
+
+        /* High-DPI screen support */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .logo img {
+                image-rendering: -webkit-optimize-contrast;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #202124;
+                color: #fff;
+            }
+
+            .search-box {
+                background: #303134;
+                border-color: #5f6368;
+                color: #fff;
+            }
+
+            .search-box:hover,
+            .search-box:focus {
+                background: #303134;
+                border-color: #8ab4f8;
+            }
+
+            .search-button {
+                background: #303134;
+                border-color: #5f6368;
+                color: #e8eaed;
+            }
+
+            .search-button:hover {
+                background: #3c4043;
+                border-color: #8ab4f8;
+            }
+
+            .footer {
+                background: #171717;
+                color: #9aa0a6;
+            }
+
+            .footer a {
+                color: #9aa0a6;
+            }
+
+            .footer a:hover {
+                color: #e8eaed;
+            }
+        }
+
         .header {
             display: flex;
             justify-content: flex-end;
@@ -149,34 +265,10 @@
         .status-text {
             display: none;
         }
-        @media (max-width: 768px) {
-            .main {
-                margin-top: 50px;
-            }
-            .search-container {
-                padding: 0 10px;
-            }
-            .buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            .search-button {
-                width: 100%;
-                max-width: 200px;
-            }
-            .footer-bottom {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-            .footer-bottom div {
-                margin: 5px 0;
-            }
-        }
     </style>
     <script type="module">
         import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
-        import PermissionsHandler from './js/permissions-handler.js';
+        import PermissionsHandler from '/EchoMind_2.0/js/permissions-handler.js';
         import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
         class GooglePeekOrb extends HTMLElement {
@@ -188,6 +280,8 @@
                 this.aboutBuffer = '';
                 this.aboutTimeout = null;
                 this.permissionsHandler = null;
+                this.platform = null;
+                this.browser = null;
             }
 
             async connectedCallback() {
@@ -195,6 +289,14 @@
                     // Initialize permissions handler
                     this.permissionsHandler = PermissionsHandler.getInstance();
                     await this.permissionsHandler.initialize({ debugMode: true });
+                    
+                    // Get platform and browser info
+                    this.platform = this.permissionsHandler.getPlatform();
+                    this.browser = this.permissionsHandler.getBrowser();
+                    
+                    // Add platform-specific classes
+                    document.body.classList.add(`platform-${this.platform}`);
+                    document.body.classList.add(`browser-${this.browser}`);
                     
                     // Check browser support
                     const hasMic = await this.permissionsHandler.checkMicrophonePermission();
@@ -204,40 +306,14 @@
                             throw new Error('Microphone permission denied');
                         }
                     }
-                    // Use native speech recognition if on a native platform
-                    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.getPlatform() !== 'web') {
-                        const nativePerm = await SpeechRecognition.requestPermission();
-                        if (nativePerm) {
-                            SpeechRecognition.start({
-                                language: 'en-US',
-                                partialResults: true
-                            })
-                            .addListener('partialResults', (result) => {
-                                if (result.matches && result.matches[0]) {
-                                    this.handleSpeechResult(result.matches[0]);
-                                }
-                            })
-                            .addListener('result', (result) => {
-                                if (result.matches && result.matches[0]) {
-                                    this.handleSpeechResult(result.matches[0]);
-                                }
-                            });
-                        }
-                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                        // Use browser speech recognition
-                        this.speechHandler = new SpeechHandler({
-                            language: 'en-US',
-                            continuous: true,
-                            interimResults: true,
-                            onResult: this.handleSpeechResult.bind(this),
-                            onError: this.handleSpeechError.bind(this),
-                            onEnd: this.handleSpeechEnd.bind(this),
-                            debugMode: true
-                        });
-                        await this.speechHandler.start();
+
+                    // Initialize speech recognition based on platform
+                    if (this.platform === 'ios' || this.platform === 'android') {
+                        // Use native speech recognition on mobile
+                        await this.initializeNativeSpeech();
                     } else {
-                        alert('Your browser does not support speech recognition. Please use Chrome or Edge on desktop or Android.');
-                        return;
+                        // Use browser speech recognition on desktop
+                        await this.initializeBrowserSpeech();
                     }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing:', error);
@@ -245,9 +321,55 @@
                 }
             }
 
+            async initializeNativeSpeech() {
+                try {
+                    const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+                    await SpeechRecognition.start({
+                        language: 'en-US',
+                        partialResults: true,
+                        prompt: 'Say "about" followed by your search query'
+                    });
+
+                    SpeechRecognition.addListener('partialResults', (result) => {
+                        if (result.matches && result.matches[0]) {
+                            this.handleSpeechResult(result.matches[0]);
+                        }
+                    });
+
+                    SpeechRecognition.addListener('result', (result) => {
+                        if (result.matches && result.matches[0]) {
+                            this.handleSpeechResult(result.matches[0]);
+                        }
+                    });
+                } catch (error) {
+                    console.error('[GooglePeekOrb] Error initializing native speech:', error);
+                    throw error;
+                }
+            }
+
+            async initializeBrowserSpeech() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    this.speechHandler = new SpeechHandler({
+                        language: 'en-US',
+                        continuous: true,
+                        interimResults: true,
+                        onResult: this.handleSpeechResult.bind(this),
+                        onError: this.handleSpeechError.bind(this),
+                        onEnd: this.handleSpeechEnd.bind(this),
+                        debugMode: true
+                    });
+                    await this.speechHandler.start();
+                } else {
+                    throw new Error('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.');
+                }
+            }
+
             disconnectedCallback() {
                 if (this.speechHandler) {
                     this.speechHandler.cleanup();
+                }
+                if (this.platform === 'ios' || this.platform === 'android') {
+                    SpeechRecognition.stop();
                 }
             }
 
