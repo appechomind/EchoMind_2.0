@@ -1,16 +1,8 @@
 /**
  * EchoMind Permissions Handler
- * 
- * This module handles requesting and managing permissions for browser features
- * such as microphone access, camera access, etc.
+ * Centralized system for managing permissions across all pages
  */
 
-// Create namespace if it doesn't exist
-if (typeof window.EchoMind === 'undefined') {
-    window.EchoMind = {};
-}
-
-// Permissions Handler Module
 class PermissionsHandler {
     constructor() {
         if (PermissionsHandler.instance) {
@@ -23,6 +15,22 @@ class PermissionsHandler {
         this.debugMode = false;
         this.initialized = false;
         this.permissionPromises = new Map();
+        this.platform = {
+            isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+            isAndroid: /Android/.test(navigator.userAgent),
+            isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        };
+        this.eventHandlers = {
+            onPermissionChange: [],
+            onError: []
+        };
+    }
+
+    static getInstance() {
+        if (!PermissionsHandler.instance) {
+            PermissionsHandler.instance = new PermissionsHandler();
+        }
+        return PermissionsHandler.instance;
     }
 
     async initialize(options = {}) {
@@ -45,168 +53,74 @@ class PermissionsHandler {
             this.initialized = true;
             
             if (this.debugMode) {
-                console.log('Permissions handler initialized');
-                console.log('Microphone permission:', this.micPermission);
-                console.log('Camera permission:', this.cameraPermission);
+                console.log('[EchoMind Permissions] Handler initialized');
+                console.log('[EchoMind Permissions] Microphone permission:', this.micPermission);
+                console.log('[EchoMind Permissions] Camera permission:', this.cameraPermission);
             }
         } catch (error) {
-            console.error('Error initializing permissions handler:', error);
+            console.error('[EchoMind Permissions] Error initializing:', error);
+            this.emit('error', error);
             throw error;
         }
     }
 
     async checkMicrophonePermission() {
+        if (!navigator.permissions) {
+            return false;
+        }
         try {
-            // Check if we already have a pending request
-            if (this.permissionPromises.has('microphone')) {
-                return this.permissionPromises.get('microphone');
-            }
-
-            // Create new permission check promise
-            const promise = (async () => {
-                try {
-                    const result = await navigator.permissions.query({ name: 'microphone' });
-                    this.micPermission = result.state;
-                    
-                    result.onchange = () => {
-                        this.micPermission = result.state;
-                        this.savePermissionStates();
-                        if (this.debugMode) {
-                            console.log('Microphone permission changed:', result.state);
-                        }
-                    };
-                    
-                    return result.state === 'granted';
-                } catch (error) {
-                    console.error('Error checking microphone permission:', error);
-                    return false;
-                }
-            })();
-
-            this.permissionPromises.set('microphone', promise);
-            return promise;
+            const result = await navigator.permissions.query({ name: 'microphone' });
+            this.micPermission = result.state;
+            this.emit('permissionChange', { type: 'microphone', state: result.state });
+            return result.state === 'granted';
         } catch (error) {
-            console.error('Error in checkMicrophonePermission:', error);
+            console.error('[EchoMind Permissions] Error checking microphone permission:', error);
             return false;
         }
     }
 
     async requestMicrophonePermission() {
         try {
-            // Check if we already have a pending request
-            if (this.permissionPromises.has('microphone')) {
-                return this.permissionPromises.get('microphone');
-            }
-
-            // Create new permission request promise
-            const promise = (async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    stream.getTracks().forEach(track => track.stop());
-                    this.micPermission = 'granted';
-                    this.savePermissionStates();
-                    if (this.debugMode) {
-                        console.log('Microphone permission granted');
-                    }
-                    return true;
-                } catch (error) {
-                    console.error('Error requesting microphone permission:', error);
-                    this.micPermission = 'denied';
-                    this.savePermissionStates();
-                    return false;
-                }
-            })();
-
-            this.permissionPromises.set('microphone', promise);
-            return promise;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            this.micPermission = 'granted';
+            localStorage.setItem('micPermission', 'granted');
+            this.emit('permissionChange', { type: 'microphone', state: 'granted' });
+            return true;
         } catch (error) {
-            console.error('Error in requestMicrophonePermission:', error);
+            console.error('[EchoMind Permissions] Error requesting microphone permission:', error);
+            this.emit('error', error);
             return false;
         }
     }
 
     async checkCameraPermission() {
+        if (!navigator.permissions) {
+            return false;
+        }
         try {
-            // Check if we already have a pending request
-            if (this.permissionPromises.has('camera')) {
-                return this.permissionPromises.get('camera');
-            }
-
-            // Create new permission check promise
-            const promise = (async () => {
-                try {
-                    const result = await navigator.permissions.query({ name: 'camera' });
-                    this.cameraPermission = result.state;
-                    
-                    result.onchange = () => {
-                        this.cameraPermission = result.state;
-                        this.savePermissionStates();
-                        if (this.debugMode) {
-                            console.log('Camera permission changed:', result.state);
-                        }
-                    };
-                    
-                    return result.state === 'granted';
-                } catch (error) {
-                    console.error('Error checking camera permission:', error);
-                    return false;
-                }
-            })();
-
-            this.permissionPromises.set('camera', promise);
-            return promise;
+            const result = await navigator.permissions.query({ name: 'camera' });
+            this.cameraPermission = result.state;
+            this.emit('permissionChange', { type: 'camera', state: result.state });
+            return result.state === 'granted';
         } catch (error) {
-            console.error('Error in checkCameraPermission:', error);
+            console.error('[EchoMind Permissions] Error checking camera permission:', error);
             return false;
         }
     }
 
     async requestCameraPermission() {
         try {
-            // Check if we already have a pending request
-            if (this.permissionPromises.has('camera')) {
-                return this.permissionPromises.get('camera');
-            }
-
-            // Create new permission request promise
-            const promise = (async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    stream.getTracks().forEach(track => track.stop());
-                    this.cameraPermission = 'granted';
-                    this.savePermissionStates();
-                    if (this.debugMode) {
-                        console.log('Camera permission granted');
-                    }
-                    return true;
-                } catch (error) {
-                    console.error('Error requesting camera permission:', error);
-                    this.cameraPermission = 'denied';
-                    this.savePermissionStates();
-                    return false;
-                }
-            })();
-
-            this.permissionPromises.set('camera', promise);
-            return promise;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+            this.cameraPermission = 'granted';
+            localStorage.setItem('cameraPermission', 'granted');
+            this.emit('permissionChange', { type: 'camera', state: 'granted' });
+            return true;
         } catch (error) {
-            console.error('Error in requestCameraPermission:', error);
+            console.error('[EchoMind Permissions] Error requesting camera permission:', error);
+            this.emit('error', error);
             return false;
-        }
-    }
-
-    savePermissionStates() {
-        try {
-            localStorage.setItem('micPermission', this.micPermission);
-            localStorage.setItem('cameraPermission', this.cameraPermission);
-            if (this.debugMode) {
-                console.log('Permission states saved:', {
-                    mic: this.micPermission,
-                    camera: this.cameraPermission
-                });
-            }
-        } catch (error) {
-            console.error('Error saving permission states:', error);
         }
     }
 
@@ -215,20 +129,41 @@ class PermissionsHandler {
             this.micPermission = localStorage.getItem('micPermission');
             this.cameraPermission = localStorage.getItem('cameraPermission');
             if (this.debugMode) {
-                console.log('Permission states loaded:', {
+                console.log('[EchoMind Permissions] States loaded:', {
                     mic: this.micPermission,
                     camera: this.cameraPermission
                 });
             }
         } catch (error) {
-            console.error('Error loading permission states:', error);
+            console.error('[EchoMind Permissions] Error loading states:', error);
+        }
+    }
+
+    on(event, handler) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event].push(handler);
+        }
+    }
+
+    off(event, handler) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
+        }
+    }
+
+    emit(event, data) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event].forEach(handler => {
+                try {
+                    handler(data);
+                } catch (e) {
+                    console.error(`[EchoMind Permissions] Error in ${event} handler:`, e);
+                }
+            });
         }
     }
 }
 
 // Create and export a single instance
-const permissions = new PermissionsHandler();
-export { permissions };
-
-// Make it available globally for non-module scripts
-window.permissions = permissions; 
+const permissions = PermissionsHandler.getInstance();
+export default PermissionsHandler; 
