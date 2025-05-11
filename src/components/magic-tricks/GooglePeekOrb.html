@@ -107,14 +107,11 @@
                         var input = getSearchInput();
                         if (!input) return;
 
-                        // If already in about mode, buffer everything for 3 seconds (do not update search bar)
+                        // If already in about mode, buffer ONLY the first final result after "about"
                         if (window.aboutMode) {
-                            if (isFinal && transcript.toLowerCase().trim() !== "about") {
-                                // Only buffer if not a repeat of the last phrase
-                                if (transcript.trim() !== window.lastBufferedPhrase) {
-                                    window.aboutBuffer += ' ' + transcript;
-                                    window.lastBufferedPhrase = transcript.trim();
-                                }
+                            if (isFinal && !window.aboutBuffer) {
+                                // Only buffer the first final result after "about"
+                                window.aboutBuffer = transcript.trim();
                             }
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
@@ -127,7 +124,6 @@
                                 window.aboutMode = false;
                                 window.aboutBuffer = '';
                                 window.aboutTimeout = null;
-                                window.lastBufferedPhrase = '';
                             }, 3000);
                             return;
                         }
@@ -137,7 +133,6 @@
                         if (match && isFinal) {
                             window.aboutMode = true;
                             window.aboutBuffer = match[1] ? match[1].trim() : '';
-                            window.lastBufferedPhrase = window.aboutBuffer;
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 // Remove all instances of 'about' from the buffer
@@ -149,7 +144,6 @@
                                 window.aboutMode = false;
                                 window.aboutBuffer = '';
                                 window.aboutTimeout = null;
-                                window.lastBufferedPhrase = '';
                             }, 3000);
                             return;
                         }
