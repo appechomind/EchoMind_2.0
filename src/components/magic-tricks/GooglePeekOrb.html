@@ -113,11 +113,11 @@
                             // Only buffer new words (avoid duplicates/overlap)
                             var spoken = transcript.trim();
                             // Remove any leading 'about' if present
-                            spoken = spoken.replace(/^about\\b\\s*/i, '');
+                            spoken = spoken.replace(/^about\b\s*/i, '');
                             // Only add if it's not a repeat of the last transcript
                             if (spoken && spoken !== window.aboutLastTranscript) {
                                 // Split into words, add only new ones
-                                var newWords = spoken.split(/\\s+/);
+                                var newWords = spoken.split(/\s+/);
                                 for (var i = 0; i < newWords.length; i++) {
                                     var word = newWords[i];
                                     if (word && window.aboutBuffer.indexOf(word) === -1) {
@@ -129,7 +129,7 @@
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 // Join buffer, remove all instances of 'about', and search
-                                var query = window.aboutBuffer.join(' ').replace(/\\babout\\b/gi, '').replace(/\\s+/g, ' ').trim();
+                                var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
                                 if (query) {
                                     input.value = query;
                                     triggerSearch(query);
@@ -143,19 +143,19 @@
                         }
 
                         // Only trigger about mode if "about" is the first word (ignore everything before)
-                        var match = transcript.toLowerCase().match(/^about\\s*(.*)/);
+                        var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
                             window.aboutBuffer = [];
                             window.aboutLastTranscript = '';
-                            var firstWords = match[1] ? match[1].trim().split(/\\s+/) : [];
+                            var firstWords = match[1] ? match[1].trim().split(/\s+/) : [];
                             for (var j = 0; j < firstWords.length; j++) {
                                 var w = firstWords[j];
                                 if (w) window.aboutBuffer.push(w);
                             }
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
-                                var query = window.aboutBuffer.join(' ').replace(/\\babout\\b/gi, '').replace(/\\s+/g, ' ').trim();
+                                var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
                                 if (query) {
                                     input.value = query;
                                     triggerSearch(query);
