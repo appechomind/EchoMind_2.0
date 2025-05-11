@@ -97,6 +97,8 @@
                     function handleSpeechResult(transcript, isFinal) {
                         var input = getSearchInput();
                         if (!input) return;
+
+                        // If already in about mode, buffer only final results
                         if (window.aboutMode) {
                             if (isFinal) {
                                 window.aboutBuffer += ' ' + transcript;
@@ -112,7 +114,9 @@
                             }
                             return;
                         }
-                        var match = transcript.toLowerCase().match(/about\\s*(.*)/);
+
+                        // If transcript contains 'about', enter about mode and start buffering
+                        var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
                             window.aboutBuffer = match[1] ? match[1].trim() : '';
@@ -127,6 +131,8 @@
                             }, 3000);
                             return;
                         }
+
+                        // For all other input, update the search bar as usual
                         if (isFinal) input.value = transcript;
                     }
                 }
