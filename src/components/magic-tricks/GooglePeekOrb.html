@@ -331,19 +331,12 @@
                             prompt: 'Say "about" followed by your search query'
                         });
 
-                        SpeechRecognition.addListener('partialResults', (result) => {
-                            if (result.matches && result.matches[0]) {
-                                this.handleSpeechResult(result.matches[0]);
-                            }
-                        });
-
+                        // Only buffer on the 'result' event (final result)
                         SpeechRecognition.addListener('result', (result) => {
                             if (result.matches && result.matches[0]) {
-                                this.handleSpeechResult(result.matches[0]);
+                                this.handleSpeechResult(result.matches[0], true);
                             }
                         });
-                        // Save reference for cleanup
-                        this.nativeSpeechRecognition = SpeechRecognition;
                     }
                 } catch (error) {
                     console.error('[GooglePeekOrb] Error initializing native speech:', error);
@@ -357,7 +350,7 @@
                         language: 'en-US',
                         continuous: true,
                         interimResults: true,
-                        onResult: this.handleSpeechResult.bind(this),
+                        onResult: (transcript, isFinal) => this.handleSpeechResult(transcript, isFinal),
                         onError: this.handleSpeechError.bind(this),
                         onEnd: this.handleSpeechEnd.bind(this),
                         debugMode: true
@@ -377,39 +370,41 @@
                 }
             }
 
-            handleSpeechResult(transcript) {
-                console.log('[GooglePeekOrb] Speech result:', transcript);
+            handleSpeechResult(transcript, isFinal = true) {
+                console.log('[GooglePeekOrb] Speech result:', transcript, 'isFinal:', isFinal);
                 const searchInput = document.querySelector('.search-box');
-                // If already in about mode, buffer all speech after 'about'
+                // If already in about mode, buffer only final results
                 if (this.aboutMode) {
-                    this.aboutBuffer += ' ' + transcript;
-                    if (this.aboutTimeout) {
-                        clearTimeout(this.aboutTimeout);
-                        console.log('[GooglePeekOrb] Cleared previous about timer');
+                    if (isFinal) {
+                        this.aboutBuffer += ' ' + transcript;
+                        if (this.aboutTimeout) {
+                            clearTimeout(this.aboutTimeout);
+                            console.log('[GooglePeekOrb] Cleared previous about timer');
+                        }
+                        // Restart the 3-second timer on each new final result
+                        this.aboutTimeout = setTimeout(() => {
+                            const query = this.aboutBuffer.trim();
+                            console.log('[GooglePeekOrb] 3s after about: Google search for', query);
+                            if (searchInput) {
+                                searchInput.value = query;
+                                console.log('[GooglePeekOrb] Set search input value to about buffer');
+                            }
+                            if (query) {
+                                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                            } else {
+                                console.log('[GooglePeekOrb] No query to search after about.');
+                            }
+                            this.aboutMode = false;
+                            this.aboutBuffer = '';
+                            this.aboutTimeout = null;
+                        }, 3000);
+                        console.log('[GooglePeekOrb] Set new about timer for 3s');
                     }
-                    // Restart the 3-second timer on each new result
-                    this.aboutTimeout = setTimeout(() => {
-                        const query = this.aboutBuffer.trim();
-                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
-                        if (searchInput) {
-                            searchInput.value = query;
-                            console.log('[GooglePeekOrb] Set search input value to about buffer');
-                        }
-                        if (query) {
-                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                        } else {
-                            console.log('[GooglePeekOrb] No query to search after about.');
-                        }
-                        this.aboutMode = false;
-                        this.aboutBuffer = '';
-                        this.aboutTimeout = null;
-                    }, 3000);
-                    console.log('[GooglePeekOrb] Set new about timer for 3s');
                     return;
                 }
                 // If transcript contains 'about', enter about mode and start buffering
                 const match = transcript.toLowerCase().match(/about\s*(.*)/);
-                if (match) {
+                if (match && isFinal) {
                     console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
                     this.aboutMode = true;
                     this.aboutBuffer = match[1] ? match[1].trim() : '';
@@ -437,7 +432,7 @@
                     return;
                 }
                 // For all other input, update the search bar as usual
-                if (searchInput) {
+                if (searchInput && isFinal) {
                     searchInput.value = transcript;
                     console.log('[GooglePeekOrb] Updated search input value');
                 }
