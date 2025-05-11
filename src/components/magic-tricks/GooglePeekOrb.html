@@ -108,24 +108,36 @@
                         var input = getSearchInput();
                         if (!input) return;
 
+                        // If already in about mode, always replace buffer with latest phrase after "about"
+                        if (window.aboutMode) {
+                            // Remove any leading 'about'
+                            var spoken = transcript.trim().replace(/^about\b\s*/i, '');
+                            // Always use the latest phrase (not accumulate)
+                            window.aboutBuffer = [spoken];
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
+                                window.aboutMode = false;
+                                window.aboutBuffer = [];
+                                window.aboutTimeout = null;
+                                window.aboutLastTranscript = '';
+                            }, 3000);
+                            return;
+                        }
+
                         // Only trigger about mode if "about" is the first word (ignore everything before)
                         var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
-                            window.aboutBuffer = [];
+                            window.aboutBuffer = [match[1] ? match[1].trim() : ''];
                             window.aboutLastTranscript = '';
-                            var firstWords = match[1] ? match[1].trim().split(/\s+/) : [];
-                            for (var j = 0; j < firstWords.length; j++) {
-                                var w = firstWords[j];
-                                if (w) window.aboutBuffer.push(w);
-                            }
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
-                                // Deduplicate consecutive repeated words
-                                var deduped = window.aboutBuffer.filter(function(word, idx, arr) {
-                                    return idx === 0 || word !== arr[idx - 1];
-                                });
-                                var query = deduped.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
+                                var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
                                 if (query) {
                                     input.value = query;
                                     triggerSearch(query);
@@ -138,44 +150,7 @@
                             return;
                         }
 
-                        // If already in about mode, buffer all new words for 3 seconds
-                        if (window.aboutMode) {
-                            // Only buffer new words (avoid duplicates/overlap)
-                            var spoken = transcript.trim();
-                            // Remove any leading 'about' if present
-                            spoken = spoken.replace(/^about\b\s*/i, '');
-                            // Only add if it's not a repeat of the last transcript
-                            if (spoken && spoken !== window.aboutLastTranscript) {
-                                // Split into words, add only new ones
-                                var newWords = spoken.split(/\s+/);
-                                for (var i = 0; i < newWords.length; i++) {
-                                    var word = newWords[i];
-                                    if (word && window.aboutBuffer.indexOf(word) === -1) {
-                                        window.aboutBuffer.push(word);
-                                    }
-                                }
-                                window.aboutLastTranscript = spoken;
-                            }
-                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
-                            window.aboutTimeout = setTimeout(function() {
-                                // Deduplicate consecutive repeated words
-                                var deduped = window.aboutBuffer.filter(function(word, idx, arr) {
-                                    return idx === 0 || word !== arr[idx - 1];
-                                });
-                                var query = deduped.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                                if (query) {
-                                    input.value = query;
-                                    triggerSearch(query);
-                                }
-                                window.aboutMode = false;
-                                window.aboutBuffer = [];
-                                window.aboutTimeout = null;
-                                window.aboutLastTranscript = '';
-                            }, 3000);
-                            return;
-                        }
-
-                        // For all other input, do nothing (no search bar update, no search)
+                        // For all other input, do nothing
                     }
                 }
             }
