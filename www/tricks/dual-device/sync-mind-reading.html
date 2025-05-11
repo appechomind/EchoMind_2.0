@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Reader - EchoMind 2.0</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            overflow: hidden;
+        }
+
+        .card-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 80%;
+            max-height: 80%;
+            display: none;
+            z-index: 1000;
+        }
+
+        .card-display.visible {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .card-display img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #a96eff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .status-indicator.visible {
+            display: block;
+        }
+
+        .status-indicator.success {
+            color: #4CAF50;
+        }
+
+        .status-indicator.error {
+            color: #f44336;
+        }
+
+        .status-indicator.waiting {
+            color: #FFC107;
+        }
+    </style>
+    <!-- Scripts -->
+    <script type="module">
+        import { permissions } from '../../js/permissions-handler.js';
+        window.permissions = permissions;
+        permissions.init({ debugMode: true });
+    </script>
+    <script src="../../js/echomind-speech.js" defer></script>
+    <script src="../../js/echomind-commands.js" defer></script>
+</head>
+<body>
+    <div class="status-indicator" id="statusIndicator"></div>
+    <div class="card-display" id="cardDisplay">
+        <img src="" alt="Your card will appear here">
+    </div>
+
+    <script>
+        const statusIndicator = document.getElementById('statusIndicator');
+        const cardDisplay = document.getElementById('cardDisplay');
+        let speechHandler = null;
+
+        // Card mapping for speech recognition
+        const cardMapping = {
+            'ace': 'A',
+            'two': '2',
+            'three': '3',
+            'four': '4',
+            'five': '5',
+            'six': '6',
+            'seven': '7',
+            'eight': '8',
+            'nine': '9',
+            'ten': '10',
+            'jack': 'J',
+            'queen': 'Q',
+            'king': 'K',
+            'hearts': 'H',
+            'diamonds': 'D',
+            'clubs': 'C',
+            'spades': 'S'
+        };
+
+        // Initialize speech handler
+        function initializeSpeechHandler() {
+            speechHandler = new SpeechHandler({
+                continuous: true,
+                onResult: handleSpeechResult,
+                onError: (error) => {
+                    console.error('Speech error:', error);
+                    showStatus('Error: ' + error.error, 'error');
+                }
+            });
+        }
+
+        function handleSpeechResult(transcript) {
+            const normalizedTranscript = normalizeTranscript(transcript);
+            if (normalizedTranscript) {
+                const cardImage = `../../images/cards/${normalizedTranscript}.png`;
+                cardDisplay.querySelector('img').src = cardImage;
+                cardDisplay.classList.add('visible');
+                
+                setTimeout(() => {
+                    cardDisplay.classList.remove('visible');
+                }, 3000);
+            }
+        }
+
+        function normalizeTranscript(transcript) {
+            const words = transcript.toLowerCase().split(' ');
+            let rank = '';
+            let suit = '';
+
+            // Find rank
+            for (const [key, value] of Object.entries(cardMapping)) {
+                if (words.includes(key) && !rank) {
+                    rank = value;
+                    break;
+                }
+            }
+
+            // Find suit
+            for (const [key, value] of Object.entries(cardMapping)) {
+                if (words.includes(key) && !suit && ['H', 'D', 'C', 'S'].includes(value)) {
+                    suit = value;
+                    break;
+                }
+            }
+
+            if (rank && suit) {
+                return `${rank}${suit}`;
+            }
+            return null;
+        }
+
+        function showStatus(message, type = '') {
+            statusIndicator.textContent = message;
+            statusIndicator.className = 'status-indicator visible';
+            if (type) {
+                statusIndicator.classList.add(type);
+            }
+        }
+
+        function hideStatus() {
+            statusIndicator.className = 'status-indicator';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const hasPermission = await EchoMind.PermissionsHandler.requestMicrophonePermission();
+                if (hasPermission) {
+                    initializeSpeechHandler();
+                    speechHandler.start();
+                    showStatus('Mind reading activated', 'success');
+                    setTimeout(hideStatus, 2000);
+                } else {
+                    showStatus('Microphone access denied', 'error');
+                }
+            } catch (error) {
+                console.error('Error initializing:', error);
+                showStatus('Error: ' + error.message, 'error');
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (speechHandler) {
+                speechHandler.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: arial, sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            display: flex;
+            justify-content: flex-end;
+            padding: 15px;
+            font-size: 13px;
+            align-items: center;
+        }
+        .header a {
+            color: #000;
+            text-decoration: none;
+            margin: 0 10px;
+            white-space: nowrap;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 100px;
+            flex: 1;
+            padding: 0 20px;
+        }
+        .logo {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .logo img {
+            max-width: 100%;
+            height: auto;
+        }
+        .search-container {
+            width: 100%;
+            max-width: 584px;
+            position: relative;
+            margin: 0 auto;
+        }
+        .search-box {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            padding: 0 20px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:hover, .search-box:focus {
+            box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+            border-color: rgba(223,225,229,0);
+        }
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .search-button {
+            background-color: #f8f9fa;
+            border: 1px solid #f8f9fa;
+            border-radius: 4px;
+            color: #3c4043;
+            font-size: 14px;
+            margin: 11px 4px;
+            padding: 0 16px;
+            height: 36px;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        .search-button:hover {
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            border: 1px solid #dadce0;
+            color: #202124;
+        }
+        .footer {
+            background: #f2f2f2;
+            color: #70757a;
+            font-size: 14px;
+            padding: 15px 0;
+            margin-top: auto;
+        }
+        .footer a {
+            color: #70757a;
+            text-decoration: none;
+            margin: 0 10px;
+            white-space: nowrap;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .footer-content {
+            padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .footer-top {
+            border-bottom: 1px solid #dadce0;
+            padding-bottom: 10px;
+        }
+        .footer-bottom {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .mic-button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mic-button img {
+            width: 24px;
+            height: 24px;
+            transition: all 0.3s ease;
+        }
+        .mic-button.listening img {
+            opacity: 0.7;
+        }
+        .mic-button.recording img {
+            opacity: 0.7;
+            filter: hue-rotate(120deg);
+        }
+        .status-text {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .main {
+                margin-top: 50px;
+            }
+            .search-container {
+                padding: 0 10px;
+            }
+            .buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .search-button {
+                width: 100%;
+                max-width: 200px;
+            }
+            .footer-bottom {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .footer-bottom div {
+                margin: 5px 0;
+            }
+        }
+    </style>
+    <script type="module">
+        import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
+        import { permissions } from '/EchoMind_2.0/js/permissions-handler.js';
+
+        class GooglePeekOrb extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.speechHandler = null;
+                this.aboutMode = false;
+                this.aboutBuffer = '';
+                this.aboutTimeout = null;
+            }
+
+            async connectedCallback() {
+                try {
+                    // Check browser support
+                    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                        alert('Your browser does not support speech recognition. Please use Chrome or Edge on desktop or Android.');
+                        return;
+                    }
+                    await permissions.initialize({ debugMode: true });
+                    const hasPermission = await permissions.checkMicrophonePermission();
+                    if (!hasPermission) {
+                        const granted = await permissions.requestMicrophonePermission();
+                        if (!granted) {
+                            throw new Error('Microphone permission denied');
+                        }
+                    }
+                    this.speechHandler = new SpeechHandler({
+                        language: 'en-US',
+                        continuous: true,
+                        interimResults: true,
+                        onResult: this.handleSpeechResult.bind(this),
+                        onError: this.handleSpeechError.bind(this),
+                        onEnd: this.handleSpeechEnd.bind(this),
+                        debugMode: true
+                    });
+                    await this.speechHandler.start();
+                } catch (error) {
+                    console.error('[GooglePeekOrb] Error initializing:', error);
+                    this.handleSpeechError(error);
+                }
+            }
+
+            disconnectedCallback() {
+                if (this.speechHandler) {
+                    this.speechHandler.cleanup();
+                }
+            }
+
+            handleSpeechResult(transcript) {
+                console.log('[GooglePeekOrb] Speech result:', transcript);
+                const searchInput = document.querySelector('.search-box');
+                if (searchInput) {
+                    searchInput.value = transcript;
+                    console.log('[GooglePeekOrb] Updated search input value');
+                }
+                // If already in about mode, buffer the transcript
+                if (this.aboutMode) {
+                    console.log('[GooglePeekOrb] In about mode. Buffer before:', this.aboutBuffer);
+                    this.aboutBuffer += ' ' + transcript;
+                    console.log('[GooglePeekOrb] Buffer after:', this.aboutBuffer);
+                    if (this.aboutTimeout) {
+                        clearTimeout(this.aboutTimeout);
+                        console.log('[GooglePeekOrb] Cleared previous about timer');
+                    }
+                    // Restart the 3-second timer on each new result
+                    this.aboutTimeout = setTimeout(() => {
+                        const query = this.aboutBuffer.trim();
+                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
+                        if (query) {
+                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                        } else {
+                            console.log('[GooglePeekOrb] No query to search after about.');
+                        }
+                        this.aboutMode = false;
+                        this.aboutBuffer = '';
+                        this.aboutTimeout = null;
+                    }, 3000);
+                    console.log('[GooglePeekOrb] Set new about timer for 3s');
+                    return;
+                }
+                // If transcript contains 'about', enter about mode and start buffering
+                const match = transcript.toLowerCase().match(/about\s*(.*)/);
+                if (match) {
+                    console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
+                    this.aboutMode = true;
+                    this.aboutBuffer = match[1] ? match[1].trim() : '';
+                    console.log('[GooglePeekOrb] Initial about buffer:', this.aboutBuffer);
+                    if (this.aboutTimeout) {
+                        clearTimeout(this.aboutTimeout);
+                        console.log('[GooglePeekOrb] Cleared previous about timer');
+                    }
+                    this.aboutTimeout = setTimeout(() => {
+                        const query = this.aboutBuffer.trim();
+                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
+                        if (query) {
+                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                        } else {
+                            console.log('[GooglePeekOrb] No query to search after about.');
+                        }
+                        this.aboutMode = false;
+                        this.aboutBuffer = '';
+                        this.aboutTimeout = null;
+                    }, 3000);
+                    console.log('[GooglePeekOrb] Set new about timer for 3s');
+                }
+            }
+
+            handleSpeechError(error) {
+                console.error('[GooglePeekOrb] Speech error:', error);
+                const micButton = document.querySelector('.mic-button');
+                if (micButton) {
+                    micButton.classList.remove('listening', 'recording');
+                }
+            }
+
+            handleSpeechEnd() {
+                console.log('[GooglePeekOrb] Speech recognition ended');
+                const micButton = document.querySelector('.mic-button');
+                if (micButton) {
+                    micButton.classList.remove('listening', 'recording');
+                }
+            }
+        }
+
+        customElements.define('google-peek-orb', GooglePeekOrb);
+
+        window.addEventListener('load', async () => {
+            try {
+                const recognizer = new GooglePeekOrb();
+                await recognizer.connectedCallback();
+                window.speechRecognizer = recognizer;
+            } catch (error) {
+                console.error('[GooglePeekOrb] Error initializing speech recognition:', error);
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (window.speechRecognizer) {
+                window.speechRecognizer.disconnectedCallback();
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="header">
+        <a href="#">Gmail</a>
+        <a href="#">Images</a>
+        <a href="#">Apps</a>
+        <a href="#">Sign in</a>
+    </div>
+
+    <div class="main">
+        <div class="logo">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-box" id="search-input">
+            <button class="mic-button" id="mic-button">
+                <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" alt="Voice Search">
+            </button>
+        </div>
+        <div class="buttons">
+            <button class="search-button" onclick="performSearch()">Google Search</button>
+            <button class="search-button" onclick="performSearch()">I'm Feeling Lucky</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-top">
+                United States
+            </div>
+            <div class="footer-bottom">
+                <div>
+                    <a href="#">About</a>
+                    <a href="#">Advertising</a>
+                    <a href="#">Business</a>
+                    <a href="#">How Search works</a>
+                </div>
+                <div>
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

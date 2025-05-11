@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Verify Repository
+      run: |
+        node -e "
+          const fs = require('fs');
+          const requiredFiles = ['index.html', 'src', 'js'];
+          const missingFiles = requiredFiles.filter(file => !fs.existsSync(file));
+          if (missingFiles.length > 0) {
+            console.error('Missing required files:', missingFiles);
+            process.exit(1);
+          }
+          console.log('All required files exist');
+        " 

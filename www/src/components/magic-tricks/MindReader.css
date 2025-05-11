@@ -1,0 +1,255 @@
+.mind-reader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #6a0dad 0%, #4a0a9d 100%);
+  padding: 2rem;
+}
+
+.card-container {
+  width: 300px;
+  height: 450px;
+  perspective: 1000px;
+  margin-bottom: 2rem;
+}
+
+.card, .card-back {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card {
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8rem;
+  color: #000;
+}
+
+.card.red {
+  color: #ff0000;
+}
+
+.card-back {
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-back img {
+  width: 80%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.voice-controls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.voice-controls button {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(5px);
+}
+
+.voice-controls button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.voice-controls button.listening {
+  background: #ff0000;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.mind-reader h2 {
+  color: #6a0dad;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mind-reader p {
+  color: #333;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.thinking-stage {
+  padding: 2rem;
+}
+
+.mind-reading-animation {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 2rem;
+}
+
+.brain-waves {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(106,13,173,0.1) 0%, rgba(106,13,173,0) 70%);
+  animation: pulse 2s infinite;
+}
+
+.brain-waves::before,
+.brain-waves::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(169, 110, 255, 0.2);
+}
+
+.brain-waves::before {
+  width: 120%;
+  height: 120%;
+  animation: pulse 2s infinite 0.5s;
+}
+
+.brain-waves::after {
+  width: 140%;
+  height: 140%;
+  animation: pulse 2s infinite 1s;
+}
+
+.thought-bubbles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(106,13,173,0.2) 0%, rgba(106,13,173,0) 60%);
+  animation: float 3s infinite;
+}
+
+.thought-bubbles::before,
+.thought-bubbles::after {
+  content: '';
+  position: absolute;
+  background: rgba(169, 110, 255, 0.3);
+  border-radius: 50%;
+  animation: float 3s infinite;
+}
+
+.thought-bubbles::before {
+  width: 20px;
+  height: 20px;
+  top: 20%;
+  left: 30%;
+  animation-delay: 0s;
+}
+
+.thought-bubbles::after {
+  width: 15px;
+  height: 15px;
+  top: 40%;
+  right: 30%;
+  animation-delay: 1.5s;
+}
+
+.reveal-stage {
+  padding: 2rem;
+}
+
+.reveal-stage h3 {
+  color: #a96eff;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.prediction {
+  background: rgba(106,13,173,0.1);
+  padding: 2rem;
+  border-radius: 15px;
+  margin: 2rem 0;
+  animation: fadeIn 1s ease;
+}
+
+.prediction p {
+  font-size: 1.5rem;
+  color: #6a0dad;
+  margin: 0;
+}
+
+.try-again {
+  background: #6a0dad;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.try-again:hover {
+  background: #5a0c9d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes float {
+  0% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-10px); }
+  100% { transform: translate(-50%, -50%) translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse {
+  animation: pulse 1s infinite;
+}
+
+.reveal {
+  animation: reveal 1s ease;
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+} 
