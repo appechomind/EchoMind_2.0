@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Reader</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+        }
+        #card {
+            width: 300px;
+            height: auto;
+        }
+    </style>
+    <script>
+        // Global permission state
+        window.echoMindPermissions = {
+            microphoneGranted: false,
+            microphoneRequested: false,
+            requestPermission: async function() {
+                if (!this.microphoneRequested) {
+                    this.microphoneRequested = true;
+                    try {
+                        // First check if we already have permission
+                        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                        if (permissionStatus.state === 'granted') {
+                            this.microphoneGranted = true;
+                            return true;
+                        }
+                        
+                        // If not granted, request it
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.microphoneGranted = true;
+                        
+                        // Listen for permission changes
+                        permissionStatus.onchange = () => {
+                            this.microphoneGranted = permissionStatus.state === 'granted';
+                        };
+                    } catch (error) {
+                        console.error('Permission denied:', error);
+                        this.microphoneGranted = false;
+                    }
+                }
+                return this.microphoneGranted;
+            }
+        };
+    </script>
+</head>
+<body>
+    <img id="card" src="../../../images/cards/back.png" alt="Card">
+    <script>
+        const card = document.getElementById('card');
+        let recognition = null;
+        let lastCard = 'back';
+
+        // Number word to digit mapping
+        const numberMap = {
+            'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+            'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'
+        };
+
+        // Suit mapping
+        const suitMap = {
+            'hearts': 'hearts', 'heart': 'hearts',
+            'spades': 'spades', 'spade': 'spades',
+            'diamonds': 'diamonds', 'diamond': 'diamonds',
+            'clubs': 'clubs', 'club': 'clubs'
+        };
+
+        // Face card mapping
+        const faceMap = {
+            'ace': 'ace', 'aces': 'ace',
+            'jack': 'jack', 'jacks': 'jack',
+            'queen': 'queen', 'queens': 'queen',
+            'king': 'king', 'kings': 'king'
+        };
+
+        function findCard(transcript) {
+            const words = transcript.toLowerCase().split(' ');
+            
+            // Check for special cards first
+            if (words.includes('joker')) return 'red_joker';
+            if (words.includes('back')) return 'back';
+
+            // Find number/face and suit
+            let number = null;
+            let suit = null;
+
+            // Check for numbers
+            for (const word of words) {
+                if (numberMap[word]) {
+                    number = numberMap[word];
+                    break;
+                }
+            }
+
+            // Check for face cards
+            if (!number) {
+                for (const word of words) {
+                    if (faceMap[word]) {
+                        number = faceMap[word];
+                        break;
+                    }
+                }
+            }
+
+            // Check for suits
+            for (const word of words) {
+                if (suitMap[word]) {
+                    suit = suitMap[word];
+                    break;
+                }
+            }
+
+            // If we found both, return the card
+            if (number && suit) {
+                return `${number}_of_${suit}`;
+            }
+
+            return lastCard; // Keep current card if no match
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const result = event.results[event.results.length - 1][0].transcript;
+                    const newCard = findCard(result);
+                    if (newCard !== lastCard) {
+                        lastCard = newCard;
+                        card.src = `../../../images/cards/${lastCard}.png`;
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    // Restart recognition on error
+                    setTimeout(() => {
+                        if (recognition) {
+                            recognition.start();
+                        }
+                    }, 1000);
+                };
+
+                recognition.onend = function() {
+                    // Restart recognition
+                    if (recognition) {
+                        recognition.start();
+                    }
+                };
+
+                // Start recognition
+                recognition.start();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Initialize speech recognition
+                initSpeechRecognition();
+            } catch (error) {
+                console.error('Error initializing:', error);
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (recognition) {
+                recognition.stop();
+            }
+        });
+    </script>
+</body>
+</html> 

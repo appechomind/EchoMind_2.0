@@ -1,0 +1,18 @@
+
+body, html {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  color: white;
+  font-family: sans-serif;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#card-display {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: block;
+  margin: auto;
+}

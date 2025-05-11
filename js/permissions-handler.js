@@ -272,4 +272,4 @@ class PermissionsHandler {
 
 // Create and export a single instance
 const permissions = PermissionsHandler.getInstance();
-export default PermissionsHandler; 
+window.PermissionsHandler = PermissionsHandler; 

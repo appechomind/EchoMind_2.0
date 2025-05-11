@@ -492,6 +492,8 @@
                 window.speechRecognizer.disconnectedCallback();
             }
         });
+
+        window.SpeechHandler = SpeechHandler;
     </script>
 </head>
 <body>
@@ -507,7 +509,7 @@
             <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
         </div>
         <div class="search-container">
-            <input type="text" class="search-box" id="search-input">
+            <input type="text" class="search-box" id="searchInput" placeholder="Search...">
             <button class="mic-button" id="mic-button">
                 <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" alt="Voice Search">
             </button>
@@ -538,5 +540,10 @@
             </div>
         </div>
     </div>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            // Paste the contents of hybrid-speech.js here, or call your init function if you modularize it.
+        });
+    </script>
 </body>
 </html> 

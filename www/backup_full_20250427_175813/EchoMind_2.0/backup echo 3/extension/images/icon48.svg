@@ -1,0 +1,18 @@
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="48" height="48" fill="#4285F4"/>
+  
+  <!-- Magnifying glass circle -->
+  <circle cx="19.2" cy="19.2" r="12" fill="white"/>
+  <circle cx="19.2" cy="19.2" r="8.4" fill="#E8F0FE"/>
+  
+  <!-- Handle -->
+  <path d="M27 27 L38.4 38.4 L35.1 38.4 L24.6 27.6 Z" fill="white"/>
+  
+  <!-- Preview window -->
+  <rect x="28.8" y="28.8" width="16.8" height="12" fill="white"/>
+  
+  <!-- Document content lines -->
+  <rect x="31.2" y="31.2" width="12" height="1.5" fill="#4285F4"/>
+  <rect x="31.2" y="34.5" width="9" height="1.5" fill="#4285F4"/>
+</svg> 
