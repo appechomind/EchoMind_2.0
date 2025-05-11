@@ -267,8 +267,9 @@
         }
     </style>
     <script type="module">
-        import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
-        import PermissionsHandler from '/EchoMind_2.0/js/permissions-handler.js';
+        import { SpeechHandler } from '../../js/echomind-speech.js';
+        import PermissionsHandler from '../../js/permissions-handler.js';
+        import { Browser } from '@capacitor/browser';
         // No top-level import of @capacitor-community/speech-recognition
 
         class GooglePeekOrb extends HTMLElement {
@@ -466,16 +467,10 @@
             async triggerSearch(query) {
                 const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
                 if (window.Capacitor && window.Capacitor.isNativePlatform) {
-                    try {
-                        const { Browser } = await import('@capacitor/browser');
-                        await Browser.open({ url });
-                        console.log('[GooglePeekOrb] Opened search in native browser:', url);
-                    } catch (err) {
-                        console.error('[GooglePeekOrb] Failed to open native browser:', err);
-                    }
+                    const { Browser } = await import('@capacitor/browser');
+                    await Browser.open({ url });
                 } else {
                     window.location.href = url;
-                    console.log('[GooglePeekOrb] Navigated to search in web browser:', url);
                 }
             }
         }
