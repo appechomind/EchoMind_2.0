@@ -6,6 +6,7 @@
             language: options.language || 'en-US',
             continuous: options.continuous !== false,
             interimResults: options.interimResults !== false,
+            maxAlternatives: options.maxAlternatives || 1,
             onResult: options.onResult || function() {},
             onError: options.onError || console.error,
             onEnd: options.onEnd || function() {},
@@ -53,6 +54,7 @@
             self.recognition.lang = self.options.language;
             self.recognition.continuous = self.options.continuous;
             self.recognition.interimResults = self.options.interimResults;
+            self.recognition.maxAlternatives = self.options.maxAlternatives;
             // Add detailed event logging
             self.recognition.onstart = function() {
                 self.isListening = true;
