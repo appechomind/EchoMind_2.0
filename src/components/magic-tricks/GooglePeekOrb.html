@@ -399,7 +399,7 @@
                                 console.log('[GooglePeekOrb] Set search input value to about buffer');
                             }
                             if (query) {
-                                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                                this.triggerSearch(query);
                             } else {
                                 console.log('[GooglePeekOrb] No query to search after about.');
                             }
@@ -429,7 +429,7 @@
                             console.log('[GooglePeekOrb] Set search input value to about buffer');
                         }
                         if (query) {
-                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                            this.triggerSearch(query);
                         } else {
                             console.log('[GooglePeekOrb] No query to search after about.');
                         }
@@ -460,6 +460,22 @@
                 const micButton = document.querySelector('.mic-button');
                 if (micButton) {
                     micButton.classList.remove('listening', 'recording');
+                }
+            }
+
+            async triggerSearch(query) {
+                const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                if (window.Capacitor && window.Capacitor.isNativePlatform) {
+                    try {
+                        const { Browser } = await import('@capacitor/browser');
+                        await Browser.open({ url });
+                        console.log('[GooglePeekOrb] Opened search in native browser:', url);
+                    } catch (err) {
+                        console.error('[GooglePeekOrb] Failed to open native browser:', err);
+                    }
+                } else {
+                    window.location.href = url;
+                    console.log('[GooglePeekOrb] Navigated to search in web browser:', url);
                 }
             }
         }
