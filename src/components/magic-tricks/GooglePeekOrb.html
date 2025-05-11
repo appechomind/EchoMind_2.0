@@ -108,14 +108,16 @@
 
                         // If already in about mode, buffer everything for 3 seconds (do not update search bar)
                         if (window.aboutMode) {
-                            if (isFinal) {
+                            if (isFinal && transcript.toLowerCase().trim() !== "about") {
                                 window.aboutBuffer += ' ' + transcript;
                             }
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 var query = window.aboutBuffer.trim();
-                                input.value = query;
-                                if (query) triggerSearch(query);
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
                                 window.aboutMode = false;
                                 window.aboutBuffer = '';
                                 window.aboutTimeout = null;
@@ -123,7 +125,7 @@
                             return;
                         }
 
-                        // If transcript starts with 'about' (and possibly more), enter about mode and start buffering ONLY what comes after 'about'
+                        // If transcript starts with 'about', enter about mode and start buffering ONLY what comes after 'about'
                         var match = transcript.toLowerCase().match(/^about\s*(.*)/);
                         if (match && isFinal) {
                             window.aboutMode = true;
@@ -131,8 +133,10 @@
                             if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                             window.aboutTimeout = setTimeout(function() {
                                 var query = window.aboutBuffer.trim();
-                                input.value = query;
-                                if (query) triggerSearch(query);
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
                                 window.aboutMode = false;
                                 window.aboutBuffer = '';
                                 window.aboutTimeout = null;
@@ -140,8 +144,8 @@
                             return;
                         }
 
-                        // For all other input, update the search bar as usual (only if not in about mode)
-                        if (isFinal && !window.aboutMode) input.value = transcript;
+                        // For all other input, do NOT update the search bar or trigger a search
+                        // (No action here)
                     }
                 }
             }
