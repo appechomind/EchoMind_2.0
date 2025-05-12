@@ -42,11 +42,7 @@
             }
             function triggerSearch(query) {
                 var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-                    window.Capacitor.Plugins.Browser.open({ url: url });
-                } else {
-                    window.location.href = url;
-                }
+                window.location.href = url;
             }
             function performSearch() {
                 var input = getSearchInput();
