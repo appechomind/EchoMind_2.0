@@ -75,7 +75,7 @@
                 });
                 function initSpeech() {
                     if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
-                        window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true }).then(function() {
+                        window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true, continuous: true }).then(function() {
                             window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
                                 var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
                                 handleSpeechResult(transcript, true);
