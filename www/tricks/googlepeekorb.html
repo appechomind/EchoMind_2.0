@@ -116,14 +116,27 @@
             bottom: 0;
             left: 0;
             width: 100vw;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.97);
             color: #fff;
-            font-size: 14px;
+            font-size: 16px;
             z-index: 9999;
-            padding: 8px 12px;
+            padding: 12px 16px;
             font-family: monospace;
-            max-height: 30vh;
+            max-height: 50vh;
             overflow-y: auto;
+        }
+        .debug-overlay .label {
+            color: #a96eff;
+            font-weight: bold;
+        }
+        .debug-overlay .value {
+            color: #fff;
+        }
+        .debug-overlay .error {
+            color: #ff4c4c;
+        }
+        .debug-overlay .success {
+            color: #4cff4c;
         }
     </style>
     <script src="../../../js/permissions-handler.js"></script>
@@ -139,6 +152,10 @@
             window.speechActive = false;
             window.speechWatchdog = null;
             window.debugLog = [];
+            window.lastTranscript = '';
+            window.lastEvent = '';
+            window.permissionStatus = 'unknown';
+            window.pluginStatus = 'unknown';
 
             function updateDebugOverlay() {
                 let overlay = document.getElementById('debugOverlay');
@@ -149,13 +166,17 @@
                     document.body.appendChild(overlay);
                 }
                 overlay.innerHTML =
-                    '<b>Google Peek Debug</b><br>' +
-                    'aboutMode: ' + window.aboutMode + '<br>' +
-                    'aboutBuffer: ' + JSON.stringify(window.aboutBuffer) + '<br>' +
-                    'aboutLastTranscript: ' + window.aboutLastTranscript + '<br>' +
-                    'lastBufferedPhrase: ' + window.lastBufferedPhrase + '<br>' +
-                    'speechActive: ' + window.speechActive + '<br>' +
-                    'debugLog:<br>' + window.debugLog.slice(-10).map(e => e).join('<br>');
+                    '<div class="label">Google Peek Debug</div>' +
+                    '<div><span class="label">Permission:</span> <span class="value ' + (window.permissionStatus === 'granted' ? 'success' : 'error') + '">' + window.permissionStatus + '</span></div>' +
+                    '<div><span class="label">Plugin:</span> <span class="value ' + (window.pluginStatus === 'ok' ? 'success' : 'error') + '">' + window.pluginStatus + '</span></div>' +
+                    '<div><span class="label">aboutMode:</span> <span class="value">' + window.aboutMode + '</span></div>' +
+                    '<div><span class="label">aboutBuffer:</span> <span class="value">' + JSON.stringify(window.aboutBuffer) + '</span></div>' +
+                    '<div><span class="label">aboutLastTranscript:</span> <span class="value">' + window.aboutLastTranscript + '</span></div>' +
+                    '<div><span class="label">lastBufferedPhrase:</span> <span class="value">' + window.lastBufferedPhrase + '</span></div>' +
+                    '<div><span class="label">speechActive:</span> <span class="value">' + window.speechActive + '</span></div>' +
+                    '<div style="margin-top:8px;"><span class="label">LAST TRANSCRIPT:</span> <span class="value" style="color:#ff0;">' + (window.lastTranscript || '(none)') + '</span></div>' +
+                    '<div><span class="label">LAST EVENT:</span> <span class="value" style="color:#0ff;">' + (window.lastEvent || '(none)') + '</span></div>' +
+                    '<div style="margin-top:8px;"><span class="label">debugLog:</span><br>' + window.debugLog.slice(-15).map(e => e).join('<br>') + '</div>';
             }
             function logDebug(msg) {
                 window.debugLog.push((new Date()).toLocaleTimeString() + ': ' + msg);
@@ -201,8 +222,12 @@
                 var permissions = window.PermissionsHandler.getInstance();
                 permissions.initialize({ debugMode: true }).then(function() {
                     permissions.checkMicrophonePermission().then(function(hasMic) {
+                        window.permissionStatus = hasMic ? 'granted' : 'denied';
+                        updateDebugOverlay();
                         if (!hasMic) {
                             permissions.requestMicrophonePermission().then(function(granted) {
+                                window.permissionStatus = granted ? 'granted' : 'denied';
+                                updateDebugOverlay();
                                 if (!granted) {
                                     alert('Microphone permission is required.');
                                 } else {
@@ -231,21 +256,44 @@
                 }
                 function startCapacitorSpeech() {
                     window.speechActive = true;
+                    window.pluginStatus = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) ? 'ok' : 'missing';
                     logDebug('[GooglePeek] Starting Capacitor speech recognition...');
+                    if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.SpeechRecognition) {
+                        logDebug('[GooglePeek] Capacitor SpeechRecognition plugin not available!');
+                        updateDebugOverlay();
+                        return;
+                    }
+                    // Log all events
+                    window.Capacitor.Plugins.SpeechRecognition.addListener('start', function() {
+                        window.lastEvent = 'start';
+                        logDebug('[GooglePeek] (plugin) start event');
+                        updateDebugOverlay();
+                    });
+                    window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
+                        var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
+                        window.lastTranscript = transcript;
+                        window.lastEvent = 'result';
+                        logDebug('[GooglePeek] (plugin) result: ' + transcript);
+                        handleSpeechResult(transcript, true);
+                        startWatchdog();
+                    });
+                    window.Capacitor.Plugins.SpeechRecognition.addListener('end', function() {
+                        window.lastEvent = 'end';
+                        logDebug('[GooglePeek] (plugin) end event');
+                        updateDebugOverlay();
+                        logDebug('[GooglePeek] Capacitor speech ended, restarting...');
+                        restartSpeech();
+                    });
+                    window.Capacitor.Plugins.SpeechRecognition.addListener('error', function(e) {
+                        window.lastEvent = 'error';
+                        logDebug('[GooglePeek] (plugin) error: ' + JSON.stringify(e));
+                        updateDebugOverlay();
+                        logDebug('[GooglePeek] Capacitor speech error: ' + JSON.stringify(e));
+                        restartSpeech();
+                    });
                     window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true, continuous: true }).then(function() {
-                        window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
-                            var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
-                            handleSpeechResult(transcript, true);
-                            startWatchdog();
-                        });
-                        window.Capacitor.Plugins.SpeechRecognition.addListener('end', function() {
-                            logDebug('[GooglePeek] Capacitor speech ended, restarting...');
-                            restartSpeech();
-                        });
-                        window.Capacitor.Plugins.SpeechRecognition.addListener('error', function(e) {
-                            logDebug('[GooglePeek] Capacitor speech error: ' + JSON.stringify(e));
-                            restartSpeech();
-                        });
+                        logDebug('[GooglePeek] (plugin) start() promise resolved');
+                        updateDebugOverlay();
                     });
                 }
                 function initSpeech() {
@@ -253,6 +301,7 @@
                         startCapacitorSpeech();
                         startWatchdog();
                     } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        window.pluginStatus = 'ok';
                         window.speech = new window.SpeechHandler({
                             language: 'en-US',
                             continuous: true,
@@ -260,14 +309,20 @@
                             debugMode: true,
                             maxAlternatives: 1,
                             onResult: function(transcript) {
+                                window.lastTranscript = transcript;
+                                window.lastEvent = 'result';
+                                logDebug('[GooglePeek] (web) result: ' + transcript);
                                 handleSpeechResult(transcript, true);
                                 startWatchdog();
                             },
                             onError: function(error) {
-                                logDebug('[GooglePeek] Speech error: ' + error);
+                                window.lastEvent = 'error';
+                                logDebug('[GooglePeek] (web) error: ' + error);
                                 restartSpeech();
                             },
                             onEnd: function() {
+                                window.lastEvent = 'end';
+                                logDebug('[GooglePeek] (web) end event');
                                 logDebug('[GooglePeek] Speech ended, restarting...');
                                 restartSpeech();
                             }
@@ -275,7 +330,9 @@
                         window.speech.start();
                         startWatchdog();
                     } else {
+                        window.pluginStatus = 'missing';
                         alert('Speech recognition is not supported on this device or browser.');
+                        updateDebugOverlay();
                     }
                 }
                 function handleSpeechResult(transcript, isFinal) {

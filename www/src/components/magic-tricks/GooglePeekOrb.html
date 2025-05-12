@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>Google Peek</title>
     <style>
         body {
             margin: 0;
@@ -128,11 +128,7 @@
             background: none;
             border: none;
             cursor: pointer;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 8px;
         }
         .mic-button img {
             width: 24px;
@@ -146,8 +142,19 @@
             opacity: 0.7;
             filter: hue-rotate(120deg);
         }
-        .status-text {
-            display: none;
+        .debug-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+            word-wrap: break-word;
         }
         @media (max-width: 768px) {
             .main {
@@ -174,151 +181,6 @@
             }
         }
     </style>
-    <script type="module">
-        import { SpeechHandler } from '/EchoMind_2.0/js/echomind-speech.js';
-        import { permissions } from '/EchoMind_2.0/js/permissions-handler.js';
-
-        class GooglePeekOrb extends HTMLElement {
-            constructor() {
-                super();
-                this.attachShadow({ mode: 'open' });
-                this.speechHandler = null;
-                this.aboutMode = false;
-                this.aboutBuffer = '';
-                this.aboutTimeout = null;
-            }
-
-            async connectedCallback() {
-                try {
-                    // Check browser support
-                    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                        alert('Your browser does not support speech recognition. Please use Chrome or Edge on desktop or Android.');
-                        return;
-                    }
-                    await permissions.initialize({ debugMode: true });
-                    const hasPermission = await permissions.checkMicrophonePermission();
-                    if (!hasPermission) {
-                        const granted = await permissions.requestMicrophonePermission();
-                        if (!granted) {
-                            throw new Error('Microphone permission denied');
-                        }
-                    }
-                    this.speechHandler = new SpeechHandler({
-                        language: 'en-US',
-                        continuous: true,
-                        interimResults: true,
-                        onResult: this.handleSpeechResult.bind(this),
-                        onError: this.handleSpeechError.bind(this),
-                        onEnd: this.handleSpeechEnd.bind(this),
-                        debugMode: true
-                    });
-                    await this.speechHandler.start();
-                } catch (error) {
-                    console.error('[GooglePeekOrb] Error initializing:', error);
-                    this.handleSpeechError(error);
-                }
-            }
-
-            disconnectedCallback() {
-                if (this.speechHandler) {
-                    this.speechHandler.cleanup();
-                }
-            }
-
-            handleSpeechResult(transcript) {
-                console.log('[GooglePeekOrb] Speech result:', transcript);
-                const searchInput = document.querySelector('.search-box');
-                if (searchInput) {
-                    searchInput.value = transcript;
-                    console.log('[GooglePeekOrb] Updated search input value');
-                }
-                // If already in about mode, buffer the transcript
-                if (this.aboutMode) {
-                    console.log('[GooglePeekOrb] In about mode. Buffer before:', this.aboutBuffer);
-                    this.aboutBuffer += ' ' + transcript;
-                    console.log('[GooglePeekOrb] Buffer after:', this.aboutBuffer);
-                    if (this.aboutTimeout) {
-                        clearTimeout(this.aboutTimeout);
-                        console.log('[GooglePeekOrb] Cleared previous about timer');
-                    }
-                    // Restart the 3-second timer on each new result
-                    this.aboutTimeout = setTimeout(() => {
-                        const query = this.aboutBuffer.trim();
-                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
-                        if (query) {
-                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                        } else {
-                            console.log('[GooglePeekOrb] No query to search after about.');
-                        }
-                        this.aboutMode = false;
-                        this.aboutBuffer = '';
-                        this.aboutTimeout = null;
-                    }, 3000);
-                    console.log('[GooglePeekOrb] Set new about timer for 3s');
-                    return;
-                }
-                // If transcript contains 'about', enter about mode and start buffering
-                const match = transcript.toLowerCase().match(/about\s*(.*)/);
-                if (match) {
-                    console.log('[GooglePeekOrb] Detected "about" keyword. Entering about mode.');
-                    this.aboutMode = true;
-                    this.aboutBuffer = match[1] ? match[1].trim() : '';
-                    console.log('[GooglePeekOrb] Initial about buffer:', this.aboutBuffer);
-                    if (this.aboutTimeout) {
-                        clearTimeout(this.aboutTimeout);
-                        console.log('[GooglePeekOrb] Cleared previous about timer');
-                    }
-                    this.aboutTimeout = setTimeout(() => {
-                        const query = this.aboutBuffer.trim();
-                        console.log('[GooglePeekOrb] 3s after about: Google search for', query);
-                        if (query) {
-                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                        } else {
-                            console.log('[GooglePeekOrb] No query to search after about.');
-                        }
-                        this.aboutMode = false;
-                        this.aboutBuffer = '';
-                        this.aboutTimeout = null;
-                    }, 3000);
-                    console.log('[GooglePeekOrb] Set new about timer for 3s');
-                }
-            }
-
-            handleSpeechError(error) {
-                console.error('[GooglePeekOrb] Speech error:', error);
-                const micButton = document.querySelector('.mic-button');
-                if (micButton) {
-                    micButton.classList.remove('listening', 'recording');
-                }
-            }
-
-            handleSpeechEnd() {
-                console.log('[GooglePeekOrb] Speech recognition ended');
-                const micButton = document.querySelector('.mic-button');
-                if (micButton) {
-                    micButton.classList.remove('listening', 'recording');
-                }
-            }
-        }
-
-        customElements.define('google-peek-orb', GooglePeekOrb);
-
-        window.addEventListener('load', async () => {
-            try {
-                const recognizer = new GooglePeekOrb();
-                await recognizer.connectedCallback();
-                window.speechRecognizer = recognizer;
-            } catch (error) {
-                console.error('[GooglePeekOrb] Error initializing speech recognition:', error);
-            }
-        });
-
-        window.addEventListener('beforeunload', () => {
-            if (window.speechRecognizer) {
-                window.speechRecognizer.disconnectedCallback();
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="header">
@@ -340,7 +202,7 @@
         </div>
         <div class="buttons">
             <button class="search-button" onclick="performSearch()">Google Search</button>
-            <button class="search-button" onclick="performSearch()">I'm Feeling Lucky</button>
+            <button class="search-button">I'm Feeling Lucky</button>
         </div>
     </div>
 
@@ -364,5 +226,212 @@
             </div>
         </div>
     </div>
+    
+    <!-- Debug Overlay -->
+    <div id="debug-overlay" class="debug-overlay"></div>
+
+    <script>
+        // Debug function
+        function updateDebug(state) {
+            const overlay = document.getElementById('debug-overlay');
+            overlay.innerHTML = `
+                Mode: ${state.aboutMode ? 'ABOUT' : 'LISTENING'}<br>
+                Buffer: ${state.buffer}<br>
+                Last Transcript: ${state.lastTranscript}<br>
+                Timer: ${state.timerActive ? 'Active' : 'Inactive'}
+            `;
+        }
+
+        // Global state
+        const state = {
+            aboutMode: false,
+            buffer: '',
+            lastTranscript: '',
+            timerActive: false,
+            recognition: null,
+            timeout: null
+        };
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            // Try to use the Capacitor plugin first
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
+                console.log('Using Capacitor Speech Recognition');
+                setupCapacitorSpeech();
+            }
+            // Fallback to Web Speech API
+            else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                console.log('Using Web Speech API');
+                setupWebSpeech();
+            }
+            else {
+                console.error('No speech recognition available');
+                alert('Speech recognition is not supported on this device');
+            }
+        }
+
+        // Setup Capacitor Speech Recognition
+        function setupCapacitorSpeech() {
+            const { SpeechRecognition } = window.Capacitor.Plugins;
+            
+            // Start recognition
+            async function startListening() {
+                try {
+                    await SpeechRecognition.start({
+                        language: 'en-US',
+                        partialResults: true,
+                        popup: false
+                    });
+                    
+                    updateMicStatus('listening');
+                } catch (e) {
+                    console.error('Error starting speech recognition:', e);
+                }
+            }
+
+            // Add result listener
+            SpeechRecognition.addListener('partialResults', (data) => {
+                handleSpeechResult(data.matches[0] || '');
+            });
+
+            // Start initial listening
+            startListening();
+
+            // Restart on end
+            SpeechRecognition.addListener('end', () => {
+                setTimeout(startListening, 100);
+            });
+        }
+
+        // Setup Web Speech API
+        function setupWebSpeech() {
+            state.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            state.recognition.continuous = true;
+            state.recognition.interimResults = true;
+            state.recognition.lang = 'en-US';
+
+            state.recognition.onstart = () => {
+                updateMicStatus('listening');
+            };
+
+            state.recognition.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript;
+                handleSpeechResult(transcript);
+            };
+
+            state.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                updateMicStatus('error');
+            };
+
+            state.recognition.onend = () => {
+                state.recognition.start();
+            };
+
+            state.recognition.start();
+        }
+
+        // Handle speech results
+        function handleSpeechResult(transcript) {
+            state.lastTranscript = transcript;
+            
+            // Update search input for visual feedback
+            document.getElementById('search-input').value = transcript;
+
+            // Check for "about" keyword if not already in about mode
+            if (!state.aboutMode) {
+                const aboutIndex = transcript.toLowerCase().indexOf('about');
+                if (aboutIndex !== -1) {
+                    // Enter about mode
+                    state.aboutMode = true;
+                    state.buffer = transcript.slice(aboutIndex + 5).trim();
+                    updateMicStatus('recording');
+                    startSearchTimer();
+                }
+            } else {
+                // In about mode, update buffer with new transcript
+                state.buffer = transcript;
+            }
+
+            // Update debug overlay
+            updateDebug(state);
+        }
+
+        // Start the search timer
+        function startSearchTimer() {
+            if (state.timeout) {
+                clearTimeout(state.timeout);
+            }
+
+            state.timerActive = true;
+            updateDebug(state);
+
+            state.timeout = setTimeout(() => {
+                performSearch(state.buffer);
+                resetState();
+            }, 3000);
+        }
+
+        // Reset state after search
+        function resetState() {
+            state.aboutMode = false;
+            state.buffer = '';
+            state.timerActive = false;
+            state.timeout = null;
+            updateMicStatus('listening');
+            updateDebug(state);
+        }
+
+        // Update microphone button status
+        function updateMicStatus(status) {
+            const micButton = document.querySelector('.mic-button');
+            micButton.classList.remove('listening', 'recording', 'error');
+            micButton.classList.add(status);
+        }
+
+        // Perform search
+        function performSearch(query = '') {
+            query = query || document.getElementById('search-input').value.trim();
+            if (!query) return;
+
+            // Clean up the query
+            query = query.replace(/\babout\b/gi, '').trim();
+            
+            // Construct search URL
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            
+            // Handle search differently for native app
+            if (window.Capacitor && window.Capacitor.isNativePlatform) {
+                window.Capacitor.Plugins.Browser.open({ url: searchUrl });
+            } else {
+                window.location.href = searchUrl;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Request microphone permission and initialize speech recognition
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(() => {
+                        initSpeechRecognition();
+                    })
+                    .catch((error) => {
+                        console.error('Microphone permission denied:', error);
+                        alert('Microphone permission is required for voice search.');
+                    });
+            }
+
+            // Add search button click handler
+            document.querySelector('.search-button').addEventListener('click', () => performSearch());
+            
+            // Add enter key handler
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        });
+    </script>
 </body>
 </html> 

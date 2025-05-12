@@ -87,6 +87,7 @@
                             continuous: true,
                             interimResults: true,
                             debugMode: true,
+                            maxAlternatives: 1,
                             onResult: function(transcript) {
                                 handleSpeechResult(transcript, true);
                             },
@@ -108,11 +109,10 @@
                         var input = getSearchInput();
                         if (!input) return;
 
-                        var lower = transcript.toLowerCase();
-                        var aboutIdx = lower.indexOf("about");
-
                         // If not in about mode, look for "about" anywhere in the transcript
+                        var aboutIdx = transcript.toLowerCase().indexOf("about");
                         if (!window.aboutMode && aboutIdx !== -1) {
+                            // Start about mode, buffer only what comes after "about"
                             var afterAbout = transcript.slice(aboutIdx + 5).trim();
                             window.aboutMode = true;
                             window.aboutBuffer = [afterAbout];
@@ -132,27 +132,23 @@
                             return;
                         }
 
-                        // If already in about mode, only update buffer if "about" is present in the transcript
+                        // If already in about mode, always buffer only what comes after "about"
                         if (window.aboutMode) {
-                            var lower2 = transcript.toLowerCase();
-                            var aboutIdx2 = lower2.indexOf("about");
-                            if (aboutIdx2 !== -1) {
-                                var spoken = transcript.slice(aboutIdx2 + 5).trim();
-                                window.aboutBuffer = [spoken];
-                                if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
-                                window.aboutTimeout = setTimeout(function() {
-                                    var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                                    if (query) {
-                                        input.value = query;
-                                        triggerSearch(query);
-                                    }
-                                    window.aboutMode = false;
-                                    window.aboutBuffer = [];
-                                    window.aboutTimeout = null;
-                                    window.aboutLastTranscript = '';
-                                }, 3000);
-                            }
-                            // If "about" is not present, do not update the buffer!
+                            var aboutIdx2 = transcript.toLowerCase().indexOf("about");
+                            var spoken = aboutIdx2 !== -1 ? transcript.slice(aboutIdx2 + 5).trim() : transcript.trim();
+                            window.aboutBuffer = [spoken];
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
+                                window.aboutMode = false;
+                                window.aboutBuffer = [];
+                                window.aboutTimeout = null;
+                                window.aboutLastTranscript = '';
+                            }, 3000);
                             return;
                         }
 
