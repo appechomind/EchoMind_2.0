@@ -111,6 +111,20 @@
             justify-content: space-between;
             margin-top: 10px;
         }
+        .debug-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            font-size: 14px;
+            z-index: 9999;
+            padding: 8px 12px;
+            font-family: monospace;
+            max-height: 30vh;
+            overflow-y: auto;
+        }
     </style>
     <script src="../../../js/permissions-handler.js"></script>
     <script src="../../../js/echomind-speech.js"></script>
@@ -124,26 +138,47 @@
             window.lastBufferedPhrase = '';
             window.speechActive = false;
             window.speechWatchdog = null;
+            window.debugLog = [];
 
+            function updateDebugOverlay() {
+                let overlay = document.getElementById('debugOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'debugOverlay';
+                    overlay.className = 'debug-overlay';
+                    document.body.appendChild(overlay);
+                }
+                overlay.innerHTML =
+                    '<b>Google Peek Debug</b><br>' +
+                    'aboutMode: ' + window.aboutMode + '<br>' +
+                    'aboutBuffer: ' + JSON.stringify(window.aboutBuffer) + '<br>' +
+                    'aboutLastTranscript: ' + window.aboutLastTranscript + '<br>' +
+                    'lastBufferedPhrase: ' + window.lastBufferedPhrase + '<br>' +
+                    'speechActive: ' + window.speechActive + '<br>' +
+                    'debugLog:<br>' + window.debugLog.slice(-10).map(e => e).join('<br>');
+            }
+            function logDebug(msg) {
+                window.debugLog.push((new Date()).toLocaleTimeString() + ': ' + msg);
+                updateDebugOverlay();
+            }
             function getSearchInput() {
                 var input = document.getElementById('searchInput');
                 if (!input) {
-                    console.warn('[GooglePeek] searchInput not found!');
+                    logDebug('[GooglePeek] searchInput not found!');
                 }
                 return input;
             }
             function triggerSearch(query) {
                 var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                console.log('[GooglePeek] Attempting navigation to:', url);
-                // Try both methods for Android WebView compatibility
+                logDebug('[GooglePeek] Attempting navigation to: ' + url);
                 try {
                     window.location.href = url;
                 } catch (e) {
-                    console.warn('[GooglePeek] window.location.href failed, trying window.open:', e);
+                    logDebug('[GooglePeek] window.location.href failed, trying window.open: ' + e);
                     try {
                         window.open(url, '_self');
                     } catch (e2) {
-                        console.error('[GooglePeek] window.open also failed:', e2);
+                        logDebug('[GooglePeek] window.open also failed: ' + e2);
                     }
                 }
             }
@@ -154,16 +189,15 @@
                 }
             }
             window.performSearch = performSearch;
-
             function startWatchdog() {
                 if (window.speechWatchdog) clearTimeout(window.speechWatchdog);
                 window.speechWatchdog = setTimeout(function() {
-                    console.warn('[GooglePeek] Watchdog: restarting speech recognition due to inactivity.');
+                    logDebug('[GooglePeek] Watchdog: restarting speech recognition due to inactivity.');
                     restartSpeech();
-                }, 15000); // 15 seconds without events triggers restart
+                }, 15000);
             }
-
             function startGooglePeek() {
+                updateDebugOverlay();
                 var permissions = window.PermissionsHandler.getInstance();
                 permissions.initialize({ debugMode: true }).then(function() {
                     permissions.checkMicrophonePermission().then(function(hasMic) {
@@ -180,26 +214,24 @@
                         }
                     });
                 });
-
                 function restartSpeech() {
                     if (window.speech && typeof window.speech.start === 'function') {
                         setTimeout(function() {
-                            console.log('[GooglePeek] Restarting web speech recognition...');
+                            logDebug('[GooglePeek] Restarting web speech recognition...');
                             window.speech.start();
                             startWatchdog();
                         }, 500);
                     } else if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
                         setTimeout(function() {
-                            console.log('[GooglePeek] Restarting Capacitor speech recognition...');
+                            logDebug('[GooglePeek] Restarting Capacitor speech recognition...');
                             startCapacitorSpeech();
                             startWatchdog();
                         }, 500);
                     }
                 }
-
                 function startCapacitorSpeech() {
                     window.speechActive = true;
-                    // NOTE: As of now, Capacitor SpeechRecognition plugin does not provide a way to suppress beeps/UI. This is a known limitation.
+                    logDebug('[GooglePeek] Starting Capacitor speech recognition...');
                     window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true, continuous: true }).then(function() {
                         window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
                             var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
@@ -207,16 +239,15 @@
                             startWatchdog();
                         });
                         window.Capacitor.Plugins.SpeechRecognition.addListener('end', function() {
-                            console.log('[GooglePeek] Capacitor speech ended, restarting...');
+                            logDebug('[GooglePeek] Capacitor speech ended, restarting...');
                             restartSpeech();
                         });
                         window.Capacitor.Plugins.SpeechRecognition.addListener('error', function(e) {
-                            console.error('[GooglePeek] Capacitor speech error:', e);
+                            logDebug('[GooglePeek] Capacitor speech error: ' + JSON.stringify(e));
                             restartSpeech();
                         });
                     });
                 }
-
                 function initSpeech() {
                     if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
                         startCapacitorSpeech();
@@ -233,11 +264,11 @@
                                 startWatchdog();
                             },
                             onError: function(error) {
-                                console.error('[GooglePeek] Speech error:', error);
+                                logDebug('[GooglePeek] Speech error: ' + error);
                                 restartSpeech();
                             },
                             onEnd: function() {
-                                console.log('[GooglePeek] Speech ended, restarting...');
+                                logDebug('[GooglePeek] Speech ended, restarting...');
                                 restartSpeech();
                             }
                         });
@@ -247,18 +278,14 @@
                         alert('Speech recognition is not supported on this device or browser.');
                     }
                 }
-
-                // --- BUFFERING LOGIC ---
                 function handleSpeechResult(transcript, isFinal) {
                     var input = getSearchInput();
                     if (!input) return;
                     transcript = transcript.trim();
-                    console.log('[GooglePeek] Transcript:', transcript, 'aboutMode:', window.aboutMode);
-
+                    logDebug('[GooglePeek] Transcript: ' + transcript + ' | aboutMode: ' + window.aboutMode);
                     // If not in about mode, look for "about" in the transcript
                     var aboutIdx = transcript.toLowerCase().indexOf("about");
                     if (!window.aboutMode && aboutIdx !== -1) {
-                        // Start about mode, buffer what comes after "about"
                         var afterAbout = transcript.slice(aboutIdx + 5).trim();
                         window.aboutMode = true;
                         window.aboutBuffer = afterAbout ? [afterAbout] : [];
@@ -266,32 +293,30 @@
                         if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                         window.aboutTimeout = setTimeout(function() {
                             var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                            console.log('[GooglePeek] Buffer:', window.aboutBuffer);
-                            console.log('[GooglePeek] Query:', query);
+                            logDebug('[GooglePeek] Buffer: ' + JSON.stringify(window.aboutBuffer));
+                            logDebug('[GooglePeek] Query: ' + query);
                             if (input) {
                                 input.value = query;
                                 setTimeout(function() {
                                     triggerSearch(query);
                                 }, 500);
                             } else {
-                                console.error('[GooglePeek] Input not found at search trigger!');
+                                logDebug('[GooglePeek] Input not found at search trigger!');
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
                             window.aboutTimeout = null;
                             window.aboutLastTranscript = '';
                         }, 3000);
+                        updateDebugOverlay();
                         return;
                     }
-
                     // If already in about mode, buffer all new words after "about"
                     if (window.aboutMode) {
-                        // Only buffer new words
                         var newWords = '';
                         if (window.aboutLastTranscript && transcript.startsWith(window.aboutLastTranscript)) {
                             newWords = transcript.slice(window.aboutLastTranscript.length).trim();
                         } else {
-                            // fallback: just use the whole transcript after "about"
                             var aboutIdx2 = transcript.toLowerCase().indexOf("about");
                             newWords = aboutIdx2 !== -1 ? transcript.slice(aboutIdx2 + 5).trim() : transcript.trim();
                         }
@@ -302,23 +327,25 @@
                         if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                         window.aboutTimeout = setTimeout(function() {
                             var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                            console.log('[GooglePeek] Buffer:', window.aboutBuffer);
-                            console.log('[GooglePeek] Query:', query);
+                            logDebug('[GooglePeek] Buffer: ' + JSON.stringify(window.aboutBuffer));
+                            logDebug('[GooglePeek] Query: ' + query);
                             if (input) {
                                 input.value = query;
                                 setTimeout(function() {
                                     triggerSearch(query);
                                 }, 500);
                             } else {
-                                console.error('[GooglePeek] Input not found at search trigger!');
+                                logDebug('[GooglePeek] Input not found at search trigger!');
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
                             window.aboutTimeout = null;
                             window.aboutLastTranscript = '';
                         }, 3000);
+                        updateDebugOverlay();
                         return;
                     }
+                    updateDebugOverlay();
                 }
             }
             window.addEventListener('DOMContentLoaded', startGooglePeek);
