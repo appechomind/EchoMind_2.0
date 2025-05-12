@@ -123,6 +123,7 @@
             window.aboutLastTranscript = '';
             window.lastBufferedPhrase = '';
             window.speechActive = false;
+            window.speechWatchdog = null;
 
             function getSearchInput() {
                 var input = document.getElementById('searchInput');
@@ -133,7 +134,18 @@
             }
             function triggerSearch(query) {
                 var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-                window.location.href = url;
+                console.log('[GooglePeek] Attempting navigation to:', url);
+                // Try both methods for Android WebView compatibility
+                try {
+                    window.location.href = url;
+                } catch (e) {
+                    console.warn('[GooglePeek] window.location.href failed, trying window.open:', e);
+                    try {
+                        window.open(url, '_self');
+                    } catch (e2) {
+                        console.error('[GooglePeek] window.open also failed:', e2);
+                    }
+                }
             }
             function performSearch() {
                 var input = getSearchInput();
@@ -142,6 +154,14 @@
                 }
             }
             window.performSearch = performSearch;
+
+            function startWatchdog() {
+                if (window.speechWatchdog) clearTimeout(window.speechWatchdog);
+                window.speechWatchdog = setTimeout(function() {
+                    console.warn('[GooglePeek] Watchdog: restarting speech recognition due to inactivity.');
+                    restartSpeech();
+                }, 15000); // 15 seconds without events triggers restart
+            }
 
             function startGooglePeek() {
                 var permissions = window.PermissionsHandler.getInstance();
@@ -166,21 +186,25 @@
                         setTimeout(function() {
                             console.log('[GooglePeek] Restarting web speech recognition...');
                             window.speech.start();
+                            startWatchdog();
                         }, 500);
                     } else if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
                         setTimeout(function() {
                             console.log('[GooglePeek] Restarting Capacitor speech recognition...');
                             startCapacitorSpeech();
+                            startWatchdog();
                         }, 500);
                     }
                 }
 
                 function startCapacitorSpeech() {
                     window.speechActive = true;
+                    // NOTE: As of now, Capacitor SpeechRecognition plugin does not provide a way to suppress beeps/UI. This is a known limitation.
                     window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true, continuous: true }).then(function() {
                         window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
                             var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
                             handleSpeechResult(transcript, true);
+                            startWatchdog();
                         });
                         window.Capacitor.Plugins.SpeechRecognition.addListener('end', function() {
                             console.log('[GooglePeek] Capacitor speech ended, restarting...');
@@ -196,6 +220,7 @@
                 function initSpeech() {
                     if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
                         startCapacitorSpeech();
+                        startWatchdog();
                     } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                         window.speech = new window.SpeechHandler({
                             language: 'en-US',
@@ -205,6 +230,7 @@
                             maxAlternatives: 1,
                             onResult: function(transcript) {
                                 handleSpeechResult(transcript, true);
+                                startWatchdog();
                             },
                             onError: function(error) {
                                 console.error('[GooglePeek] Speech error:', error);
@@ -216,6 +242,7 @@
                             }
                         });
                         window.speech.start();
+                        startWatchdog();
                     } else {
                         alert('Speech recognition is not supported on this device or browser.');
                     }
@@ -246,6 +273,8 @@
                                 setTimeout(function() {
                                     triggerSearch(query);
                                 }, 500);
+                            } else {
+                                console.error('[GooglePeek] Input not found at search trigger!');
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
@@ -280,6 +309,8 @@
                                 setTimeout(function() {
                                     triggerSearch(query);
                                 }, 500);
+                            } else {
+                                console.error('[GooglePeek] Input not found at search trigger!');
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
