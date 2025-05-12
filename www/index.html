@@ -154,46 +154,40 @@
     }
   </style>
   <!-- Scripts -->
-  <script type="module">
-    import { permissions } from './js/permissions-handler.js';
-
+  <script src="js/permissions-handler.js"></script>
+  <script>
     // Initialize permissions once when the app starts
-    async function initializeApp() {
-        try {
-            // Initialize permissions handler
-            await permissions.initialize({ debugMode: true });
-            
-            // Make permissions available globally
-            window.permissions = permissions;
-            
-            // Check if we need to request permissions
-            const hasMicPermission = await permissions.checkMicrophonePermission();
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.permissions) {
+        window.permissions.initialize({ debugMode: true }).then(function() {
+          window.permissions.checkMicrophonePermission().then(function(hasMicPermission) {
             if (!hasMicPermission) {
-                const granted = await permissions.requestMicrophonePermission();
+              window.permissions.requestMicrophonePermission().then(function(granted) {
                 if (!granted) {
-                    console.warn('Microphone permission denied');
+                  console.warn('Microphone permission denied');
                 }
+              });
             }
-            
-            // Check camera permission
-            const hasCameraPermission = await permissions.checkCameraPermission();
+          });
+          window.permissions.checkCameraPermission().then(function(hasCameraPermission) {
             if (!hasCameraPermission) {
-                const granted = await permissions.requestCameraPermission();
+              window.permissions.requestCameraPermission().then(function(granted) {
                 if (!granted) {
-                    console.warn('Camera permission denied');
+                  console.warn('Camera permission denied');
                 }
+              });
             }
-        } catch (error) {
-            console.error('Error initializing app:', error);
-        }
-    }
-
-    // Initialize when the page loads
-    window.permissions = permissions;
-    permissions.init({ debugMode: true });
+          });
+        }).catch(function(error) {
+          console.error('Error initializing permissions handler:', error);
+        });
+      } else {
+        console.error('Permissions handler not available');
+      }
+    });
   </script>
-  <script src="js/echomind-speech.js" defer></script>
-  <script src="js/echomind-commands.js" defer></script>
+  <script src="js/echomind-speech.js"></script>
+  <script src="js/echomind-commands.js"></script>
 </head>
 <body>
   <div id="root"></div>
