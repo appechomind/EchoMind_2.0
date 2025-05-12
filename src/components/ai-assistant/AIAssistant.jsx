@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import FractalRenderer from '../../core/ui/fractal-renderer';
-import { useAIIntentHandler } from '../../core/ai/intent-handler';
+import useIntentStore from '../../core/ai/intent-handler';
 import './AIAssistant.css';
 
 const AIAssistant = () => {
@@ -9,7 +9,8 @@ const AIAssistant = () => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { processInput, getContext } = useAIIntentHandler();
+  const processInput = useIntentStore(state => state.processInput);
+  const getContext = useIntentStore(state => state.context);
 
   useEffect(() => {
     // Initialize fractal renderer
