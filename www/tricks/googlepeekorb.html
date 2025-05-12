@@ -1,0 +1,206 @@
+<<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Peek</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: arial, sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .main { display: flex; flex-direction: column; align-items: center; margin-top: 100px; flex: 1; padding: 0 20px; }
+        .logo { margin-bottom: 20px; text-align: center; }
+        .logo img { max-width: 100%; height: auto; }
+        .search-container { width: 100%; max-width: 584px; position: relative; margin: 0 auto; }
+        .search-box { width: 100%; height: 44px; border: 1px solid #dfe1e5; border-radius: 24px; padding: 0 20px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .buttons { margin-top: 20px; display: flex; justify-content: center; flex-wrap: wrap; }
+        .search-button { background-color: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px; color: #3c4043; font-size: 14px; margin: 11px 4px; padding: 0 16px; height: 36px; cursor: pointer; min-width: 120px; }
+        .footer { background: #f2f2f2; color: #70757a; font-size: 14px; padding: 15px 0; margin-top: auto; }
+        .footer-content { padding: 0 20px; max-width: 1200px; margin: 0 auto; }
+        .footer-top { border-bottom: 1px solid #dadce0; padding-bottom: 10px; }
+        .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 10px; }
+    </style>
+    <script src="../../../js/permissions-handler.js"></script>
+    <script src="../../../js/echomind-speech.js"></script>
+    <script>
+        (function() {
+            // Place these at the top of your script for global state
+            window.aboutMode = false;
+            window.aboutBuffer = [];
+            window.aboutTimeout = null;
+            window.aboutLastTranscript = '';
+            window.lastBufferedPhrase = '';
+
+            function getSearchInput() {
+                return document.getElementById('searchInput');
+            }
+            function triggerSearch(query) {
+                var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+                    window.Capacitor.Plugins.Browser.open({ url: url });
+                } else {
+                    window.location.href = url;
+                }
+            }
+            function performSearch() {
+                var input = getSearchInput();
+                if (input && input.value) {
+                    triggerSearch(input.value);
+                }
+            }
+            window.performSearch = performSearch;
+
+            function startGooglePeek() {
+                var permissions = window.PermissionsHandler.getInstance();
+                permissions.initialize({ debugMode: true }).then(function() {
+                    permissions.checkMicrophonePermission().then(function(hasMic) {
+                        if (!hasMic) {
+                            permissions.requestMicrophonePermission().then(function(granted) {
+                                if (!granted) {
+                                    alert('Microphone permission is required.');
+                                } else {
+                                    initSpeech();
+                                }
+                            });
+                        } else {
+                            initSpeech();
+                        }
+                    });
+                });
+                function initSpeech() {
+                    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) {
+                        window.Capacitor.Plugins.SpeechRecognition.start({ language: 'en-US', partialResults: true }).then(function() {
+                            window.Capacitor.Plugins.SpeechRecognition.addListener('result', function(result) {
+                                var transcript = result.matches && result.matches[0] ? result.matches[0] : '';
+                                handleSpeechResult(transcript, true);
+                            });
+                        });
+                    } else if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        window.speech = new window.SpeechHandler({
+                            language: 'en-US',
+                            continuous: true,
+                            interimResults: true,
+                            debugMode: true,
+                            maxAlternatives: 1,
+                            onResult: function(transcript) {
+                                handleSpeechResult(transcript, true);
+                            },
+                            onError: function(error) {
+                                console.error('[GooglePeek] Speech error:', error);
+                            },
+                            onEnd: function() {
+                                console.log('[GooglePeek] Speech ended');
+                                if (window.speech) {
+                                    setTimeout(function() { window.speech.start(); }, 1000);
+                                }
+                            }
+                        });
+                        window.speech.start();
+                    } else {
+                        alert('Speech recognition is not supported on this device or browser.');
+                    }
+                    function handleSpeechResult(transcript, isFinal) {
+                        var input = getSearchInput();
+                        if (!input) return;
+
+                        // If not in about mode, look for "about" anywhere in the transcript
+                        var aboutIdx = transcript.toLowerCase().indexOf("about");
+                        if (!window.aboutMode && aboutIdx !== -1) {
+                            // Start about mode, buffer only what comes after "about"
+                            var afterAbout = transcript.slice(aboutIdx + 5).trim();
+                            window.aboutMode = true;
+                            window.aboutBuffer = [afterAbout];
+                            window.aboutLastTranscript = '';
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
+                                window.aboutMode = false;
+                                window.aboutBuffer = [];
+                                window.aboutTimeout = null;
+                                window.aboutLastTranscript = '';
+                            }, 3000);
+                            return;
+                        }
+
+                        // If already in about mode, always buffer only what comes after "about"
+                        if (window.aboutMode) {
+                            var aboutIdx2 = transcript.toLowerCase().indexOf("about");
+                            var spoken = aboutIdx2 !== -1 ? transcript.slice(aboutIdx2 + 5).trim() : transcript.trim();
+                            window.aboutBuffer = [spoken];
+                            if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
+                            window.aboutTimeout = setTimeout(function() {
+                                var query = window.aboutBuffer[0].replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
+                                if (query) {
+                                    input.value = query;
+                                    triggerSearch(query);
+                                }
+                                window.aboutMode = false;
+                                window.aboutBuffer = [];
+                                window.aboutTimeout = null;
+                                window.aboutLastTranscript = '';
+                            }, 3000);
+                            return;
+                        }
+
+                        // For all other input, do nothing
+                    }
+                }
+            }
+            window.addEventListener('DOMContentLoaded', startGooglePeek);
+        })();
+    </script>
+</head>
+<body>
+    <div class="header">
+        <a href="#">Gmail</a>
+        <a href="#">Images</a>
+        <a href="#">Apps</a>
+        <a href="#">Sign in</a>
+    </div>
+    <div class="main">
+        <div class="logo">
+            <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google">
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-box" id="searchInput" placeholder="Search...">
+            <button class="mic-button" id="mic-button">
+                <img src="https://www.gstatic.com/images/branding/googlemic/2x/googlemic_color_24dp.png" alt="Voice Search">
+            </button>
+        </div>
+        <div class="buttons">
+            <button class="search-button" onclick="performSearch()">Google Search</button>
+            <button class="search-button" onclick="performSearch()">I'm Feeling Lucky</button>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-top">
+                United States
+            </div>
+            <div class="footer-bottom">
+                <div>
+                    <a href="#">About</a>
+                    <a href="#">Advertising</a>
+                    <a href="#">Business</a>
+                    <a href="#">How Search works</a>
+                </div>
+                <div>
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
