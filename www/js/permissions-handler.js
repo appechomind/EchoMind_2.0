@@ -228,7 +228,6 @@ class PermissionsHandler {
 
 // Create and export a single instance
 const permissions = new PermissionsHandler();
-export { permissions };
-
+// export { permissions }; // REMOVE THIS LINE
 // Make it available globally for non-module scripts
 window.permissions = permissions; 

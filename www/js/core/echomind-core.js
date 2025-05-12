@@ -61,7 +61,7 @@ class EchoMindCore {
             // Initialize other modules
             if (window.EchoMindPermissions) {
                 this.modules.permissions = EchoMindPermissions;
-                await this.modules.permissions.init();
+                await this.modules.permissions.initialize();
             }
 
             if (window.EchoMindSpeech) {

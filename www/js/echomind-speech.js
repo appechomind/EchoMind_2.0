@@ -181,4 +181,4 @@ class SpeechHandler {
 }
 
 // Export the SpeechHandler class
-window.SpeechHandler = SpeechHandler; 
+// (No export needed for classic JS, already attached to window) 
