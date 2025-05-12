@@ -261,7 +261,7 @@ container.addEventListener('touchend', handleTouchEnd);
 window.addEventListener('load', async function() {
   try {
     // Initialize permissions module
-    await EchoMind.Permissions.init();
+    await EchoMind.Permissions.initialize();
     
     // Check platform and adjust settings accordingly
     const platform = EchoMind.Permissions.getPlatform();
