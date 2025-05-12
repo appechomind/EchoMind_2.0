@@ -125,7 +125,11 @@
             window.speechActive = false;
 
             function getSearchInput() {
-                return document.getElementById('searchInput');
+                var input = document.getElementById('searchInput');
+                if (!input) {
+                    console.warn('[GooglePeek] searchInput not found!');
+                }
+                return input;
             }
             function triggerSearch(query) {
                 var url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
@@ -235,10 +239,13 @@
                         if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                         window.aboutTimeout = setTimeout(function() {
                             var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                            console.log('[GooglePeek] Triggering search with:', query);
-                            if (query) {
+                            console.log('[GooglePeek] Buffer:', window.aboutBuffer);
+                            console.log('[GooglePeek] Query:', query);
+                            if (input) {
                                 input.value = query;
-                                triggerSearch(query);
+                                setTimeout(function() {
+                                    triggerSearch(query);
+                                }, 500);
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
@@ -266,10 +273,13 @@
                         if (window.aboutTimeout) clearTimeout(window.aboutTimeout);
                         window.aboutTimeout = setTimeout(function() {
                             var query = window.aboutBuffer.join(' ').replace(/\babout\b/gi, '').replace(/\s+/g, ' ').trim();
-                            console.log('[GooglePeek] Triggering search with:', query);
-                            if (query) {
+                            console.log('[GooglePeek] Buffer:', window.aboutBuffer);
+                            console.log('[GooglePeek] Query:', query);
+                            if (input) {
                                 input.value = query;
-                                triggerSearch(query);
+                                setTimeout(function() {
+                                    triggerSearch(query);
+                                }, 500);
                             }
                             window.aboutMode = false;
                             window.aboutBuffer = [];
