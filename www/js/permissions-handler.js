@@ -56,6 +56,7 @@ class PermissionsHandler {
     }
 
     async checkMicrophonePermission() {
+        console.log('[PermissionsHandler] Checking microphone permission...');
         try {
             // Check if we already have a pending request
             if (this.permissionPromises.has('microphone')) {
@@ -76,9 +77,10 @@ class PermissionsHandler {
                         }
                     };
                     
+                    console.log('[PermissionsHandler] Microphone permission state:', result.state);
                     return result.state === 'granted';
                 } catch (error) {
-                    console.error('Error checking microphone permission:', error);
+                    console.error('[PermissionsHandler] Error checking microphone permission:', error);
                     return false;
                 }
             })();
@@ -92,6 +94,7 @@ class PermissionsHandler {
     }
 
     async requestMicrophonePermission() {
+        console.log('[PermissionsHandler] Requesting microphone permission...');
         try {
             // Check if we already have a pending request
             if (this.permissionPromises.has('microphone')) {
@@ -105,12 +108,13 @@ class PermissionsHandler {
                     stream.getTracks().forEach(track => track.stop());
                     this.micPermission = 'granted';
                     this.savePermissionStates();
+                    console.log('[PermissionsHandler] Microphone permission granted.');
                     if (this.debugMode) {
                         console.log('Microphone permission granted');
                     }
                     return true;
                 } catch (error) {
-                    console.error('Error requesting microphone permission:', error);
+                    console.error('[PermissionsHandler] Microphone permission denied:', error);
                     this.micPermission = 'denied';
                     this.savePermissionStates();
                     return false;
@@ -126,6 +130,7 @@ class PermissionsHandler {
     }
 
     async checkCameraPermission() {
+        console.log('[PermissionsHandler] Checking camera permission...');
         try {
             // Check if we already have a pending request
             if (this.permissionPromises.has('camera')) {
@@ -146,9 +151,10 @@ class PermissionsHandler {
                         }
                     };
                     
+                    console.log('[PermissionsHandler] Camera permission state:', result.state);
                     return result.state === 'granted';
                 } catch (error) {
-                    console.error('Error checking camera permission:', error);
+                    console.error('[PermissionsHandler] Error checking camera permission:', error);
                     return false;
                 }
             })();
@@ -162,6 +168,7 @@ class PermissionsHandler {
     }
 
     async requestCameraPermission() {
+        console.log('[PermissionsHandler] Requesting camera permission...');
         try {
             // Check if we already have a pending request
             if (this.permissionPromises.has('camera')) {
@@ -175,12 +182,13 @@ class PermissionsHandler {
                     stream.getTracks().forEach(track => track.stop());
                     this.cameraPermission = 'granted';
                     this.savePermissionStates();
+                    console.log('[PermissionsHandler] Camera permission granted.');
                     if (this.debugMode) {
                         console.log('Camera permission granted');
                     }
                     return true;
                 } catch (error) {
-                    console.error('Error requesting camera permission:', error);
+                    console.error('[PermissionsHandler] Camera permission denied:', error);
                     this.cameraPermission = 'denied';
                     this.savePermissionStates();
                     return false;
